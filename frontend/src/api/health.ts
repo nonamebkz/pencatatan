@@ -1,3 +1,5 @@
+import { getHealthUrl } from '@/api/config'
+
 export type HealthData = {
   status: string
   db: string
@@ -9,10 +11,8 @@ export type HealthResponse = {
   data: HealthData
 }
 
-const API_BASE = import.meta.env.VITE_API_BASE ?? '/api'
-
 export async function fetchHealth(): Promise<HealthResponse> {
-  const response = await fetch(`${API_BASE}/health`)
+  const response = await fetch(getHealthUrl())
 
   const payload = (await response.json()) as HealthResponse
 

@@ -24,6 +24,7 @@ Semua port host bisa di-overwrite lewat `.env`:
 | `FRONTEND_PORT` | 3000 | Port frontend di host |
 | `FRONTEND_CONTAINER_PORT` | 80 | Port nginx di dalam container |
 | `FRONTEND_DEV_PORT` | 5173 | Port Vite dev server (lokal) |
+| `VITE_API_BASE` | `http://localhost:8080/api/v1` | URL API penuh untuk frontend |
 
 Contoh custom port:
 
@@ -31,14 +32,24 @@ Contoh custom port:
 MYSQL_PORT=3307
 APP_PORT=9090
 FRONTEND_PORT=4000
+VITE_API_BASE=http://localhost:9090/api/v1
 CORS_ORIGINS=http://localhost:4000,http://localhost:5173
 ```
 
-Akses (sesuaikan dengan `.env`):
+Contoh production:
+
+```env
+APP_PORT=8801
+FRONTEND_PORT=8802
+VITE_API_BASE=https://pencatatan.rubyjane.my.id:8801/api/v1
+CORS_ORIGINS=https://pencatatan.rubyjane.my.id
+```
+
+Akses:
 
 - Frontend: http://localhost:${FRONTEND_PORT:-3000}
 - Backend health: http://localhost:${APP_PORT:-8080}/health
-- Frontend proxy health: http://localhost:${FRONTEND_PORT:-3000}/api/health
+- API dashboard: `${VITE_API_BASE}/dashboard`
 
 ## Development lokal
 
@@ -47,7 +58,6 @@ Akses (sesuaikan dengan `.env`):
 ```bash
 cd backend
 cp ../.env.example ../.env
-# Set DB_HOST=localhost jika MySQL sudah jalan
 go run ./cmd/server
 ```
 
@@ -56,11 +66,11 @@ go run ./cmd/server
 ```bash
 cd frontend
 pnpm install
-cp .env.example .env.local   # opsional, sesuaikan APP_PORT / FRONTEND_DEV_PORT
+cp .env.example .env.local
 pnpm dev
 ```
 
-Frontend dev server mem-proxy `/api/*` ke backend (`VITE_PROXY_TARGET` atau `http://localhost:${APP_PORT}`).
+Frontend memanggil backend langsung lewat `VITE_API_BASE` (tanpa proxy nginx/vite).
 
 ## Endpoint
 
@@ -71,8 +81,6 @@ Frontend dev server mem-proxy `/api/*` ke backend (`VITE_PROXY_TARGET` atau `htt
 `GET /api/v1/ponds` — master kolam (prasyarat kualitas air)
 
 `GET /api/v1/dashboard` — ringkasan kualitas air per kolam aktif
-
-Frontend default API base: `/api/v1` (via nginx proxy `/api/` → backend)
 
 ```json
 {
