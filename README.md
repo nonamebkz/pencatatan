@@ -66,6 +66,14 @@ Frontend dev server mem-proxy `/api/*` ke backend (`VITE_PROXY_TARGET` atau `htt
 
 `GET /health`
 
+`GET /api/v1/water-quality-logs` — CRUD kualitas air (ammonia, pH, catatan)
+
+`GET /api/v1/ponds` — master kolam (prasyarat kualitas air)
+
+`GET /api/v1/dashboard` — ringkasan kualitas air per kolam aktif
+
+Frontend default API base: `/api/v1` (via nginx proxy `/api/` → backend)
+
 ```json
 {
   "success": true,
