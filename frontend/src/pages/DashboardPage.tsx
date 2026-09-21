@@ -3,6 +3,7 @@ import { Link } from 'react-router-dom'
 import {
   AlertTriangle,
   CheckCircle2,
+  ChevronRight,
   Fish,
   Plus,
   RefreshCw,
@@ -13,6 +14,7 @@ import { fetchHealth } from '@/api/health'
 import { getDashboardSummary, type WaterQualitySummary } from '@/api/water-quality'
 import { PondStatusCard } from '@/components/dashboard/PondStatusCard'
 import { StatCard } from '@/components/dashboard/StatCard'
+import { MobileSectionHeader } from '@/components/mobile/MobileSectionHeader'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Skeleton } from '@/components/ui/skeleton'
@@ -72,23 +74,31 @@ export function DashboardPage() {
     weekday: 'long',
     day: 'numeric',
     month: 'long',
-    year: 'numeric',
   }).format(now)
 
   return (
-    <div className="space-y-8">
-      <section className="relative overflow-hidden rounded-3xl border bg-gradient-to-br from-primary/10 via-background to-accent/30 p-6 shadow-sm md:p-8">
-        <div className="relative z-10 grid gap-6 lg:grid-cols-[1.2fr_0.8fr] lg:items-center">
-          <div className="space-y-4">
-            <p className="text-sm font-medium text-primary">{dateLabel}</p>
-            <div className="space-y-2">
-              <h2 className="text-3xl font-bold tracking-tight md:text-4xl">{greeting}</h2>
-              <p className="max-w-xl text-muted-foreground">
-                Pantau kualitas air kolam lele harian — ammonia, pH, dan catatan observasi dalam satu dashboard.
-              </p>
+    <div className="space-y-6 md:space-y-8">
+      <section className="relative overflow-hidden rounded-2xl border bg-gradient-to-br from-primary/10 via-card to-background p-4 shadow-sm md:rounded-3xl md:p-8">
+        <div className="relative z-10 flex flex-col gap-4 md:grid md:grid-cols-[1.2fr_0.8fr] md:items-center md:gap-6">
+          <div className="space-y-3">
+            <div className="flex items-center justify-between gap-2">
+              <p className="text-xs font-medium text-primary">{dateLabel}</p>
+              <button
+                type="button"
+                onClick={() => void loadDashboard(true)}
+                disabled={refreshing}
+                className="touch-target inline-flex size-9 items-center justify-center rounded-xl border bg-background/80 text-muted-foreground md:hidden"
+                aria-label="Refresh dashboard"
+              >
+                <RefreshCw className={refreshing ? 'size-4 animate-spin' : 'size-4'} />
+              </button>
             </div>
+            <h2 className="text-2xl font-semibold tracking-tight md:text-4xl">{greeting}</h2>
+            <p className="hidden max-w-xl text-sm text-muted-foreground sm:block md:text-base">
+              Pantau ammonia, pH, dan catatan observasi kolam lele setiap hari.
+            </p>
 
-            <div className="flex flex-wrap gap-3">
+            <div className="hidden flex-wrap gap-3 md:flex">
               <Button asChild size="lg">
                 <Link to="/water-quality/new">
                   <Plus className="size-4" />
@@ -109,7 +119,7 @@ export function DashboardPage() {
             )}
           </div>
 
-          <div className="hidden justify-end lg:flex">
+          <div className="hidden justify-end md:flex">
             <img
               src={heroImage}
               alt="Ilustrasi budidaya lele"
@@ -125,16 +135,16 @@ export function DashboardPage() {
         </div>
       )}
 
-      <section className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+      <section className="grid grid-cols-2 gap-3 md:gap-4 xl:grid-cols-4">
         {loading ? (
-          Array.from({ length: 4 }).map((_, index) => <Skeleton key={index} className="h-28 rounded-2xl" />)
+          Array.from({ length: 4 }).map((_, index) => <Skeleton key={index} className="h-32 rounded-2xl" />)
         ) : (
           <>
             <StatCard label="Kolam aktif" value={stats.total} icon={Fish} />
             <StatCard
               label="Sudah diukur hari ini"
               value={stats.measuredToday}
-              hint={` dari ${stats.total} kolam`}
+              hint={`dari ${stats.total} kolam`}
               icon={CheckCircle2}
               tone="success"
             />
@@ -156,26 +166,36 @@ export function DashboardPage() {
       </section>
 
       {!loading && stats.pendingToday > 0 && (
-        <div className="rounded-2xl border border-amber-200/80 bg-amber-50 px-4 py-3 text-sm text-amber-900 dark:border-amber-900/40 dark:bg-amber-950/30 dark:text-amber-100">
-          Ada {stats.pendingToday} kolam yang belum dicatat hari ini. Prioritaskan pengukuran pagi atau sore.
-        </div>
+        <Link
+          to="/water-quality/new"
+          className="flex items-center justify-between gap-3 rounded-2xl border border-amber-200/80 bg-amber-50 px-4 py-4 text-sm text-amber-900 transition active:scale-[0.99] dark:border-amber-900/40 dark:bg-amber-950/30 dark:text-amber-100"
+        >
+          <div className="flex items-start gap-3">
+            <AlertTriangle className="mt-0.5 size-5 shrink-0" />
+            <div>
+              <p className="font-semibold">{stats.pendingToday} kolam belum dicatat</p>
+              <p className="mt-1 text-xs opacity-80">Ketuk untuk catat kualitas air sekarang</p>
+            </div>
+          </div>
+          <ChevronRight className="size-5 shrink-0 opacity-60" />
+        </Link>
       )}
 
       <section className="space-y-4">
-        <div className="flex items-end justify-between gap-3">
-          <div>
-            <h3 className="text-xl font-semibold">Status Kolam</h3>
-            <p className="text-sm text-muted-foreground">Nilai terakhir dan indikator kesehatan air.</p>
-          </div>
-          <Button asChild variant="outline" size="sm">
-            <Link to="/water-quality">Semua catatan</Link>
-          </Button>
-        </div>
+        <MobileSectionHeader
+          title="Status Kolam"
+          description="Nilai terakhir dan indikator kesehatan air"
+          action={
+            <Button asChild variant="ghost" size="sm" className="hidden shrink-0 sm:inline-flex">
+              <Link to="/water-quality">Semua catatan</Link>
+            </Button>
+          }
+        />
 
         {loading ? (
-          <div className="grid gap-4 md:grid-cols-2">
+          <div className="space-y-3 md:grid md:grid-cols-2 md:gap-4 md:space-y-0">
             {Array.from({ length: 2 }).map((_, index) => (
-              <Skeleton key={index} className="h-64 rounded-2xl" />
+              <Skeleton key={index} className="h-40 rounded-2xl md:h-64" />
             ))}
           </div>
         ) : summaries.length === 0 && !error ? (
@@ -186,17 +206,17 @@ export function DashboardPage() {
                 Tambah kolam terlebih dulu, lalu mulai catat ammonia, pH, dan observasi harian.
               </CardDescription>
             </CardHeader>
-            <CardContent className="flex flex-wrap gap-3">
-              <Button asChild>
+            <CardContent className="flex flex-col gap-2 sm:flex-row sm:flex-wrap sm:gap-3">
+              <Button asChild className="w-full sm:w-auto">
                 <Link to="/ponds">Kelola Kolam</Link>
               </Button>
-              <Button asChild variant="outline">
+              <Button asChild variant="outline" className="w-full sm:w-auto">
                 <Link to="/water-quality/new">Catat Kualitas Air</Link>
               </Button>
             </CardContent>
           </Card>
         ) : (
-          <div className="grid gap-4 md:grid-cols-2">
+          <div className="space-y-3 md:grid md:grid-cols-2 md:gap-4 md:space-y-0">
             {summaries.map((summary) => (
               <PondStatusCard key={summary.businessUnitId} summary={summary} />
             ))}

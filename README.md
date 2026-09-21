@@ -53,7 +53,35 @@ Akses:
 
 ## Development lokal
 
-### Backend
+### Makefile (recommended)
+
+```bash
+cp .env.example .env   # sesuaikan port jika perlu
+make install           # pertama kali
+make dev               # MySQL + backend + frontend
+```
+
+Perintah lain:
+
+```bash
+make backend           # backend saja
+make frontend          # frontend saja
+make db                # MySQL saja
+make stop              # stop MySQL container
+```
+
+Pastikan di `.env` lokal:
+
+```env
+APP_PORT=8080
+MYSQL_PORT=3306
+FRONTEND_DEV_PORT=5173
+CORS_ORIGINS=http://localhost:5173
+```
+
+Backend connect ke MySQL via `localhost:$(MYSQL_PORT)`.
+
+### Manual
 
 ```bash
 cd backend

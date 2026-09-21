@@ -1,0 +1,54 @@
+import { Link } from 'react-router-dom'
+import { ChevronRight, Fish, MapPin, Plus } from 'lucide-react'
+
+import type { Pond } from '@/api/water-quality'
+import { Button } from '@/components/ui/button'
+import { cn } from '@/lib/utils'
+
+export function PondCard({ pond }: { pond: Pond }) {
+  const isActive = pond.status === 'ACTIVE'
+
+  return (
+    <article className="group rounded-2xl border bg-card p-4 shadow-sm transition hover:-translate-y-0.5 hover:shadow-md sm:p-5">
+      <div className="flex items-start justify-between gap-2 sm:gap-3">
+        <div className="flex min-w-0 items-start gap-3">
+          <div className="shrink-0 rounded-xl bg-primary/10 p-2.5 text-primary">
+            <Fish className="size-5" />
+          </div>
+          <div className="min-w-0">
+            <h3 className="truncate font-semibold">{pond.name}</h3>
+            <p className="mt-1 inline-flex items-start gap-1 text-sm text-muted-foreground">
+              <MapPin className="mt-0.5 size-3.5 shrink-0" />
+              <span className="line-clamp-2">{pond.location || 'Lokasi belum diisi'}</span>
+            </p>
+          </div>
+        </div>
+        <span
+          className={cn(
+            'shrink-0 rounded-full px-2.5 py-1 text-xs font-medium',
+            isActive ? 'bg-emerald-500/10 text-emerald-700' : 'bg-muted text-muted-foreground',
+          )}
+        >
+          {isActive ? 'Aktif' : 'Nonaktif'}
+        </span>
+      </div>
+
+      {pond.notes && <p className="mt-3 line-clamp-2 text-sm text-muted-foreground sm:mt-4">{pond.notes}</p>}
+
+      <div className="mt-4 grid grid-cols-2 gap-2 sm:mt-5 sm:flex sm:flex-wrap">
+        <Button asChild variant="outline" size="sm" className="w-full">
+          <Link to={`/ponds/${pond.id}`}>
+            Detail
+            <ChevronRight className="size-4" />
+          </Link>
+        </Button>
+        <Button asChild variant="ghost" size="sm" className="w-full">
+          <Link to={`/water-quality/new?pondId=${pond.id}`}>
+            <Plus className="size-4" />
+            Catat
+          </Link>
+        </Button>
+      </div>
+    </article>
+  )
+}

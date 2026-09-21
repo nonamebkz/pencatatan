@@ -19,17 +19,15 @@ const toneStyles = {
 
 export function StatCard({ label, value, hint, icon: Icon, tone = 'default' }: StatCardProps) {
   return (
-    <div className="rounded-2xl border bg-card/80 p-4 shadow-sm backdrop-blur-sm">
-      <div className="flex items-start justify-between gap-3">
-        <div className="space-y-2">
-          <p className="text-sm text-muted-foreground">{label}</p>
-          <p className="text-2xl font-semibold tracking-tight">{value}</p>
-          {hint && <p className="text-xs text-muted-foreground">{hint}</p>}
-        </div>
-        <div className={cn('rounded-xl p-2.5', toneStyles[tone])}>
-          <Icon className="size-5" />
+    <div className="rounded-2xl border bg-card p-4 shadow-sm">
+      <div className="mb-3 flex items-center justify-between">
+        <div className={cn('rounded-xl p-2', toneStyles[tone])}>
+          <Icon className="size-4" />
         </div>
       </div>
+      <p className="text-2xl font-semibold tabular-nums tracking-tight sm:text-3xl">{value}</p>
+      <p className="mt-1 text-xs text-muted-foreground sm:text-sm">{label}</p>
+      {hint && <p className="mt-0.5 text-[11px] text-muted-foreground/80">{hint}</p>}
     </div>
   )
 }

@@ -1,0 +1,59 @@
+import { Link } from 'react-router-dom'
+import { ChevronRight, Droplets, FlaskConical, Pencil } from 'lucide-react'
+
+import type { WaterQualityLog } from '@/api/water-quality'
+import { WaterQualityStatusBadge } from '@/components/water-quality/WaterQualityStatusBadge'
+import { Button } from '@/components/ui/button'
+import { formatDateTime } from '@/lib/format'
+
+export function WaterQualityLogRow({ log }: { log: WaterQualityLog }) {
+  return (
+    <article className="rounded-2xl border bg-card p-4 shadow-sm">
+      <div className="flex items-start justify-between gap-3">
+        <div className="min-w-0 flex-1 space-y-2">
+          <div className="flex flex-wrap items-center gap-2">
+            {log.businessUnitName && <p className="font-semibold">{log.businessUnitName}</p>}
+            <WaterQualityStatusBadge status={log.status} />
+          </div>
+          <p className="text-xs text-muted-foreground">{formatDateTime(log.measuredAt)}</p>
+        </div>
+        <Button asChild variant="ghost" size="sm" className="size-9 shrink-0 p-0">
+          <Link to={`/water-quality/${log.id}/edit`} aria-label="Edit catatan">
+            <Pencil className="size-4" />
+          </Link>
+        </Button>
+      </div>
+
+      <div className="mt-3 grid grid-cols-2 gap-3">
+        <div className="rounded-xl bg-muted/60 p-3">
+          <div className="mb-1 flex items-center gap-1.5 text-[11px] text-muted-foreground">
+            <FlaskConical className="size-3.5" />
+            Ammonia
+          </div>
+          <p className="text-lg font-semibold tabular-nums">{log.ammoniaPpm ?? '—'}</p>
+          <p className="text-[11px] text-muted-foreground">ppm</p>
+        </div>
+        <div className="rounded-xl bg-muted/60 p-3">
+          <div className="mb-1 flex items-center gap-1.5 text-[11px] text-muted-foreground">
+            <Droplets className="size-3.5" />
+            pH
+          </div>
+          <p className="text-lg font-semibold tabular-nums">{log.ph ?? '—'}</p>
+          <p className="text-[11px] text-muted-foreground">skala 0–14</p>
+        </div>
+      </div>
+
+      {log.notes && (
+        <p className="mt-3 line-clamp-2 text-sm text-muted-foreground">{log.notes}</p>
+      )}
+
+      <Link
+        to={`/water-quality/${log.id}/edit`}
+        className="mt-3 flex items-center justify-between text-xs font-medium text-primary md:hidden"
+      >
+        Lihat detail
+        <ChevronRight className="size-4" />
+      </Link>
+    </article>
+  )
+}

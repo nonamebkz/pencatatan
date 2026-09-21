@@ -3,74 +3,66 @@ import { AlertTriangle, ChevronRight, Droplets, FlaskConical } from 'lucide-reac
 
 import type { WaterQualitySummary } from '@/api/water-quality'
 import { WaterQualityStatusBadge } from '@/components/water-quality/WaterQualityStatusBadge'
-import { Button } from '@/components/ui/button'
+import { formatDateTime } from '@/lib/format'
 import { cn } from '@/lib/utils'
 
-function formatDateTime(value?: string) {
-  if (!value) return 'Belum pernah diukur'
-  return new Intl.DateTimeFormat('id-ID', {
-    dateStyle: 'medium',
-    timeStyle: 'short',
-  }).format(new Date(value))
-}
-
 const statusAccent = {
-  NORMAL: 'from-emerald-500/20 via-emerald-500/5 to-transparent',
-  WARNING: 'from-amber-500/25 via-amber-500/5 to-transparent',
-  DANGER: 'from-red-500/25 via-red-500/5 to-transparent',
+  NORMAL: 'border-emerald-500/20 bg-emerald-500/[0.04]',
+  WARNING: 'border-amber-500/30 bg-amber-500/[0.06]',
+  DANGER: 'border-red-500/30 bg-red-500/[0.06]',
 }
 
 export function PondStatusCard({ summary }: { summary: WaterQualitySummary }) {
   return (
-    <article
+    <Link
+      to={`/ponds/${summary.businessUnitId}`}
       className={cn(
-        'group relative overflow-hidden rounded-2xl border bg-card shadow-sm transition hover:-translate-y-0.5 hover:shadow-md',
+        'group block rounded-2xl border p-4 shadow-sm transition active:scale-[0.99] md:p-5 md:hover:-translate-y-0.5 md:hover:shadow-md',
+        statusAccent[summary.status],
       )}
     >
-      <div className={cn('absolute inset-x-0 top-0 h-24 bg-gradient-to-b', statusAccent[summary.status])} />
-
-      <div className="relative space-y-4 p-5">
-        <div className="flex items-start justify-between gap-3">
-          <div>
-            <h3 className="text-lg font-semibold">{summary.businessUnitName}</h3>
-            <p className="text-sm text-muted-foreground">{formatDateTime(summary.lastMeasuredAt)}</p>
-          </div>
-          <WaterQualityStatusBadge status={summary.status} />
+      <div className="flex items-start justify-between gap-3">
+        <div className="min-w-0">
+          <h3 className="truncate font-semibold">{summary.businessUnitName}</h3>
+          <p className="mt-1 text-xs text-muted-foreground">
+            {summary.lastMeasuredAt
+              ? formatDateTime(summary.lastMeasuredAt)
+              : 'Belum pernah diukur'}
+          </p>
         </div>
-
-        {summary.notMeasuredToday && (
-          <div className="flex items-center gap-2 rounded-xl border border-amber-200/80 bg-amber-50 px-3 py-2 text-sm text-amber-900 dark:border-amber-900/40 dark:bg-amber-950/40 dark:text-amber-200">
-            <AlertTriangle className="size-4 shrink-0" />
-            Belum diukur hari ini
-          </div>
-        )}
-
-        <div className="grid grid-cols-2 gap-3">
-          <div className="rounded-xl border bg-background/70 p-3">
-            <div className="mb-1 flex items-center gap-1.5 text-xs text-muted-foreground">
-              <FlaskConical className="size-3.5" />
-              Ammonia
-            </div>
-            <p className="text-lg font-semibold">{summary.ammoniaPpm ?? '—'}</p>
-            <p className="text-xs text-muted-foreground">ppm</p>
-          </div>
-          <div className="rounded-xl border bg-background/70 p-3">
-            <div className="mb-1 flex items-center gap-1.5 text-xs text-muted-foreground">
-              <Droplets className="size-3.5" />
-              pH
-            </div>
-            <p className="text-lg font-semibold">{summary.ph ?? '—'}</p>
-            <p className="text-xs text-muted-foreground">skala 0–14</p>
-          </div>
-        </div>
-
-        <Button asChild variant="ghost" className="w-full justify-between px-0 hover:bg-transparent">
-          <Link to={`/ponds/${summary.businessUnitId}`}>
-            Lihat riwayat kolam
-            <ChevronRight className="size-4 transition group-hover:translate-x-0.5" />
-          </Link>
-        </Button>
+        <WaterQualityStatusBadge status={summary.status} />
       </div>
-    </article>
+
+      {summary.notMeasuredToday && (
+        <div className="mt-3 flex items-center gap-2 rounded-xl border border-amber-200/80 bg-amber-50 px-3 py-2 text-xs text-amber-900 dark:border-amber-900/40 dark:bg-amber-950/40 dark:text-amber-200">
+          <AlertTriangle className="size-3.5 shrink-0" />
+          Belum diukur hari ini
+        </div>
+      )}
+
+      <div className="mt-4 grid grid-cols-2 gap-3">
+        <div className="rounded-xl border bg-background/80 p-3">
+          <div className="mb-1 flex items-center gap-1.5 text-[11px] text-muted-foreground">
+            <FlaskConical className="size-3.5" />
+            Ammonia
+          </div>
+          <p className="text-xl font-semibold tabular-nums">{summary.ammoniaPpm ?? '—'}</p>
+          <p className="text-[11px] text-muted-foreground">ppm</p>
+        </div>
+        <div className="rounded-xl border bg-background/80 p-3">
+          <div className="mb-1 flex items-center gap-1.5 text-[11px] text-muted-foreground">
+            <Droplets className="size-3.5" />
+            pH
+          </div>
+          <p className="text-xl font-semibold tabular-nums">{summary.ph ?? '—'}</p>
+          <p className="text-[11px] text-muted-foreground">skala 0–14</p>
+        </div>
+      </div>
+
+      <div className="mt-4 flex items-center justify-between text-xs font-medium text-primary md:text-sm">
+        <span>Lihat riwayat</span>
+        <ChevronRight className="size-4 transition group-hover:translate-x-0.5" />
+      </div>
+    </Link>
   )
 }

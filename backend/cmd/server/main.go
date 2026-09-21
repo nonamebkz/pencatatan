@@ -1,6 +1,7 @@
 package main
 
 import (
+	"context"
 	"log"
 	"strings"
 	"time"
@@ -13,8 +14,10 @@ import (
 	"github.com/kikichan/pencatatan/backend/internal/config"
 	"github.com/kikichan/pencatatan/backend/internal/database"
 	"github.com/kikichan/pencatatan/backend/internal/handler"
+	"github.com/kikichan/pencatatan/backend/internal/middleware"
 	"github.com/kikichan/pencatatan/backend/internal/migrate"
 	"github.com/kikichan/pencatatan/backend/internal/repository"
+	"github.com/kikichan/pencatatan/backend/internal/seed"
 )
 
 func main() {
@@ -32,10 +35,17 @@ func main() {
 		log.Fatalf("database migration failed: %v", err)
 	}
 
+	if err := seed.EnsureAdmin(context.Background(), db, cfg.AdminEmail, cfg.AdminPassword); err != nil {
+		log.Fatalf("seed admin failed: %v", err)
+	}
+
+	userRepo := repository.NewUserRepository(db)
 	pondRepo := repository.NewPondRepository(db)
 	waterQualityRepo := repository.NewWaterQualityRepository(db)
 
 	healthHandler := handler.NewHealthHandler(db)
+	authHandler := handler.NewAuthHandler(userRepo, cfg.JWTSecret, cfg.JWTExpiry)
+	userHandler := handler.NewUserHandler(userRepo)
 	pondHandler := handler.NewPondHandler(pondRepo)
 	waterQualityHandler := handler.NewWaterQualityHandler(waterQualityRepo, pondRepo)
 
@@ -49,27 +59,42 @@ func main() {
 	app.Use(logger.New())
 	app.Use(cors.New(cors.Config{
 		AllowOrigins: strings.Join(splitOrigins(cfg.CORSOrigins), ","),
-		AllowHeaders: "Origin, Content-Type, Accept, X-Workspace-ID",
+		AllowHeaders: "Origin, Content-Type, Accept, Authorization, X-Workspace-ID",
 	}))
 
 	app.Get("/health", healthHandler.Check)
 
 	api := app.Group("/api/v1")
-	api.Get("/ponds", pondHandler.List)
-	api.Get("/ponds/:id", pondHandler.Get)
-	api.Post("/ponds", pondHandler.Create)
-	api.Put("/ponds/:id", pondHandler.Update)
-	api.Delete("/ponds/:id", pondHandler.Delete)
 
-	api.Get("/water-quality-logs/trends", waterQualityHandler.Trends)
-	api.Get("/water-quality-logs", waterQualityHandler.List)
-	api.Get("/water-quality-logs/:id", waterQualityHandler.Get)
-	api.Post("/water-quality-logs", waterQualityHandler.Create)
-	api.Put("/water-quality-logs/:id", waterQualityHandler.Update)
-	api.Delete("/water-quality-logs/:id", waterQualityHandler.Delete)
+	api.Post("/auth/login", authHandler.Login)
 
-	api.Get("/reports/water-quality", waterQualityHandler.Report)
-	api.Get("/dashboard", waterQualityHandler.DashboardSummary)
+	protected := api.Group("", middleware.Auth(cfg.JWTSecret))
+	protected.Post("/auth/logout", authHandler.Logout)
+	protected.Get("/auth/me", authHandler.Me)
+
+	admin := protected.Group("/users", middleware.AdminOnly())
+	admin.Get("/", userHandler.List)
+	admin.Get("/:id", userHandler.Get)
+	admin.Post("/", userHandler.Create)
+	admin.Put("/:id", userHandler.Update)
+	admin.Put("/:id/reset-password", userHandler.ResetPassword)
+	admin.Delete("/:id", userHandler.Delete)
+
+	protected.Get("/ponds", pondHandler.List)
+	protected.Get("/ponds/:id", pondHandler.Get)
+	protected.Post("/ponds", pondHandler.Create)
+	protected.Put("/ponds/:id", pondHandler.Update)
+	protected.Delete("/ponds/:id", pondHandler.Delete)
+
+	protected.Get("/water-quality-logs/trends", waterQualityHandler.Trends)
+	protected.Get("/water-quality-logs", waterQualityHandler.List)
+	protected.Get("/water-quality-logs/:id", waterQualityHandler.Get)
+	protected.Post("/water-quality-logs", waterQualityHandler.Create)
+	protected.Put("/water-quality-logs/:id", waterQualityHandler.Update)
+	protected.Delete("/water-quality-logs/:id", waterQualityHandler.Delete)
+
+	protected.Get("/reports/water-quality", waterQualityHandler.Report)
+	protected.Get("/dashboard", waterQualityHandler.DashboardSummary)
 
 	log.Printf("server listening on :%s", cfg.Port)
 	if err := app.Listen(":" + cfg.Port); err != nil {

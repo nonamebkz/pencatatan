@@ -1,13 +1,19 @@
 import { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
-import { Plus } from 'lucide-react'
+import { Droplets, Plus } from 'lucide-react'
 
 import { listPonds, listWaterQualityLogs, type Pond, type WaterQualityLog } from '@/api/water-quality'
-import { WaterQualityStatusBadge } from '@/components/water-quality/WaterQualityStatusBadge'
+import { MobileFilterPanel } from '@/components/mobile/MobileFilterPanel'
+import { MobileSectionHeader } from '@/components/mobile/MobileSectionHeader'
+import { EmptyState } from '@/components/shared/EmptyState'
+import { ErrorAlert } from '@/components/shared/PanelCard'
+import { PageHeader } from '@/components/shared/PageHeader'
+import { WaterQualityLogRow } from '@/components/water-quality/WaterQualityLogRow'
 import { Button } from '@/components/ui/button'
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
+import { Select } from '@/components/ui/select'
+import { Skeleton } from '@/components/ui/skeleton'
 
 export function WaterQualityListPage() {
   const [ponds, setPonds] = useState<Pond[]>([])
@@ -16,11 +22,15 @@ export function WaterQualityListPage() {
   const [from, setFrom] = useState('')
   const [to, setTo] = useState('')
   const [error, setError] = useState<string | null>(null)
+  const [loading, setLoading] = useState(true)
 
-  const loadLogs = () => {
+  const loadLogs = (showLoading = true) => {
+    if (showLoading) setLoading(true)
+    setError(null)
     listWaterQualityLogs({ businessUnitId, from, to, limit: 100 })
       .then((response) => setLogs(response.data))
       .catch((err) => setError(err instanceof Error ? err.message : 'Gagal memuat catatan'))
+      .finally(() => setLoading(false))
   }
 
   useEffect(() => {
@@ -29,40 +39,36 @@ export function WaterQualityListPage() {
   }, [])
 
   return (
-    <div className="space-y-6">
-      <div className="flex flex-wrap items-center justify-between gap-3">
-        <div>
-          <h2 className="text-2xl font-bold">Kualitas Air</h2>
-          <p className="text-sm text-muted-foreground">Pencatatan ammonia, pH, dan catatan observasi per kolam.</p>
-        </div>
-        <Button asChild>
-          <Link to="/water-quality/new">
-            <Plus className="size-4" />
-            Tambah Catatan
-          </Link>
-        </Button>
-      </div>
+    <div className="space-y-6 md:space-y-8">
+      <PageHeader
+        title="Kualitas Air"
+        description="Catatan observasi ammonia, pH, dan catatan operasional."
+        actions={
+          <Button asChild size="lg" className="hidden md:inline-flex">
+            <Link to="/water-quality/new">
+              <Plus className="size-4" />
+              Tambah Catatan
+            </Link>
+          </Button>
+        }
+      />
 
-      <Card>
-        <CardHeader>
-          <CardTitle>Filter</CardTitle>
-        </CardHeader>
-        <CardContent className="grid gap-4 md:grid-cols-4">
-          <div className="space-y-2">
+      <MobileFilterPanel
+        title="Filter Catatan"
+        description="Kolam dan rentang tanggal"
+        onApply={() => loadLogs()}
+      >
+        <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
+          <div className="space-y-2 sm:col-span-2 xl:col-span-1">
             <Label htmlFor="filter-pond">Kolam</Label>
-            <select
-              id="filter-pond"
-              className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
-              value={businessUnitId}
-              onChange={(e) => setBusinessUnitId(e.target.value)}
-            >
+            <Select id="filter-pond" value={businessUnitId} onChange={(e) => setBusinessUnitId(e.target.value)}>
               <option value="">Semua kolam</option>
               {ponds.map((pond) => (
                 <option key={pond.id} value={pond.id}>
                   {pond.name}
                 </option>
               ))}
-            </select>
+            </Select>
           </div>
           <div className="space-y-2">
             <Label htmlFor="filter-from">Dari</Label>
@@ -72,42 +78,46 @@ export function WaterQualityListPage() {
             <Label htmlFor="filter-to">Sampai</Label>
             <Input id="filter-to" type="date" value={to} onChange={(e) => setTo(e.target.value)} />
           </div>
-          <div className="flex items-end">
-            <Button onClick={loadLogs}>Terapkan</Button>
+        </div>
+      </MobileFilterPanel>
+
+      {error && <ErrorAlert>{error}</ErrorAlert>}
+
+      <div className="space-y-4">
+        <MobileSectionHeader
+          title="Daftar Catatan"
+          action={
+            <span className="rounded-full bg-muted px-3 py-1 text-xs font-medium text-muted-foreground">
+              {logs.length} entri
+            </span>
+          }
+        />
+
+        {loading ? (
+          <div className="space-y-3">
+            {Array.from({ length: 3 }).map((_, index) => (
+              <Skeleton key={index} className="h-28 rounded-2xl" />
+            ))}
           </div>
-        </CardContent>
-      </Card>
-
-      {error && <p className="text-sm text-destructive">{error}</p>}
-
-      <Card>
-        <CardContent className="space-y-3 pt-6">
-          {logs.length === 0 ? (
-            <p className="text-sm text-muted-foreground">Belum ada catatan.</p>
-          ) : (
-            logs.map((log) => (
-              <div key={log.id} className="flex flex-wrap items-center justify-between gap-3 rounded-lg border p-4">
-                <div>
-                  <p className="font-medium">{log.businessUnitName}</p>
-                  <p className="text-sm text-muted-foreground">
-                    {new Intl.DateTimeFormat('id-ID', { dateStyle: 'medium', timeStyle: 'short' }).format(new Date(log.measuredAt))}
-                  </p>
-                  <p className="text-sm">
-                    Ammonia {log.ammoniaPpm ?? '-'} ppm · pH {log.ph ?? '-'}
-                  </p>
-                  {log.notes && <p className="mt-1 text-sm text-muted-foreground">{log.notes}</p>}
-                </div>
-                <div className="flex items-center gap-2">
-                  <WaterQualityStatusBadge status={log.status} />
-                  <Button asChild variant="outline" size="sm">
-                    <Link to={`/water-quality/${log.id}/edit`}>Edit</Link>
-                  </Button>
-                </div>
-              </div>
-            ))
-          )}
-        </CardContent>
-      </Card>
+        ) : logs.length === 0 ? (
+          <EmptyState
+            icon={Droplets}
+            title="Belum ada catatan"
+            description="Tambah catatan kualitas air untuk mulai memantau kondisi kolam."
+            action={
+              <Button asChild className="w-full sm:w-auto">
+                <Link to="/water-quality/new">Tambah Catatan</Link>
+              </Button>
+            }
+          />
+        ) : (
+          <div className="space-y-3">
+            {logs.map((log) => (
+              <WaterQualityLogRow key={log.id} log={log} />
+            ))}
+          </div>
+        )}
+      </div>
     </div>
   )
 }
