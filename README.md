@@ -15,11 +15,30 @@ cp .env.example .env
 docker compose up --build
 ```
 
-Akses:
+Semua port host bisa di-overwrite lewat `.env`:
 
-- Frontend: http://localhost:3000
-- Backend health: http://localhost:8080/health
-- Frontend proxy health: http://localhost:3000/api/health
+| Variable | Default | Keterangan |
+|---|---|---|
+| `MYSQL_PORT` | 3306 | Port MySQL di host |
+| `APP_PORT` | 8080 | Port backend di host & container |
+| `FRONTEND_PORT` | 3000 | Port frontend di host |
+| `FRONTEND_CONTAINER_PORT` | 80 | Port nginx di dalam container |
+| `FRONTEND_DEV_PORT` | 5173 | Port Vite dev server (lokal) |
+
+Contoh custom port:
+
+```env
+MYSQL_PORT=3307
+APP_PORT=9090
+FRONTEND_PORT=4000
+CORS_ORIGINS=http://localhost:4000,http://localhost:5173
+```
+
+Akses (sesuaikan dengan `.env`):
+
+- Frontend: http://localhost:${FRONTEND_PORT:-3000}
+- Backend health: http://localhost:${APP_PORT:-8080}/health
+- Frontend proxy health: http://localhost:${FRONTEND_PORT:-3000}/api/health
 
 ## Development lokal
 
@@ -37,10 +56,11 @@ go run ./cmd/server
 ```bash
 cd frontend
 pnpm install
+cp .env.example .env.local   # opsional, sesuaikan APP_PORT / FRONTEND_DEV_PORT
 pnpm dev
 ```
 
-Frontend dev server mem-proxy `/api/*` ke `http://localhost:8080`.
+Frontend dev server mem-proxy `/api/*` ke backend (`VITE_PROXY_TARGET` atau `http://localhost:${APP_PORT}`).
 
 ## Endpoint
 
