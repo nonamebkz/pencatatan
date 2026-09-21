@@ -2,9 +2,9 @@
 
 | Field | Value |
 |---|---|
-| Versi | 1.2 |
-| Status | Final — selaras BRD v1.1 |
-| BRD Reference | [BRD.md](./BRD.md) v1.1 |
+| Versi | 1.3 |
+| Status | Final — selaras BRD v1.2 |
+| BRD Reference | [BRD.md](./BRD.md) v1.2 |
 | Arsitektur | React SPA + Go REST API + MariaDB + Redis |
 
 ---
@@ -84,6 +84,7 @@ Aturan bisnis lengkap: [BRD.md §9–§14](./BRD.md).
 | Bagi hasil | Max 2 pihak; persen total = 100% |
 | ConsumableLot | Link ke purchase opsional; manual allowed |
 | Anti double-count | Laporan sewa by kontrak; bagi hasil by record |
+| WaterQualityLog (T2) | Atom observasional; no Transaction; threshold hardcoded |
 
 ---
 
@@ -104,6 +105,7 @@ pencatatan-usaha/
 │   │   │   ├── feed.api.ts
 │   │   │   ├── rent.api.ts
 │   │   │   ├── distribution.api.ts
+│   │   │   ├── water-quality.api.ts
 │   │   │   └── report.api.ts
 │   │   ├── components/
 │   │   │   ├── ui/                 # shadcn
@@ -117,6 +119,7 @@ pencatatan-usaha/
 │   │   │   ├── LoginPage.tsx
 │   │   │   ├── DashboardPage.tsx
 │   │   │   ├── ponds/
+│   │   │   ├── water-quality/
 │   │   │   ├── purchases/
 │   │   │   ├── feed/
 │   │   │   ├── rent/
@@ -156,6 +159,7 @@ pencatatan-usaha/
 │   │   │   ├── feed_handler.go
 │   │   │   ├── rent_handler.go
 │   │   │   ├── distribution_handler.go
+│   │   │   ├── water_quality_handler.go
 │   │   │   ├── report_handler.go
 │   │   │   └── dashboard_handler.go
 │   │   ├── service/                # business logic (core atoms)
@@ -166,6 +170,7 @@ pencatatan-usaha/
 │   │   │   ├── contract_service.go
 │   │   │   ├── consumable_service.go
 │   │   │   ├── distribution_service.go
+│   │   │   ├── water_quality_service.go
 │   │   │   └── report_service.go
 │   │   ├── repository/             # GORM queries
 │   │   │   ├── user_repo.go
@@ -182,7 +187,9 @@ pencatatan-usaha/
 │   │       └── redis.go            # cache helper + key patterns
 │   ├── migrations/                 # SQL files (golang-migrate)
 │   │   ├── 000001_init.up.sql
-│   │   └── 000001_init.down.sql
+│   │   ├── 000001_init.down.sql
+│   │   ├── 000002_water_quality_logs.up.sql   # T2
+│   │   └── 000002_water_quality_logs.down.sql # T2
 │   ├── go.mod
 │   └── go.sum
 │
@@ -429,6 +436,26 @@ CREATE TABLE distribution_records (
     FOREIGN KEY (transaction_id) REFERENCES transactions(id) ON DELETE SET NULL,
     INDEX idx_distribution_records_scheme (scheme_id)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+-- ─── WaterQualityLog Atom (T2) ──────────────────────
+
+CREATE TABLE water_quality_logs (
+    id                 CHAR(36)     PRIMARY KEY,
+    workspace_id       CHAR(36)     NOT NULL,
+    business_unit_id   CHAR(36)     NOT NULL,
+    batch_id           CHAR(36),
+    measured_at        DATETIME(3)  NOT NULL,
+    ammonia_ppm        DECIMAL(6,3),
+    ph                 DECIMAL(4,2),
+    notes              TEXT,
+    created_at         DATETIME(3)  NOT NULL DEFAULT CURRENT_TIMESTAMP(3),
+    updated_at         DATETIME(3)  NOT NULL DEFAULT CURRENT_TIMESTAMP(3) ON UPDATE CURRENT_TIMESTAMP(3),
+    FOREIGN KEY (workspace_id) REFERENCES workspaces(id) ON DELETE CASCADE,
+    FOREIGN KEY (business_unit_id) REFERENCES business_units(id) ON DELETE CASCADE,
+    FOREIGN KEY (batch_id) REFERENCES batches(id) ON DELETE SET NULL,
+    INDEX idx_wq_logs_workspace_measured (workspace_id, measured_at),
+    INDEX idx_wq_logs_business_unit (business_unit_id, measured_at)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 ```
 
 ### GORM Model Example
@@ -565,7 +592,33 @@ Base URL: `/api/v1`
 | POST | `/distribution-records` | `{ schemeId, periodStart, periodEnd, grossResult, totalCost }` | `DistributionRecord` (auto-calc) |
 | POST | `/distribution-records/:id/pay` | `{ partyIndex, paymentDate, cashAccountId }` — **1 transaction per pihak** | `{ record, transaction }` |
 
-### 5.9 Reports
+### 5.9 WaterQualityLog (T2 — Kualitas Air)
+
+| Method | Endpoint | Body / Query | Response |
+|---|---|---|---|
+| GET | `/water-quality-logs` | `?businessUnitId=&batchId=&from=&to=&page=&limit=` | `[WaterQualityLog]` with status badge |
+| GET | `/water-quality-logs/:id` | — | `WaterQualityLog` |
+| POST | `/water-quality-logs` | `{ businessUnitId, batchId?, measuredAt, ammoniaPpm?, ph?, notes? }` — **min 1 of ammoniaPpm/ph/notes** | `WaterQualityLog` |
+| PUT | `/water-quality-logs/:id` | `{ ...fields }` | `WaterQualityLog` |
+| DELETE | `/water-quality-logs/:id` | — | `204` |
+| GET | `/water-quality-logs/trends` | `?businessUnitId=&days=7\|30` | `{ series: { ammonia[], ph[] }, measuredAt[] }` |
+
+**Validation (server):**
+- Reject if kolam status = `INACTIVE`
+- Reject if all of `ammoniaPpm`, `ph`, `notes` empty
+- Compute `status`: `NORMAL` \| `WARNING` \| `DANGER` from hardcoded thresholds (BR-F7)
+
+**Threshold constants (T2):**
+```go
+const (
+    AmmoniaWarnPPM  = 0.5
+    AmmoniaDangerPPM = 1.0
+    PHMinNormal = 6.5
+    PHMaxNormal = 8.5
+)
+```
+
+### 5.10 Reports
 
 | Method | Endpoint | Query | Response |
 |---|---|---|---|
@@ -575,14 +628,28 @@ Base URL: `/api/v1`
 | GET | `/reports/feed` | `from, to, status?` | `{ lots[], avgDurationDays }` |
 | GET | `/reports/distribution` | `from, to, paymentStatus?` | `{ records[], totalPaid, totalUnpaid }` |
 | GET | `/reports/summary` | `from, to` | `{ purchases, feed, rent, distribution }` |
+| GET | `/reports/water-quality` | `from, to, businessUnitId?, days=7\|30` | `{ logs[], trends, notMeasuredToday[] }` |
 
-### 5.10 Dashboard
+### 5.11 Dashboard
 
 | Method | Endpoint | Query | Response |
 |---|---|---|---|
-| GET | `/dashboard` | `month?, year?` | `{ cards, activeFeedLots, expiringContracts }` |
+| GET | `/dashboard` | `month?, year?` | `{ cards, activeFeedLots, expiringContracts, waterQualitySummary[] }` |
 
-### 5.11 Health
+**`waterQualitySummary[]` item (T2):**
+```json
+{
+  "businessUnitId": "uuid",
+  "businessUnitName": "Kolam A",
+  "lastMeasuredAt": "2026-09-21T07:30:00+07:00",
+  "ammoniaPpm": 0.3,
+  "ph": 7.2,
+  "status": "NORMAL",
+  "notMeasuredToday": false
+}
+```
+
+### 5.12 Health
 
 | Method | Endpoint | Response |
 |---|---|---|
@@ -599,6 +666,7 @@ Base URL: `/api/v1`
 | `dashboard:{wsId}:{year}:{month}` | 60s | Dashboard response JSON | Any write in workspace |
 | `report:{type}:{wsId}:{hash}` | 120s | Report response JSON | Write matching entity type |
 | `ponds:{wsId}` | 300s | List kolam | CRUD pond |
+| `water-quality:{wsId}:{hash}` | 120s | List/trends response | CRUD water quality log |
 | `auth:blacklist:{jti}` | = token expiry | `"1"` | Logout |
 | `auth:refresh:{userId}` | 7d | Refresh token (T3) | Logout all |
 
@@ -888,6 +956,10 @@ const router = createBrowserRouter([
       { path: 'ponds', element: <PondListPage /> },
       { path: 'ponds/new', element: <PondFormPage /> },
       { path: 'ponds/:id/edit', element: <PondFormPage /> },
+      { path: 'ponds/:id', element: <PondDetailPage /> },  // tabs: info | kualitas air (T2)
+      { path: 'water-quality', element: <WaterQualityListPage /> },
+      { path: 'water-quality/new', element: <WaterQualityFormPage /> },
+      { path: 'water-quality/:id/edit', element: <WaterQualityFormPage /> },
       { path: 'purchases', element: <PurchaseListPage /> },
       { path: 'purchases/new', element: <PurchaseFormPage /> },
       { path: 'feed', element: <FeedListPage /> },
@@ -935,6 +1007,7 @@ export const leleTemplate = {
   menu: [
     { path: '/dashboard', label: 'Dashboard', icon: 'LayoutDashboard' },
     { path: '/ponds', label: 'Kolam', icon: 'Fish' },
+    { path: '/water-quality', label: 'Kualitas Air', icon: 'Droplets' }, // T2
     // ...
   ],
 };
@@ -949,14 +1022,16 @@ export const leleTemplate = {
 | `WorkspaceSwitcher` | workspaces, activeId, onSwitch | AppLayout header |
 | `MoneyInput` | value, onChange | Semua form nominal |
 | `DatePicker` | value, onChange | Semua form tanggal |
-| `BusinessUnitSelect` | value, onChange | Form pembelian, pakan, sewa |
-| `BatchSelect` | value, onChange | Form pembelian, pakan |
+| `BusinessUnitSelect` | value, onChange | Form pembelian, pakan, sewa, kualitas air |
+| `BatchSelect` | value, onChange | Form pembelian, pakan, kualitas air |
 | `PurchaseForm` | onSubmit | P-06 |
 | `ConsumablePromptDialog` | open, onConfirm, onCancel | P-07 |
 | `PaymentScheduleTable` | schedules, onPay | P-12 |
 | `DistributionCalculator` | scheme, grossResult, totalCost | P-15 |
 | `SummaryCards` | data | P-03 |
 | `FeedLotWidget` | activeLots | P-03 |
+| `WaterQualityWidget` | waterQualitySummary | P-03 (T2) |
+| `WaterQualityStatusBadge` | ammoniaPpm, ph | List, form, dashboard (T2) |
 | `ReportTable` | columns, data, totals | P-17 |
 
 ---
@@ -1222,6 +1297,26 @@ func main() {
 - [ ] Playwright E2E critical flows
 
 **DoD:** MVP lengkap sesuai BRD checklist.
+
+### Sprint 4 — Kualitas Air (T2)
+
+**Backend:**
+- [ ] Migration 000002_water_quality_logs
+- [ ] WaterQualityLog CRUD + validation (BR-F1–F11)
+- [ ] Threshold status calculator (NORMAL/WARNING/DANGER)
+- [ ] GET `/water-quality-logs/trends`
+- [ ] Extend dashboard response with `waterQualitySummary[]`
+- [ ] Report `/reports/water-quality` (RPT-07)
+- [ ] Cache invalidation on water quality writes
+
+**Frontend:**
+- [ ] WaterQuality list + form pages
+- [ ] Tab "Kualitas Air" di PondDetailPage
+- [ ] WaterQualityWidget + WaterQualityStatusBadge di dashboard
+- [ ] Report page RPT-07 dengan line chart (7/30 hari)
+- [ ] Menu item "Kualitas Air" di lele template (business only)
+
+**DoD:** 9 acceptance criteria Epic E7 (BRD §15) terpenuhi.
 
 ---
 
