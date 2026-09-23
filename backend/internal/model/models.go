@@ -43,7 +43,8 @@ type WaterQualityLog struct {
 	AmmoniaPPM      *float64           `json:"ammoniaPpm,omitempty"`
 	PH              *float64           `json:"ph,omitempty"`
 	Notes           *string            `json:"notes,omitempty"`
-	Status          WaterQualityStatus `json:"status"`
+	Status          WaterQualityStatus       `json:"status"`
+	Advice          []WaterQualityAdviceItem `json:"advice,omitempty"`
 	CreatedAt       time.Time          `json:"createdAt"`
 	UpdatedAt       time.Time          `json:"updatedAt"`
 }
@@ -61,6 +62,7 @@ type WaterQualitySummary struct {
 	LastMeasuredAt   *time.Time         `json:"lastMeasuredAt,omitempty"`
 	AmmoniaPPM       *float64           `json:"ammoniaPpm,omitempty"`
 	PH               *float64           `json:"ph,omitempty"`
-	Status           WaterQualityStatus `json:"status"`
+	Status           WaterQualityStatus       `json:"status"`
+	Advice           []WaterQualityAdviceItem `json:"advice,omitempty"`
 	NotMeasuredToday bool               `json:"notMeasuredToday"`
 }

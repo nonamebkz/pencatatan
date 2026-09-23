@@ -2,6 +2,7 @@ import type { LucideIcon } from 'lucide-react'
 import type { ReactNode } from 'react'
 
 import { cn } from '@/lib/utils'
+import { surface } from '@/lib/design'
 
 type EmptyStateProps = {
   icon: LucideIcon
@@ -13,7 +14,13 @@ type EmptyStateProps = {
 
 export function EmptyState({ icon: Icon, title, description, action, className }: EmptyStateProps) {
   return (
-    <div className={cn('flex flex-col items-center justify-center rounded-2xl border border-dashed bg-card/50 px-4 py-10 text-center sm:px-6 sm:py-12', className)}>
+    <div
+      className={cn(
+        surface.empty,
+        'flex flex-col items-center justify-center px-4 py-10 text-center sm:px-6 sm:py-12',
+        className,
+      )}
+    >
       <div className="mb-4 rounded-2xl bg-muted p-4 text-muted-foreground">
         <Icon className="size-8" />
       </div>

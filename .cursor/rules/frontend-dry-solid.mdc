@@ -1,0 +1,46 @@
+---
+description: Frontend DRY, SOLID, dan konsistensi shadcn/ui
+globs: frontend/**/*
+alwaysApply: false
+---
+
+# Frontend: DRY, SOLID, dan Design System
+
+## Prinsip utama
+
+1. **DRY** — Jangan duplikasi pola UI (badge hitung, kartu metrik, callout info, back link, sticky form footer, skeleton list). Taruh di `frontend/src/components/shared/` atau `frontend/src/lib/design.ts`.
+2. **SOLID (praktis untuk React)**
+   - **S** — Satu komponen = satu tanggung jawab (mis. `PageHeader` hanya judul/aksi, bukan fetch data).
+   - **O** — Perluas lewat props (`tone`, `variant`, `className`), bukan copy-paste markup.
+   - **L** — Wrapper shadcn (`Button`, `Card`, `Alert`) tetap bisa diganti implementasi tanpa ubah halaman.
+   - **I** — Props kecil dan fokus; hindari “god component” yang mengurus layout + form + API.
+   - **D** — Halaman bergantung pada abstraksi shared (`MetricCard`, `Field`), bukan class Tailwind panjang inline.
+3. **shadcn/ui** — Style `new-york`, token dari `index.css`. Primitif di `@/components/ui/*`; komposisi aplikasi di `@/components/shared/*`.
+
+**Graphify**: dari `frontend/`, graf di `frontend/graphify-out/` — lihat `graphify-monorepo.mdc`.
+
+## Hierarki komponen
+
+| Lapisan | Lokasi | Contoh |
+|---------|--------|--------|
+| Primitif | `components/ui/` | `Button`, `Input`, `Alert`, `Card` |
+| Shared | `components/shared/` | `PageHeader`, `PanelCard`, `MetricCard`, `Field` |
+| Domain | `components/<domain>/` | `TransactionRow`, `PondCard` |
+| Halaman | `pages/` | Fetch state, susun shared + domain |
+
+## Konvensi visual
+
+- Gunakan helper `design.ts`: `surface.panel`, `surface.metric`, `skeleton.block`, `iconBadge(tone)`.
+- Radius panel aplikasi: `rounded-2xl` (bukan campur aduk `rounded-xl` di panel besar kecuali di dalam shadcn default yang belum di-wrap).
+- Spacing halaman: bungkus konten dengan `PageShell` (`space-y-6 md:space-y-8`).
+- Error: `ErrorAlert` (shadcn `Alert` destructive), bukan div custom baru.
+- Info: `InfoCallout`, bukan border primary manual di halaman.
+
+## Checklist sebelum merge UI
+
+- [ ] Tidak ada blok `rounded-2xl border bg-card` duplikat — pakai `MetricCard` / `PanelCard`.
+- [ ] Form field memakai `Field` / `TextField` / `SelectField` / `TextareaField`.
+- [ ] Form keuangan: `useCashAccountAndPonds`, `MobileFormFooter` + `form` id di mobile.
+- [ ] Import dari `@/components/ui/*` untuk kontrol interaktif.
+- [ ] Jalankan `npm run build` atau lint di `frontend/`.
+- [ ] Jika ada perubahan kode: `cd frontend && graphify update .` sebelum selesai.

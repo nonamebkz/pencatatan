@@ -1,67 +1,122 @@
 import { useState } from 'react'
-import { Link, useNavigate } from 'react-router-dom'
-import { LogOut, UserCog, UserRound } from 'lucide-react'
+import { Link } from 'react-router-dom'
+import { ChevronDown, Settings2, UserCog, UserRound } from 'lucide-react'
 
+import { LogoutButton } from '@/components/auth/LogoutButton'
 import { useAuth } from '@/contexts/AuthContext'
 import { cn } from '@/lib/utils'
 
-export function UserMenu() {
-  const navigate = useNavigate()
-  const { user, isAdmin, logout } = useAuth()
+type UserMenuProps = {
+  layout?: 'sidebar' | 'header'
+}
+
+export function UserMenu({ layout = 'header' }: UserMenuProps) {
+  const { user, isAdmin } = useAuth()
   const [open, setOpen] = useState(false)
 
   if (!user) return null
 
-  return (
-    <div className="relative">
-      <button
-        type="button"
-        onClick={() => setOpen((value) => !value)}
-        className="touch-target inline-flex items-center gap-2 rounded-xl border bg-card px-2 py-1.5 text-sm sm:px-3"
-        aria-expanded={open}
-      >
-        <span className="flex size-8 items-center justify-center rounded-lg bg-primary/10 text-primary">
-          <UserRound className="size-4" />
-        </span>
-        <span className="hidden max-w-24 truncate font-medium sm:inline">{user.name.split(' ')[0]}</span>
-      </button>
-
-      {open && (
-        <>
-          <button type="button" className="fixed inset-0 z-40" aria-label="Tutup menu" onClick={() => setOpen(false)} />
-          <div className="absolute right-0 top-[calc(100%+0.5rem)] z-50 w-56 overflow-hidden rounded-2xl border bg-popover shadow-lg">
-            <div className="border-b px-4 py-3">
-              <p className="truncate font-semibold">{user.name}</p>
-              <p className="truncate text-xs text-muted-foreground">{user.email}</p>
-            </div>
-            <div className="p-1">
-              {isAdmin && (
-                <Link
-                  to="/users"
-                  onClick={() => setOpen(false)}
-                  className="flex items-center gap-2 rounded-xl px-3 py-2.5 text-sm hover:bg-muted"
-                >
-                  <UserCog className="size-4" />
-                  Kelola Pengguna
-                </Link>
-              )}
-              <button
-                type="button"
-                onClick={() =>
-                  void logout().then(() => {
-                    setOpen(false)
-                    navigate('/login')
-                  })
-                }
-                className={cn('flex w-full items-center gap-2 rounded-xl px-3 py-2.5 text-sm text-destructive hover:bg-destructive/5')}
-              >
-                <LogOut className="size-4" />
-                Keluar
-              </button>
-            </div>
+  if (layout === 'sidebar') {
+    return (
+      <div className="space-y-3 rounded-2xl border bg-card p-3">
+        <div className="flex items-center gap-3">
+          <span className="flex size-10 shrink-0 items-center justify-center rounded-xl bg-primary/10 text-primary">
+            <UserRound className="size-5" />
+          </span>
+          <div className="min-w-0 flex-1">
+            <p className="truncate font-semibold">{user.name}</p>
+            <p className="truncate text-xs text-muted-foreground">{user.email}</p>
+            <p className="mt-0.5 text-[10px] font-medium uppercase tracking-wide text-muted-foreground">
+              {user.role === 'ADMIN' ? 'Administrator' : 'Pengguna'}
+            </p>
           </div>
-        </>
-      )}
+        </div>
+
+        {isAdmin && (
+          <>
+            <Link
+              to="/users"
+              className="flex items-center gap-2 rounded-xl px-3 py-2.5 text-sm text-muted-foreground transition hover:bg-muted hover:text-foreground"
+            >
+              <UserCog className="size-4" />
+              Kelola Pengguna
+            </Link>
+            <Link
+              to="/settings/water-quality"
+              className="flex items-center gap-2 rounded-xl px-3 py-2.5 text-sm text-muted-foreground transition hover:bg-muted hover:text-foreground"
+            >
+              <Settings2 className="size-4" />
+              Kualitas Air
+            </Link>
+          </>
+        )}
+
+        <LogoutButton variant="outline" />
+      </div>
+    )
+  }
+
+  return (
+    <div className="flex items-center gap-1">
+      <LogoutButton iconOnly className="md:hidden" />
+
+      <div className="relative">
+        <button
+          type="button"
+          onClick={() => setOpen((value) => !value)}
+          className="touch-target inline-flex max-w-[11rem] items-center gap-2 rounded-xl border bg-card px-2 py-1.5 text-sm sm:max-w-none sm:px-3"
+          aria-expanded={open}
+          aria-haspopup="menu"
+        >
+          <span className="flex size-8 shrink-0 items-center justify-center rounded-lg bg-primary/10 text-primary">
+            <UserRound className="size-4" />
+          </span>
+          <span className="min-w-0 truncate font-medium">{user.name.split(' ')[0]}</span>
+          <ChevronDown className={cn('size-4 shrink-0 text-muted-foreground transition', open && 'rotate-180')} />
+        </button>
+
+        {open && (
+          <>
+            <button type="button" className="fixed inset-0 z-40" aria-label="Tutup menu" onClick={() => setOpen(false)} />
+            <div
+              role="menu"
+              className="absolute right-0 top-[calc(100%+0.5rem)] z-50 w-56 overflow-hidden rounded-2xl border bg-popover shadow-lg"
+            >
+              <div className="border-b px-4 py-3">
+                <p className="truncate font-semibold">{user.name}</p>
+                <p className="truncate text-xs text-muted-foreground">{user.email}</p>
+              </div>
+              <div className="space-y-1 p-2">
+                {isAdmin && (
+                  <>
+                    <Link
+                      to="/users"
+                      role="menuitem"
+                      onClick={() => setOpen(false)}
+                      className="flex items-center gap-2 rounded-xl px-3 py-2.5 text-sm hover:bg-muted"
+                    >
+                      <UserCog className="size-4" />
+                      Kelola Pengguna
+                    </Link>
+                    <Link
+                      to="/settings/water-quality"
+                      role="menuitem"
+                      onClick={() => setOpen(false)}
+                      className="flex items-center gap-2 rounded-xl px-3 py-2.5 text-sm hover:bg-muted"
+                    >
+                      <Settings2 className="size-4" />
+                      Kualitas Air
+                    </Link>
+                  </>
+                )}
+                <div className="px-1 pb-1" onClick={() => setOpen(false)}>
+                  <LogoutButton variant="ghost" className="w-full" />
+                </div>
+              </div>
+            </div>
+          </>
+        )}
+      </div>
     </div>
   )
 }

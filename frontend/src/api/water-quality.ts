@@ -22,8 +22,32 @@ export type WaterQualityLog = {
   ph?: number
   notes?: string
   status: WaterQualityStatus
+  advice?: WaterQualityAdviceItem[]
   createdAt: string
   updatedAt: string
+}
+
+export type WaterQualityAdviceItem = {
+  code: string
+  title: string
+  steps: string[]
+}
+
+export type WaterQualityConfig = {
+  ammoniaWarnPpm: number
+  ammoniaDangerPpm: number
+  phMinNormal: number
+  phMaxNormal: number
+  ammoniaAnalyteNote: string
+  advicePhLow: string[]
+  advicePhHigh: string[]
+  adviceAmmoniaWarn: string[]
+  adviceAmmoniaDanger: string[]
+}
+
+export type WaterQualityEvaluation = {
+  status: WaterQualityStatus
+  advice: WaterQualityAdviceItem[]
 }
 
 export type WaterQualitySummary = {
@@ -33,15 +57,32 @@ export type WaterQualitySummary = {
   ammoniaPpm?: number
   ph?: number
   status: WaterQualityStatus
+  advice?: WaterQualityAdviceItem[]
   notMeasuredToday: boolean
 }
 
 export type WaterQualityInput = {
   businessUnitId: string
+  batchId?: string
   measuredAt: string
   ammoniaPpm?: number
   ph?: number
   notes?: string
+}
+
+export type Batch = {
+  id: string
+  name: string
+  businessUnitId?: string
+  status: 'ACTIVE' | 'COMPLETED'
+}
+
+export function listBatches(params?: { businessUnitId?: string; status?: string }) {
+  const search = new URLSearchParams()
+  if (params?.businessUnitId) search.set('businessUnitId', params.businessUnitId)
+  if (params?.status) search.set('status', params.status)
+  const query = search.toString()
+  return api.get<Batch[]>(`/batches${query ? `?${query}` : ''}`)
 }
 
 export function listPonds(status?: string) {
@@ -55,6 +96,10 @@ export function createPond(body: Pick<Pond, 'name' | 'location' | 'notes'>) {
 
 export function getPond(id: string) {
   return api.get<Pond>(`/ponds/${id}`)
+}
+
+export function deletePond(id: string) {
+  return api.delete(`/ponds/${id}`)
 }
 
 export function listWaterQualityLogs(params: Record<string, string | number | undefined> = {}) {
@@ -92,10 +137,6 @@ export function getWaterQualityTrends(businessUnitId?: string, days = 7) {
   )
 }
 
-export function getDashboardSummary() {
-  return api.get<{ waterQualitySummary: WaterQualitySummary[] }>('/dashboard')
-}
-
 export function getWaterQualityReport(params: Record<string, string | number | undefined> = {}) {
   const search = new URLSearchParams()
   Object.entries(params).forEach(([key, value]) => {
@@ -109,4 +150,20 @@ export function getWaterQualityReport(params: Record<string, string | number | u
     trends: Array<{ measuredAt: string; ammoniaPpm?: number; ph?: number; status: WaterQualityStatus }>
     notMeasuredToday: WaterQualitySummary[]
   }>(`/reports/water-quality${query ? `?${query}` : ''}`)
+}
+
+export function getDashboardSummary() {
+  return api.get<{ waterQualitySummary: WaterQualitySummary[] }>('/dashboard')
+}
+
+export function getWaterQualityConfig() {
+  return api.get<WaterQualityConfig>('/water-quality/config')
+}
+
+export function updateWaterQualityConfig(body: WaterQualityConfig) {
+  return api.put<WaterQualityConfig>('/water-quality/config', body)
+}
+
+export function evaluateWaterQuality(body: Pick<WaterQualityInput, 'ammoniaPpm' | 'ph'>) {
+  return api.post<WaterQualityEvaluation>('/water-quality/evaluate', body)
 }

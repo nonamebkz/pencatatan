@@ -1,0 +1,68 @@
+---
+description: graphify per folder monorepo (frontend / backend / root)
+alwaysApply: true
+---
+
+# Graphify — monorepo Pencatatan
+
+Repo ini punya **tiga graf terpisah**. Selalu jalankan `graphify` dari **working directory yang sesuai** agar query memakai `graphify-out` yang benar.
+
+| Konteks kerja | `cd` sebelum graphify | Graf |
+|---------------|------------------------|------|
+| File di `frontend/**` | `frontend/` | `frontend/graphify-out/` |
+| File di `backend/**` | `backend/` | `backend/graphify-out/` |
+| Root (BRD, docker, full-stack, `docs/`) | root repo (`pencatatan/`) | `graphify-out/` |
+
+## Perintah (contoh)
+
+```bash
+# Eksplorasi UI
+cd frontend && graphify query "FinancePage routes api"
+
+# Eksplorasi API
+cd backend && graphify path "FinanceHandler" "FinanceRepository"
+
+# Arsitektur seluruh monorepo
+graphify query "auth middleware routes"
+```
+
+Wiki: `graphify-out/wiki/index.md` di **folder yang sama** (mis. `frontend/graphify-out/wiki/index.md`).
+
+## Wajib (sama seperti graphify global)
+
+Sebelum Read/Grep/Glob/Bash untuk eksplorasi:
+
+1. `cd` ke folder tabel di atas.
+2. `graphify query` | `graphify path` | `graphify explain`.
+
+Langsung Read/Grep hanya setelah graphify mengarahkan, atau jika `graphify-out/graph.json` di folder itu belum ada.
+
+## Update graf — wajib di akhir proses
+
+Setiap task yang **mengubah kode** (fitur, refactor, bugfix non-trivial) **belum selesai** sampai graf di-update. Lakukan **setelah** build/lint lulus, **sebelum** menyatakan done ke user.
+
+Jalankan dari folder yang berisi file yang diubah:
+
+```bash
+cd frontend && graphify update .
+cd backend && graphify update .
+# Hanya jika mengubah wiring/docs di root yang memengaruhi panduan arsitektur:
+graphify update .
+```
+
+| Perubahan | Update wajib |
+|-----------|----------------|
+| Hanya `frontend/**` | `cd frontend && graphify update .` |
+| Hanya `backend/**` | `cd backend && graphify update .` |
+| FE + BE | kedua perintah di atas |
+| Hanya `docs/` / `BRD` / `TECHNICAL_SPEC` (tanpa kode) | opsional root `graphify update .` |
+
+Subagent yang mengedit kode **wajib** menjalankan `graphify update .` di scope foldernya sebelum return. Koordinator memverifikasi jika spawn paralel.
+
+**Jangan** mengakhiri sesi fitur tanpa update — graf basi menyebabkan eksplorasi berikutnya salah.
+
+## Subagent
+
+- **Frontend subagent**: eksplorasi hanya via `cd …/frontend && graphify …`; jangan pakai graf root untuk navigasi komponen.
+- **Backend subagent**: eksplorasi hanya via `cd …/backend && graphify …`.
+- **Koordinator full-stack**: boleh root `graphify` untuk lintas lapisan; tetap spawn subagent dengan aturan folder di atas.

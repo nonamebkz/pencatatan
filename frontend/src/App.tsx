@@ -11,6 +11,12 @@ import { UserFormPage } from '@/pages/UserFormPage'
 import { UserListPage } from '@/pages/UserListPage'
 import { WaterQualityFormPage } from '@/pages/WaterQualityFormPage'
 import { WaterQualityListPage } from '@/pages/WaterQualityListPage'
+import { WaterQualityReportPage } from '@/pages/WaterQualityReportPage'
+import { WaterQualityConfigPage } from '@/pages/WaterQualityConfigPage'
+import { FinancePage } from '@/pages/FinancePage'
+import { OtherExpenseFormPage } from '@/pages/OtherExpenseFormPage'
+import { PurchaseDetailPage } from '@/pages/PurchaseDetailPage'
+import { PurchaseFormPage } from '@/pages/PurchaseFormPage'
 
 function App() {
   return (
@@ -27,8 +33,13 @@ function App() {
               <Route path="ponds" element={<PondListPage />} />
               <Route path="ponds/:id" element={<PondDetailPage />} />
               <Route path="water-quality" element={<WaterQualityListPage />} />
+              <Route path="water-quality/report" element={<WaterQualityReportPage />} />
               <Route path="water-quality/new" element={<WaterQualityFormPage />} />
               <Route path="water-quality/:id/edit" element={<WaterQualityFormPage />} />
+              <Route path="finance" element={<FinancePage />} />
+              <Route path="finance/purchases/new" element={<PurchaseFormPage />} />
+              <Route path="finance/purchases/:id" element={<PurchaseDetailPage />} />
+              <Route path="finance/expenses/new" element={<OtherExpenseFormPage />} />
             </Route>
 
             <Route element={<AdminRoute />}>
@@ -36,6 +47,7 @@ function App() {
                 <Route path="users" element={<UserListPage />} />
                 <Route path="users/new" element={<UserFormPage />} />
                 <Route path="users/:id/edit" element={<UserFormPage />} />
+                <Route path="settings/water-quality" element={<WaterQualityConfigPage />} />
               </Route>
             </Route>
           </Route>

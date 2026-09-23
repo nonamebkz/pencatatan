@@ -1,0 +1,83 @@
+---
+description: Backend Go — DRY, SOLID, layering, dan konvensi API
+globs: backend/**/*
+alwaysApply: false
+---
+
+# Backend: DRY, SOLID, dan arsitektur
+
+Stack: **Go + Fiber + database/sql (MariaDB)**. Spesifikasi API: `TECHNICAL_SPEC.md` §5–8.
+
+**Graphify**: dari `backend/`, graf di `backend/graphify-out/` — lihat `graphify-monorepo.mdc`.
+
+## Lapisan (jangan loncat)
+
+| Lapisan | Paket | Tanggung jawab |
+|---------|--------|----------------|
+| Entry | `cmd/server` | Wiring saja: config, DB, migrate, seed, buat repo/handler, daftar route |
+| HTTP | `internal/handler` | Parse request, validasi input, status HTTP, panggil repo/service |
+| Domain | `internal/service/<domain>` | Aturan bisnis murni (tanpa Fiber/SQL), bisa di-unit-test |
+| Data | `internal/repository` | SQL, scan row, filter struct, transaksi DB |
+| Model | `internal/model` | Struct entitas + konstanta status/role |
+| Infra | `internal/database`, `internal/migrate`, `internal/middleware`, `internal/httpx`, `internal/auth` | Koneksi, migrasi, JWT, response JSON |
+
+**SOLID praktis**
+
+- **S** — Satu handler per domain (`PondHandler`, `FinanceHandler`); satu repository per agregat data utama.
+- **O** — Perluas lewat method repo atau service baru, bukan copy-paste query di handler.
+- **L** — Handler bergantung pada struct repository konkret (OK untuk ukuran proyek ini); jangan taruh SQL di handler.
+- **I** — Repository method fokus (`GetByID`, `List`, `Create`), hindari “god repo” tanpa filter.
+- **D** — Handler memanggil repo/service; `main` hanya menyuntikkan dependency.
+
+## DRY — pola wajib
+
+1. **Response JSON** — Selalu `httpx.OK`, `httpx.OKWithMeta`, atau `httpx.Fail`. Jangan `c.JSON` ad hoc kecuali `201 Created` / `204 No Content` yang sudah memakai bentuk `{ success, data }` konsisten.
+2. **Error API** — Kode: `VALIDATION_ERROR`, `NOT_FOUND`, `UNAUTHORIZED`, `FORBIDDEN`, `INTERNAL_ERROR`. Pesan ke user dalam Bahasa Indonesia, singkat.
+3. **Workspace** — `workspaceID(c)` di `handler/context.go` (header `X-Workspace-ID`, fallback `model.DefaultWorkspaceID`). Setiap query multi-tenant harus filter `workspace_id`.
+4. **Auth** — Route dilindungi `middleware.Auth`; admin `middleware.AdminOnly()`. Ambil user dari `middleware.UserID(c)` / `UserRole(c)`, bukan parse JWT ulang di handler.
+5. **Context** — Operasi DB: `c.Context()` sebagai argumen pertama ke repository.
+6. **ID** — Entitas baru: `uuid.NewString()`.
+7. **Not found** — `sql.ErrNoRows` → `httpx.Fail(..., NOT_FOUND, ...)`, bukan 500.
+8. **Validasi** — Struct request privat di file handler (`type fooRequest struct`); validasi di handler sebelum repo. Normalisasi/normalisasi bisnis (mis. kategori pembelian) → `internal/service/<domain>/`.
+9. **SQL** — Hanya di `repository`. Pakai helper scan (`scanX`, `buildXWhere`) dalam file repo yang sama, jangan duplikasi kolom SELECT.
+10. **Migrasi** — Skema baru: file berurutan `internal/migrate/migrations/NNNNNN_<nama>.up.sql`; jangan ubah migrasi lama yang sudah di-deploy.
+
+## Menambah endpoint baru (checklist)
+
+1. Model / field di `internal/model` (atau file domain `finance.go`, dll.).
+2. Migrasi SQL jika perlu.
+3. Method repository (+ filter struct jika list).
+4. Method handler: parse → validasi → repo/service → `httpx.*`.
+5. Daftar route di `cmd/server/main.go` (grup `protected` / `admin` / `adminData` sesuai pola yang ada).
+6. Sesuaikan `TECHNICAL_SPEC.md` jika kontrak API berubah.
+
+## Service vs handler
+
+- **Handler**: HTTP, DTO request, mapping status code.
+- **Service**: rumus, threshold, normalisasi, perhitungan tanpa DB (contoh: `service/waterquality/threshold`, `service/finance/normalize`).
+- **Repository**: persistensi, agregasi SQL, transaksi.
+
+Jika logic > ~15 baris dan bukan sekadar validasi, pindah ke service.
+
+## Keamanan & data
+
+- Jangan log password, token, atau isi JWT.
+- Admin-only untuk hapus data sensitif (kolam, catatan, user) — ikuti pola `adminData` di `main.go`.
+- Parameter query untuk filter: parse di helper (`parseFinanceFilter`, `parseWaterQualityFilter`), validasi tipe/range sebelum SQL.
+
+## Testing (arah)
+
+- Service murni: unit test di `internal/service/...`.
+- Repository: integration test dengan DB test (opsional per fitur kritis).
+- Handler: minimal smoke atau test parse filter jika kompleks.
+
+## Anti-patterns
+
+- SQL atau transaksi di handler.
+- Duplikasi `workspaceID` / response envelope di banyak file (perluas helper di `handler` atau `httpx`).
+- Mengembalikan `err.Error()` ke client untuk error internal tanpa sanitasi (OK untuk MVP kecil, tetapi tetap gunakan kode `INTERNAL_ERROR`).
+- Model Fiber (`fiber.Ctx`) di dalam repository atau service.
+
+## Akhir task
+
+Setelah mengubah file Go: `go build ./...` lalu **`cd backend && graphify update .`** sebelum menyatakan selesai.

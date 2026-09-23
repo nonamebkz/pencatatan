@@ -94,7 +94,17 @@ func (r *PondRepository) Update(ctx context.Context, pond *model.BusinessUnit) e
 }
 
 func (r *PondRepository) Delete(ctx context.Context, workspaceID, id string) error {
-	result, err := r.db.ExecContext(ctx, `DELETE FROM business_units WHERE id = ? AND workspace_id = ?`, id, workspaceID)
+	tx, err := r.db.BeginTx(ctx, nil)
+	if err != nil {
+		return err
+	}
+	defer tx.Rollback()
+
+	if err := deletePondRelatedData(ctx, tx, workspaceID, id); err != nil {
+		return err
+	}
+
+	result, err := tx.ExecContext(ctx, `DELETE FROM business_units WHERE id = ? AND workspace_id = ?`, id, workspaceID)
 	if err != nil {
 		return err
 	}
@@ -105,6 +115,46 @@ func (r *PondRepository) Delete(ctx context.Context, workspaceID, id string) err
 	if rows == 0 {
 		return sql.ErrNoRows
 	}
+	return tx.Commit()
+}
+
+func deletePondRelatedData(ctx context.Context, tx *sql.Tx, workspaceID, businessUnitID string) error {
+	// Transaksi keuangan (+ baris pembelian) yang terhubung ke kolam atau batch kolam ini.
+	if _, err := tx.ExecContext(ctx, `
+		DELETE pli FROM purchase_line_items pli
+		INNER JOIN transactions t ON t.id = pli.transaction_id
+		LEFT JOIN batches b ON b.id = t.batch_id AND b.workspace_id = ? AND b.business_unit_id = ?
+		WHERE t.workspace_id = ?
+		  AND (t.business_unit_id = ? OR b.id IS NOT NULL)`,
+		workspaceID, businessUnitID, workspaceID, businessUnitID,
+	); err != nil {
+		return err
+	}
+
+	if _, err := tx.ExecContext(ctx, `
+		DELETE t FROM transactions t
+		LEFT JOIN batches b ON b.id = t.batch_id AND b.workspace_id = ? AND b.business_unit_id = ?
+		WHERE t.workspace_id = ?
+		  AND (t.business_unit_id = ? OR b.id IS NOT NULL)`,
+		workspaceID, businessUnitID, workspaceID, businessUnitID,
+	); err != nil {
+		return err
+	}
+
+	if _, err := tx.ExecContext(ctx, `
+		DELETE FROM water_quality_logs WHERE workspace_id = ? AND business_unit_id = ?`,
+		workspaceID, businessUnitID,
+	); err != nil {
+		return err
+	}
+
+	if _, err := tx.ExecContext(ctx, `
+		DELETE FROM batches WHERE workspace_id = ? AND business_unit_id = ?`,
+		workspaceID, businessUnitID,
+	); err != nil {
+		return err
+	}
+
 	return nil
 }
 
@@ -293,7 +343,7 @@ func (r *WaterQualityRepository) Trends(ctx context.Context, workspaceID, busine
 			value := ph.Float64
 			point.PH = &value
 		}
-		point.Status = waterquality.ComputeStatus(point.AmmoniaPPM, point.PH)
+		point.Status = waterquality.ComputeStatusLegacy(point.AmmoniaPPM, point.PH)
 		points = append(points, point)
 	}
 	return points, rows.Err()
@@ -361,7 +411,7 @@ func (r *WaterQualityRepository) Summaries(ctx context.Context, workspaceID stri
 			value := ph.Float64
 			summary.PH = &value
 		}
-		summary.Status = waterquality.ComputeStatus(summary.AmmoniaPPM, summary.PH)
+		summary.Status = waterquality.ComputeStatusLegacy(summary.AmmoniaPPM, summary.PH)
 		summary.NotMeasuredToday = notMeasured == 1
 		summaries = append(summaries, summary)
 	}
@@ -406,7 +456,7 @@ func scanWaterQualityLog(rows *sql.Rows) (model.WaterQualityLog, error) {
 		return item, err
 	}
 	applyNullableFields(&item, batchID, ammonia, ph, notes)
-	item.Status = waterquality.ComputeStatus(item.AmmoniaPPM, item.PH)
+	item.Status = waterquality.ComputeStatusLegacy(item.AmmoniaPPM, item.PH)
 	return item, nil
 }
 
@@ -425,7 +475,7 @@ func scanWaterQualityLogRow(row *sql.Row) (*model.WaterQualityLog, error) {
 		return nil, err
 	}
 	applyNullableFields(&item, batchID, ammonia, ph, notes)
-	item.Status = waterquality.ComputeStatus(item.AmmoniaPPM, item.PH)
+	item.Status = waterquality.ComputeStatusLegacy(item.AmmoniaPPM, item.PH)
 	return &item, nil
 }
 
@@ -457,4 +507,67 @@ func TodayRangeJakarta(now time.Time) (time.Time, time.Time, error) {
 	start := time.Date(local.Year(), local.Month(), local.Day(), 0, 0, 0, 0, loc)
 	end := start.Add(24 * time.Hour)
 	return start, end, nil
+}
+
+type BatchRepository struct {
+	db *sql.DB
+}
+
+func NewBatchRepository(db *sql.DB) *BatchRepository {
+	return &BatchRepository{db: db}
+}
+
+func (r *BatchRepository) List(ctx context.Context, workspaceID, businessUnitID, status string) ([]model.Batch, error) {
+	query := `
+		SELECT id, workspace_id, business_unit_id, name, start_date, end_date, status, notes, created_at
+		FROM batches
+		WHERE workspace_id = ?`
+	args := []any{workspaceID}
+
+	if businessUnitID != "" {
+		query += " AND business_unit_id = ?"
+		args = append(args, businessUnitID)
+	}
+	if status != "" {
+		query += " AND status = ?"
+		args = append(args, status)
+	}
+	query += " ORDER BY created_at DESC"
+
+	rows, err := r.db.QueryContext(ctx, query, args...)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	items := make([]model.Batch, 0)
+	for rows.Next() {
+		var item model.Batch
+		var businessUnitID sql.NullString
+		var startDate, endDate sql.NullTime
+		var notes sql.NullString
+		if err := rows.Scan(
+			&item.ID, &item.WorkspaceID, &businessUnitID, &item.Name, &startDate, &endDate, &item.Status, &notes, &item.CreatedAt,
+		); err != nil {
+			return nil, err
+		}
+		if businessUnitID.Valid {
+			value := businessUnitID.String
+			item.BusinessUnitID = &value
+		}
+		if startDate.Valid {
+			value := startDate.Time
+			item.StartDate = &value
+		}
+		if endDate.Valid {
+			value := endDate.Time
+			item.EndDate = &value
+		}
+		if notes.Valid {
+			value := notes.String
+			item.Notes = &value
+		}
+		items = append(items, item)
+	}
+	return items, rows.Err()
 }

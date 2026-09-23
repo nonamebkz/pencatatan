@@ -40,14 +40,20 @@ func main() {
 	}
 
 	userRepo := repository.NewUserRepository(db)
+	batchRepo := repository.NewBatchRepository(db)
 	pondRepo := repository.NewPondRepository(db)
 	waterQualityRepo := repository.NewWaterQualityRepository(db)
+	financeRepo := repository.NewFinanceRepository(db)
+
+	settingsRepo := repository.NewSettingsRepository(db)
 
 	healthHandler := handler.NewHealthHandler(db)
 	authHandler := handler.NewAuthHandler(userRepo, cfg.JWTSecret, cfg.JWTExpiry)
 	userHandler := handler.NewUserHandler(userRepo)
+	batchHandler := handler.NewBatchHandler(batchRepo)
 	pondHandler := handler.NewPondHandler(pondRepo)
-	waterQualityHandler := handler.NewWaterQualityHandler(waterQualityRepo, pondRepo)
+	waterQualityHandler := handler.NewWaterQualityHandler(waterQualityRepo, pondRepo, settingsRepo)
+	financeHandler := handler.NewFinanceHandler(financeRepo)
 
 	app := fiber.New(fiber.Config{
 		AppName:      "pencatatan-api",
@@ -80,21 +86,35 @@ func main() {
 	admin.Put("/:id/reset-password", userHandler.ResetPassword)
 	admin.Delete("/:id", userHandler.Delete)
 
+	protected.Get("/batches", batchHandler.List)
 	protected.Get("/ponds", pondHandler.List)
 	protected.Get("/ponds/:id", pondHandler.Get)
 	protected.Post("/ponds", pondHandler.Create)
 	protected.Put("/ponds/:id", pondHandler.Update)
-	protected.Delete("/ponds/:id", pondHandler.Delete)
+
+	adminData := protected.Group("", middleware.AdminOnly())
+	adminData.Delete("/ponds/:id", pondHandler.Delete)
+	adminData.Delete("/water-quality-logs/:id", waterQualityHandler.Delete)
+	adminData.Put("/water-quality/config", waterQualityHandler.UpdateConfig)
 
 	protected.Get("/water-quality-logs/trends", waterQualityHandler.Trends)
+	protected.Get("/water-quality/config", waterQualityHandler.GetConfig)
+	protected.Post("/water-quality/evaluate", waterQualityHandler.EvaluateMeasurements)
 	protected.Get("/water-quality-logs", waterQualityHandler.List)
 	protected.Get("/water-quality-logs/:id", waterQualityHandler.Get)
 	protected.Post("/water-quality-logs", waterQualityHandler.Create)
 	protected.Put("/water-quality-logs/:id", waterQualityHandler.Update)
-	protected.Delete("/water-quality-logs/:id", waterQualityHandler.Delete)
 
 	protected.Get("/reports/water-quality", waterQualityHandler.Report)
 	protected.Get("/dashboard", waterQualityHandler.DashboardSummary)
+
+	protected.Get("/cash-accounts", financeHandler.ListCashAccounts)
+	protected.Get("/finance/summary", financeHandler.Summary)
+	protected.Get("/transactions", financeHandler.ListTransactions)
+	protected.Get("/purchases", financeHandler.ListPurchases)
+	protected.Get("/purchases/:id", financeHandler.GetPurchase)
+	protected.Post("/purchases", financeHandler.CreatePurchase)
+	protected.Post("/transactions/other-expenses", financeHandler.CreateOtherExpense)
 
 	log.Printf("server listening on :%s", cfg.Port)
 	if err := app.Listen(":" + cfg.Port); err != nil {

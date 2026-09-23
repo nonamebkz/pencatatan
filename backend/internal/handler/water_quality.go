@@ -14,12 +14,13 @@ import (
 )
 
 type WaterQualityHandler struct {
-	logs  *repository.WaterQualityRepository
-	ponds *repository.PondRepository
+	logs     *repository.WaterQualityRepository
+	ponds    *repository.PondRepository
+	settings *repository.SettingsRepository
 }
 
-func NewWaterQualityHandler(logs *repository.WaterQualityRepository, ponds *repository.PondRepository) *WaterQualityHandler {
-	return &WaterQualityHandler{logs: logs, ponds: ponds}
+func NewWaterQualityHandler(logs *repository.WaterQualityRepository, ponds *repository.PondRepository, settings *repository.SettingsRepository) *WaterQualityHandler {
+	return &WaterQualityHandler{logs: logs, ponds: ponds, settings: settings}
 }
 
 type waterQualityRequest struct {
@@ -42,6 +43,14 @@ func (h *WaterQualityHandler) List(c *fiber.Ctx) error {
 		return httpx.Fail(c, fiber.StatusInternalServerError, "INTERNAL_ERROR", err.Error())
 	}
 
+	cfg, err := h.loadConfig(c)
+	if err != nil {
+		return httpx.Fail(c, fiber.StatusInternalServerError, "INTERNAL_ERROR", err.Error())
+	}
+	for i := range items {
+		h.applyLogEvaluation(cfg, &items[i])
+	}
+
 	return httpx.OKWithMeta(c, items, fiber.Map{
 		"page":  filter.Page,
 		"limit": filter.Limit,
@@ -57,6 +66,11 @@ func (h *WaterQualityHandler) Get(c *fiber.Ctx) error {
 	if item == nil {
 		return httpx.Fail(c, fiber.StatusNotFound, "NOT_FOUND", "Catatan kualitas air tidak ditemukan")
 	}
+	cfg, err := h.loadConfig(c)
+	if err != nil {
+		return httpx.Fail(c, fiber.StatusInternalServerError, "INTERNAL_ERROR", err.Error())
+	}
+	h.applyLogEvaluation(cfg, item)
 	return httpx.OK(c, item)
 }
 
@@ -75,7 +89,11 @@ func (h *WaterQualityHandler) Create(c *fiber.Ctx) error {
 		return httpx.Fail(c, fiber.StatusInternalServerError, "INTERNAL_ERROR", err.Error())
 	}
 
-	logItem.Status = waterquality.ComputeStatus(logItem.AmmoniaPPM, logItem.PH)
+	cfg, err := h.loadConfig(c)
+	if err != nil {
+		return httpx.Fail(c, fiber.StatusInternalServerError, "INTERNAL_ERROR", err.Error())
+	}
+	h.applyLogEvaluation(cfg, logItem)
 	return c.Status(fiber.StatusCreated).JSON(fiber.Map{"success": true, "data": logItem})
 }
 
@@ -107,14 +125,18 @@ func (h *WaterQualityHandler) Update(c *fiber.Ctx) error {
 	}
 
 	logItem.BusinessUnitName = existing.BusinessUnitName
-	logItem.Status = waterquality.ComputeStatus(logItem.AmmoniaPPM, logItem.PH)
+	cfg, err := h.loadConfig(c)
+	if err != nil {
+		return httpx.Fail(c, fiber.StatusInternalServerError, "INTERNAL_ERROR", err.Error())
+	}
+	h.applyLogEvaluation(cfg, logItem)
 	return httpx.OK(c, logItem)
 }
 
 func (h *WaterQualityHandler) Delete(c *fiber.Ctx) error {
 	if err := h.logs.Delete(c.Context(), workspaceID(c), c.Params("id")); err != nil {
 		if err == sql.ErrNoRows {
-			return httpx.Fail(c, fiber.StatusNotFound, "NOT_FOUND", "Catatan kualitas air tidak ditemukan")
+			return c.SendStatus(fiber.StatusNoContent)
 		}
 		return httpx.Fail(c, fiber.StatusInternalServerError, "INTERNAL_ERROR", err.Error())
 	}
@@ -126,6 +148,15 @@ func (h *WaterQualityHandler) Trends(c *fiber.Ctx) error {
 	points, err := h.logs.Trends(c.Context(), workspaceID(c), c.Query("businessUnitId"), days)
 	if err != nil {
 		return httpx.Fail(c, fiber.StatusInternalServerError, "INTERNAL_ERROR", err.Error())
+	}
+
+	cfg, err := h.loadConfig(c)
+	if err != nil {
+		return httpx.Fail(c, fiber.StatusInternalServerError, "INTERNAL_ERROR", err.Error())
+	}
+	for i := range points {
+		eval := waterquality.Evaluate(cfg, points[i].AmmoniaPPM, points[i].PH)
+		points[i].Status = eval.Status
 	}
 
 	measuredAt := make([]time.Time, 0, len(points))
@@ -174,6 +205,17 @@ func (h *WaterQualityHandler) Report(c *fiber.Ctx) error {
 		return httpx.Fail(c, fiber.StatusInternalServerError, "INTERNAL_ERROR", err.Error())
 	}
 
+	cfg, err := h.loadConfig(c)
+	if err != nil {
+		return httpx.Fail(c, fiber.StatusInternalServerError, "INTERNAL_ERROR", err.Error())
+	}
+	for i := range logs {
+		h.applyLogEvaluation(cfg, &logs[i])
+	}
+	for i := range summaries {
+		h.applySummaryEvaluation(cfg, &summaries[i])
+	}
+
 	notMeasuredToday := make([]model.WaterQualitySummary, 0)
 	for _, summary := range summaries {
 		if summary.NotMeasuredToday {
@@ -201,6 +243,14 @@ func (h *WaterQualityHandler) DashboardSummary(c *fiber.Ctx) error {
 	summaries, err := h.logs.Summaries(c.Context(), workspaceID(c), todayStart, todayEnd)
 	if err != nil {
 		return httpx.Fail(c, fiber.StatusInternalServerError, "INTERNAL_ERROR", err.Error())
+	}
+
+	cfg, err := h.loadConfig(c)
+	if err != nil {
+		return httpx.Fail(c, fiber.StatusInternalServerError, "INTERNAL_ERROR", err.Error())
+	}
+	for i := range summaries {
+		h.applySummaryEvaluation(cfg, &summaries[i])
 	}
 
 	return httpx.OK(c, fiber.Map{"waterQualitySummary": summaries})
@@ -299,4 +349,64 @@ func (e validationError) Error() string {
 
 func errValidation(message string) error {
 	return validationError{message: message}
+}
+
+func (h *WaterQualityHandler) loadConfig(c *fiber.Ctx) (model.WaterQualityConfig, error) {
+	if h.settings == nil {
+		return waterquality.DefaultConfig(), nil
+	}
+	return h.settings.GetWaterQualityConfig(c.Context(), workspaceID(c))
+}
+
+func (h *WaterQualityHandler) applyLogEvaluation(cfg model.WaterQualityConfig, log *model.WaterQualityLog) {
+	eval := waterquality.Evaluate(cfg, log.AmmoniaPPM, log.PH)
+	log.Status = eval.Status
+	log.Advice = eval.Advice
+}
+
+func (h *WaterQualityHandler) applySummaryEvaluation(cfg model.WaterQualityConfig, summary *model.WaterQualitySummary) {
+	eval := waterquality.Evaluate(cfg, summary.AmmoniaPPM, summary.PH)
+	summary.Status = eval.Status
+	summary.Advice = eval.Advice
+}
+
+func (h *WaterQualityHandler) GetConfig(c *fiber.Ctx) error {
+	cfg, err := h.loadConfig(c)
+	if err != nil {
+		return httpx.Fail(c, fiber.StatusInternalServerError, "INTERNAL_ERROR", err.Error())
+	}
+	return httpx.OK(c, cfg)
+}
+
+func (h *WaterQualityHandler) UpdateConfig(c *fiber.Ctx) error {
+	var cfg model.WaterQualityConfig
+	if err := c.BodyParser(&cfg); err != nil {
+		return httpx.Fail(c, fiber.StatusBadRequest, "VALIDATION_ERROR", "Payload tidak valid")
+	}
+	if cfg.AmmoniaWarnPPM <= 0 || cfg.AmmoniaDangerPPM <= 0 || cfg.PHMinNormal <= 0 || cfg.PHMaxNormal <= 0 {
+		return httpx.Fail(c, fiber.StatusBadRequest, "VALIDATION_ERROR", "Ambang threshold harus lebih dari 0")
+	}
+	if cfg.AmmoniaDangerPPM < cfg.AmmoniaWarnPPM {
+		return httpx.Fail(c, fiber.StatusBadRequest, "VALIDATION_ERROR", "Ambang bahaya amonia harus ≥ waspada")
+	}
+	if cfg.PHMaxNormal < cfg.PHMinNormal {
+		return httpx.Fail(c, fiber.StatusBadRequest, "VALIDATION_ERROR", "pH maksimum harus ≥ minimum")
+	}
+	cfg = waterquality.MergeWithDefaults(cfg)
+	if err := h.settings.SaveWaterQualityConfig(c.Context(), workspaceID(c), cfg); err != nil {
+		return httpx.Fail(c, fiber.StatusInternalServerError, "INTERNAL_ERROR", err.Error())
+	}
+	return httpx.OK(c, cfg)
+}
+
+func (h *WaterQualityHandler) EvaluateMeasurements(c *fiber.Ctx) error {
+	var req waterQualityRequest
+	if err := c.BodyParser(&req); err != nil {
+		return httpx.Fail(c, fiber.StatusBadRequest, "VALIDATION_ERROR", "Payload tidak valid")
+	}
+	cfg, err := h.loadConfig(c)
+	if err != nil {
+		return httpx.Fail(c, fiber.StatusInternalServerError, "INTERNAL_ERROR", err.Error())
+	}
+	return httpx.OK(c, waterquality.Evaluate(cfg, req.AmmoniaPPM, req.PH))
 }

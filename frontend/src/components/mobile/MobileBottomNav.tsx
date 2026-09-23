@@ -1,12 +1,14 @@
 import { Link, NavLink } from 'react-router-dom'
-import { Droplets, Fish, LayoutDashboard, Plus } from 'lucide-react'
+import { Droplets, Fish, LayoutDashboard, Plus, Wallet } from 'lucide-react'
 
 import { cn } from '@/lib/utils'
 
 const leftNav = [
   { to: '/', label: 'Beranda', icon: LayoutDashboard, end: true },
-  { to: '/ponds', label: 'Kolam', icon: Fish },
+  { to: '/finance', label: 'Keuangan', icon: Wallet },
 ]
+
+const midNav = [{ to: '/ponds', label: 'Kolam', icon: Fish }]
 
 const rightNav = [{ to: '/water-quality', label: 'Catatan', icon: Droplets }]
 
@@ -18,7 +20,7 @@ export function MobileBottomNav({ hidePrimaryAction = false }: MobileBottomNavPr
   return (
     <nav className="safe-bottom fixed inset-x-0 bottom-0 z-40 md:hidden">
       <div className="border-t bg-background/95 backdrop-blur">
-        <div className="mx-auto grid max-w-lg grid-cols-4 items-end px-2 pb-2 pt-1">
+        <div className="mx-auto grid max-w-lg grid-cols-5 items-end px-1 pb-2 pt-1">
           {leftNav.map(({ to, label, icon: Icon, end }) => (
             <NavLink
               key={to}
@@ -49,6 +51,22 @@ export function MobileBottomNav({ hidePrimaryAction = false }: MobileBottomNavPr
               </Link>
             )}
           </div>
+
+          {midNav.map(({ to, label, icon: Icon }) => (
+            <NavLink
+              key={to}
+              to={to}
+              className={({ isActive }) =>
+                cn(
+                  'touch-target flex flex-col items-center justify-center gap-1 rounded-xl py-2 text-[10px] font-medium',
+                  isActive ? 'text-primary' : 'text-muted-foreground',
+                )
+              }
+            >
+              <Icon className="size-5" strokeWidth={2.2} />
+              <span>{label}</span>
+            </NavLink>
+          ))}
 
           {rightNav.map(({ to, label, icon: Icon }) => (
             <NavLink

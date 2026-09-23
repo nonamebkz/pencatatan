@@ -15,6 +15,7 @@ import { getDashboardSummary, type WaterQualitySummary } from '@/api/water-quali
 import { PondStatusCard } from '@/components/dashboard/PondStatusCard'
 import { StatCard } from '@/components/dashboard/StatCard'
 import { MobileSectionHeader } from '@/components/mobile/MobileSectionHeader'
+import { ErrorAlert } from '@/components/shared/ErrorAlert'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Skeleton } from '@/components/ui/skeleton'
@@ -129,11 +130,7 @@ export function DashboardPage() {
         </div>
       </section>
 
-      {error && (
-        <div className="rounded-2xl border border-destructive/30 bg-destructive/5 p-4 text-sm text-destructive">
-          {error}
-        </div>
-      )}
+      {error && <ErrorAlert>{error}</ErrorAlert>}
 
       <section className="grid grid-cols-2 gap-3 md:gap-4 xl:grid-cols-4">
         {loading ? (

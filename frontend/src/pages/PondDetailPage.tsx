@@ -1,21 +1,37 @@
 import { useEffect, useState } from 'react'
-import { Link, useParams } from 'react-router-dom'
-import { ArrowLeft, Droplets, Fish, MapPin, Plus } from 'lucide-react'
+import { Link, useNavigate, useParams } from 'react-router-dom'
+import { Droplets, Fish, MapPin, Plus } from 'lucide-react'
 
-import { getPond, listWaterQualityLogs, type Pond, type WaterQualityLog } from '@/api/water-quality'
+import {
+  deletePond,
+  deleteWaterQualityLog,
+  getPond,
+  listWaterQualityLogs,
+  type Pond,
+  type WaterQualityLog,
+} from '@/api/water-quality'
+import { DeleteOutlineButton } from '@/components/shared/DeleteButton'
+import { BackLink } from '@/components/shared/BackLink'
 import { EmptyState } from '@/components/shared/EmptyState'
-import { ErrorAlert, PanelCard } from '@/components/shared/PanelCard'
+import { ErrorAlert } from '@/components/shared/ErrorAlert'
+import { PanelCard } from '@/components/shared/PanelCard'
+import { PageShell } from '@/components/shared/PageShell'
 import { WaterQualityLogRow } from '@/components/water-quality/WaterQualityLogRow'
 import { Button } from '@/components/ui/button'
 import { Skeleton } from '@/components/ui/skeleton'
+import { useAuth } from '@/contexts/AuthContext'
 import { cn } from '@/lib/utils'
 
 export function PondDetailPage() {
+  const navigate = useNavigate()
   const { id = '' } = useParams()
+  const { isAdmin } = useAuth()
   const [pond, setPond] = useState<Pond | null>(null)
   const [logs, setLogs] = useState<WaterQualityLog[]>([])
   const [error, setError] = useState<string | null>(null)
   const [loading, setLoading] = useState(true)
+  const [deletingPond, setDeletingPond] = useState(false)
+  const [deletingLogId, setDeletingLogId] = useState<string | null>(null)
 
   useEffect(() => {
     setLoading(true)
@@ -28,6 +44,33 @@ export function PondDetailPage() {
       .finally(() => setLoading(false))
   }, [id])
 
+  const handleDeletePond = async () => {
+    if (!pond) return
+    setDeletingPond(true)
+    setError(null)
+    try {
+      await deletePond(pond.id)
+      navigate('/ponds', { replace: true })
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Gagal menghapus kolam')
+    } finally {
+      setDeletingPond(false)
+    }
+  }
+
+  const handleDeleteLog = async (log: WaterQualityLog) => {
+    setDeletingLogId(log.id)
+    setError(null)
+    try {
+      await deleteWaterQualityLog(log.id)
+      setLogs((prev) => prev.filter((item) => item.id !== log.id))
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Gagal menghapus catatan')
+    } finally {
+      setDeletingLogId(null)
+    }
+  }
+
   if (loading) {
     return (
       <div className="space-y-6">
@@ -37,21 +80,21 @@ export function PondDetailPage() {
     )
   }
 
-  if (error || !pond) {
-    return <ErrorAlert>{error ?? 'Kolam tidak ditemukan'}</ErrorAlert>
+  if (error && !pond) {
+    return <ErrorAlert>{error}</ErrorAlert>
+  }
+
+  if (!pond) {
+    return <ErrorAlert>Kolam tidak ditemukan</ErrorAlert>
   }
 
   const isActive = pond.status === 'ACTIVE'
 
   return (
-    <div className="space-y-6 md:space-y-8">
-      <Button asChild variant="ghost" className="-ml-1 h-auto px-1 py-1 text-sm hover:bg-transparent sm:px-0">
-        <Link to="/ponds">
-          <ArrowLeft className="size-4" />
-          <span className="hidden sm:inline">Kembali ke daftar kolam</span>
-          <span className="sm:hidden">Kembali</span>
-        </Link>
-      </Button>
+    <PageShell>
+      <BackLink to="/ponds" label="Kembali ke daftar kolam" />
+
+      {error && <ErrorAlert>{error}</ErrorAlert>}
 
       <section className="overflow-hidden rounded-2xl border bg-gradient-to-br from-primary/10 via-card to-background p-4 shadow-sm sm:rounded-3xl sm:p-6 md:p-8">
         <div className="flex flex-col gap-4 sm:gap-6 lg:flex-row lg:items-start lg:justify-between">
@@ -79,12 +122,24 @@ export function PondDetailPage() {
             {pond.notes && <p className="max-w-2xl text-sm text-muted-foreground">{pond.notes}</p>}
           </div>
 
-          <Button asChild size="lg" className="w-full lg:w-auto">
-            <Link to={`/water-quality/new?pondId=${pond.id}`}>
-              <Plus className="size-4" />
-              Catat Kualitas Air
-            </Link>
-          </Button>
+          <div className="flex w-full flex-col gap-2 lg:w-auto">
+            <Button asChild size="lg" className="w-full lg:w-auto">
+              <Link to={`/water-quality/new?pondId=${pond.id}`}>
+                <Plus className="size-4" />
+                Catat Kualitas Air
+              </Link>
+            </Button>
+            {isAdmin && (
+              <DeleteOutlineButton
+                className="w-full lg:w-auto"
+                disabled={deletingPond}
+                confirmMessage={`Hapus kolam "${pond.name}"? Semua data terkait ikut terhapus: catatan kualitas air, batch, dan transaksi keuangan yang terhubung ke kolam ini.`}
+                onConfirm={handleDeletePond}
+              >
+                {deletingPond ? 'Menghapus…' : 'Hapus Kolam'}
+              </DeleteOutlineButton>
+            )}
+          </div>
         </div>
       </section>
 
@@ -103,11 +158,17 @@ export function PondDetailPage() {
         ) : (
           <div className="space-y-3">
             {logs.map((log) => (
-              <WaterQualityLogRow key={log.id} log={log} />
+              <WaterQualityLogRow
+                key={log.id}
+                log={log}
+                canDelete={isAdmin}
+                deleting={deletingLogId === log.id}
+                onDelete={handleDeleteLog}
+              />
             ))}
           </div>
         )}
       </PanelCard>
-    </div>
+    </PageShell>
   )
 }

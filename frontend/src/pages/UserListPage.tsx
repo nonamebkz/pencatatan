@@ -6,10 +6,12 @@ import type { AuthUser } from '@/api/auth'
 import { listUsers } from '@/api/users'
 import { UserCard } from '@/components/users/UserCard'
 import { EmptyState } from '@/components/shared/EmptyState'
-import { ErrorAlert } from '@/components/shared/PanelCard'
+import { ErrorAlert } from '@/components/shared/ErrorAlert'
+import { ListSkeleton } from '@/components/shared/ListSkeleton'
+import { MetricCard } from '@/components/shared/MetricCard'
 import { PageHeader } from '@/components/shared/PageHeader'
+import { PageShell } from '@/components/shared/PageShell'
 import { Button } from '@/components/ui/button'
-import { Skeleton } from '@/components/ui/skeleton'
 
 export function UserListPage() {
   const [users, setUsers] = useState<AuthUser[]>([])
@@ -26,7 +28,7 @@ export function UserListPage() {
   const activeCount = users.filter((user) => user.isActive).length
 
   return (
-    <div className="space-y-6 md:space-y-8">
+    <PageShell>
       <PageHeader
         title="Pengguna"
         description="Kelola akun tim operasional kolam. Tidak ada pendaftaran mandiri."
@@ -41,24 +43,14 @@ export function UserListPage() {
       />
 
       <div className="grid grid-cols-2 gap-3 md:max-w-lg">
-        <div className="rounded-2xl border bg-card p-4">
-          <p className="text-2xl font-semibold tabular-nums">{users.length}</p>
-          <p className="mt-1 text-xs text-muted-foreground">Total pengguna</p>
-        </div>
-        <div className="rounded-2xl border bg-card p-4">
-          <p className="text-2xl font-semibold tabular-nums">{activeCount}</p>
-          <p className="mt-1 text-xs text-muted-foreground">Aktif</p>
-        </div>
+        <MetricCard label="Total pengguna" value={users.length} layout="simple" />
+        <MetricCard label="Aktif" value={activeCount} layout="simple" />
       </div>
 
       {error && <ErrorAlert>{error}</ErrorAlert>}
 
       {loading ? (
-        <div className="space-y-3">
-          {Array.from({ length: 3 }).map((_, index) => (
-            <Skeleton key={index} className="h-28 rounded-2xl" />
-          ))}
-        </div>
+        <ListSkeleton count={3} className="h-28 rounded-2xl" />
       ) : users.length === 0 ? (
         <EmptyState
           icon={Users}
@@ -83,6 +75,6 @@ export function UserListPage() {
           <Plus className="size-6" />
         </Link>
       </Button>
-    </div>
+    </PageShell>
   )
 }

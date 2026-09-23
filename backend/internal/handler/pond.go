@@ -132,16 +132,9 @@ func (h *PondHandler) Update(c *fiber.Ctx) error {
 func (h *PondHandler) Delete(c *fiber.Ctx) error {
 	if err := h.repo.Delete(c.Context(), workspaceID(c), c.Params("id")); err != nil {
 		if err == sql.ErrNoRows {
-			return httpx.Fail(c, fiber.StatusNotFound, "NOT_FOUND", "Kolam tidak ditemukan")
+			return c.SendStatus(fiber.StatusNoContent)
 		}
 		return httpx.Fail(c, fiber.StatusInternalServerError, "INTERNAL_ERROR", err.Error())
 	}
 	return c.SendStatus(fiber.StatusNoContent)
-}
-
-func workspaceID(c *fiber.Ctx) string {
-	if value := c.Get("X-Workspace-ID"); value != "" {
-		return value
-	}
-	return model.DefaultWorkspaceID
 }

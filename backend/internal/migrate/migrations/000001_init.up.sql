@@ -34,7 +34,7 @@ CREATE TABLE IF NOT EXISTS batches (
     notes            TEXT,
     created_at       DATETIME(3)  NOT NULL DEFAULT CURRENT_TIMESTAMP(3),
     FOREIGN KEY (workspace_id) REFERENCES workspaces(id) ON DELETE CASCADE,
-    FOREIGN KEY (business_unit_id) REFERENCES business_units(id) ON DELETE SET NULL,
+    FOREIGN KEY (business_unit_id) REFERENCES business_units(id) ON DELETE CASCADE,
     INDEX idx_batches_workspace (workspace_id)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 

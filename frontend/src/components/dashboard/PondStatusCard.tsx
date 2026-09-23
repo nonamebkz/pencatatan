@@ -2,6 +2,7 @@ import { Link } from 'react-router-dom'
 import { AlertTriangle, ChevronRight, Droplets, FlaskConical } from 'lucide-react'
 
 import type { WaterQualitySummary } from '@/api/water-quality'
+import { WaterQualityAdvicePanel } from '@/components/water-quality/WaterQualityAdvicePanel'
 import { WaterQualityStatusBadge } from '@/components/water-quality/WaterQualityStatusBadge'
 import { formatDateTime } from '@/lib/format'
 import { cn } from '@/lib/utils'
@@ -58,6 +59,12 @@ export function PondStatusCard({ summary }: { summary: WaterQualitySummary }) {
           <p className="text-[11px] text-muted-foreground">skala 0–14</p>
         </div>
       </div>
+
+      <WaterQualityAdvicePanel
+        advice={summary.advice}
+        status={summary.status}
+        className="mt-4 pointer-events-none"
+      />
 
       <div className="mt-4 flex items-center justify-between text-xs font-medium text-primary md:text-sm">
         <span>Lihat riwayat</span>

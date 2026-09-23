@@ -2,11 +2,20 @@ import { Link } from 'react-router-dom'
 import { ChevronRight, Droplets, FlaskConical, Pencil } from 'lucide-react'
 
 import type { WaterQualityLog } from '@/api/water-quality'
+import { DeleteIconButton } from '@/components/shared/DeleteButton'
+import { WaterQualityAdvicePanel } from '@/components/water-quality/WaterQualityAdvicePanel'
 import { WaterQualityStatusBadge } from '@/components/water-quality/WaterQualityStatusBadge'
 import { Button } from '@/components/ui/button'
 import { formatDateTime } from '@/lib/format'
 
-export function WaterQualityLogRow({ log }: { log: WaterQualityLog }) {
+type WaterQualityLogRowProps = {
+  log: WaterQualityLog
+  canDelete?: boolean
+  deleting?: boolean
+  onDelete?: (log: WaterQualityLog) => void | Promise<void>
+}
+
+export function WaterQualityLogRow({ log, canDelete, deleting, onDelete }: WaterQualityLogRowProps) {
   return (
     <article className="rounded-2xl border bg-card p-4 shadow-sm">
       <div className="flex items-start justify-between gap-3">
@@ -17,11 +26,21 @@ export function WaterQualityLogRow({ log }: { log: WaterQualityLog }) {
           </div>
           <p className="text-xs text-muted-foreground">{formatDateTime(log.measuredAt)}</p>
         </div>
-        <Button asChild variant="ghost" size="sm" className="size-9 shrink-0 p-0">
-          <Link to={`/water-quality/${log.id}/edit`} aria-label="Edit catatan">
-            <Pencil className="size-4" />
-          </Link>
-        </Button>
+        <div className="flex shrink-0 items-center gap-0.5">
+          {canDelete && onDelete && (
+            <DeleteIconButton
+              label="Hapus catatan"
+              confirmMessage="Hapus catatan kualitas air ini? Tindakan tidak dapat dibatalkan."
+              disabled={deleting}
+              onConfirm={() => onDelete(log)}
+            />
+          )}
+          <Button asChild variant="ghost" size="sm" className="size-9 shrink-0 p-0">
+            <Link to={`/water-quality/${log.id}/edit`} aria-label="Edit catatan">
+              <Pencil className="size-4" />
+            </Link>
+          </Button>
+        </div>
       </div>
 
       <div className="mt-3 grid grid-cols-2 gap-3">
@@ -46,6 +65,8 @@ export function WaterQualityLogRow({ log }: { log: WaterQualityLog }) {
       {log.notes && (
         <p className="mt-3 line-clamp-2 text-sm text-muted-foreground">{log.notes}</p>
       )}
+
+      <WaterQualityAdvicePanel advice={log.advice} status={log.status} className="mt-3" />
 
       <Link
         to={`/water-quality/${log.id}/edit`}

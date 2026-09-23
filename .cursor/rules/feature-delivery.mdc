@@ -1,0 +1,79 @@
+---
+description: Alur fitur baru — kontrak API, business flow, gate sebelum kode
+alwaysApply: true
+---
+
+# Pengantaran fitur (design → contract → implement)
+
+## Hard gate
+
+Jangan mulai implementasi BE/FE untuk **fitur baru** (bukan bugfix satu baris) sebelum:
+
+1. Ada file `docs/features/<slug>.md` (salin dari `docs/features/_template.md`).
+2. Bagian **Business flow** + **Aturan bisnis** + **Edge cases** terisi.
+3. Bagian **API contract** lengkap per endpoint (method, path, auth, body, `data`, kode error).
+4. Bagian **Frontend contract** (route, halaman, file API, types).
+5. Status dokumen minimal **`contract-ready`** (user menyetujui atau eksplisit "lanjut implement").
+
+Fitur hanya-UI tanpa API: tetap isi flow + states UI; tulis "Tidak ada endpoint baru".
+
+Fitur hanya-BE: tetap isi flow + contract API; FE contract boleh "N/A".
+
+## Sinkronisasi dokumen kanonik
+
+Setelah contract disetujui:
+
+- Tambah/update tabel endpoint di **`TECHNICAL_SPEC.md` §5** (format yang sudah ada).
+- Aturan bisnis baru → **`BRD.md`** jika mengubah scope produk.
+- Saat selesai → **`TECHNICAL_SPEC.md` §20 Status Implementasi**.
+
+## Urutan implementasi (minim bug)
+
+1. **Skema** — migrasi SQL (jika ada) sebelum handler.
+2. **Backend** — model → repository → service (jika perlu) → handler → `main.go`.
+3. **Frontend** — types di `frontend/src/api/*` mengikuti contract → halaman → `App.tsx` routes.
+4. **Integrasi** — jalankan build BE + FE; uji happy path + satu error path dari tabel aturan.
+
+Jangan merge FE yang memanggil endpoint yang belum ada di contract / belum di-route di `main.go`.
+
+## Spawn agent (BE / FE)
+
+Saat user meminta fitur baru atau setelah contract `contract-ready`, **koordinator** (agent utama) wajib:
+
+1. Pastikan `docs/features/<slug>.md` ada dan dilampirkan di prompt subagent.
+2. **Spawn 2 Task subagent paralel** (satu respons, dua panggilan Task), kecuali ada dependency kuat (mis. migrasi belum bisa dijalankan):
+
+| Agent | Subagent | Scope |
+|-------|----------|--------|
+| Backend | `generalPurpose` atau `explore` | Hanya `backend/**`, ikuti `backend-dry-solid.mdc` |
+| Frontend | `generalPurpose` atau `explore` | Hanya `frontend/**`, ikuti `frontend-dry-solid.mdc` |
+
+**Prompt wajib untuk setiap subagent** (salin dan isi):
+
+```text
+Full Repository Path: /home/kikichan/project/pencatatan
+Feature spec: docs/features/<slug>.md — ikuti API contract & business flow tanpa menyimpang.
+
+MANDATORY graphify per folder (.cursor/rules/graphify-monorepo.mdc):
+- Backend: cd …/pencatatan/backend && graphify query|path|explain …
+- Frontend: cd …/pencatatan/frontend && graphify query|path|explain …
+Jangan eksplorasi dengan graf root untuk tugas satu-sisi.
+Ikuti .cursor/rules/<backend-dry-solid|frontend-dry-solid>.mdc.
+
+Tugas: [Backend ONLY | Frontend ONLY] — implement bagian checklist di spec.
+Jangan ubah folder lawan (FE agent tidak edit backend/).
+Setelah selesai: build (go build / npm run build), lalu WAJIB `cd <frontend|backend> && graphify update .` untuk folder yang diedit, laporkan file yang diubah.
+```
+
+3. Setelah subagent selesai, koordinator: build penuh BE+FE, perbaiki mismatch contract, lalu **`graphify update`** per folder yang berubah (lihat `graphify-monorepo.mdc`).
+
+**Jangan** satu agent mengerjakan BE+FE besar tanpa contract. **Jangan** spawn FE sebelum contract endpoint jelas.
+
+## Checklist selesai fitur (urutan)
+
+- [ ] Build BE + FE hijau
+- [ ] **`graphify update`** — `frontend/` dan/atau `backend/` (wajib jika ada perubahan kode di folder itu)
+- [ ] `docs/features/<slug>.md` status `done`
+- [ ] TECHNICAL_SPEC §5 + §20 updated
+
+Tanpa langkah graphify, fitur **tidak** dianggap selesai.

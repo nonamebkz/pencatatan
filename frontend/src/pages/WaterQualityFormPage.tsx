@@ -1,22 +1,33 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { Link, useNavigate, useParams, useSearchParams } from 'react-router-dom'
-import { ArrowLeft, Info, Save } from 'lucide-react'
+import { Save, Trash2 } from 'lucide-react'
 
 import {
   createWaterQualityLog,
+  deleteWaterQualityLog,
+  evaluateWaterQuality,
+  getWaterQualityConfig,
   getWaterQualityLog,
+  listBatches,
   listPonds,
   updateWaterQualityLog,
+  type Batch,
   type Pond,
+  type WaterQualityConfig,
+  type WaterQualityEvaluation,
 } from '@/api/water-quality'
-import { TextField } from '@/components/shared/Field'
-import { ErrorAlert, PanelCard } from '@/components/shared/PanelCard'
+import { BackLink } from '@/components/shared/BackLink'
+import { SelectField, TextField, TextareaField } from '@/components/shared/Field'
+import { ErrorAlert } from '@/components/shared/ErrorAlert'
+import { InfoCallout } from '@/components/shared/InfoCallout'
+import { MobileFormFooter } from '@/components/shared/MobileFormFooter'
+import { PanelCard } from '@/components/shared/PanelCard'
 import { PageHeader } from '@/components/shared/PageHeader'
+import { WaterQualityAdvicePanel } from '@/components/water-quality/WaterQualityAdvicePanel'
+import { WaterQualityStatusBadge } from '@/components/water-quality/WaterQualityStatusBadge'
 import { Button } from '@/components/ui/button'
-import { Label } from '@/components/ui/label'
-import { Select } from '@/components/ui/select'
 import { Skeleton } from '@/components/ui/skeleton'
-import { Textarea } from '@/components/ui/textarea'
+import { useAuth } from '@/contexts/AuthContext'
 
 function toLocalInputValue(date: Date) {
   const offset = date.getTimezoneOffset()
@@ -27,11 +38,14 @@ function toLocalInputValue(date: Date) {
 export function WaterQualityFormPage() {
   const navigate = useNavigate()
   const { id } = useParams()
+  const { isAdmin } = useAuth()
   const [searchParams] = useSearchParams()
   const isEdit = Boolean(id)
 
   const [ponds, setPonds] = useState<Pond[]>([])
+  const [batches, setBatches] = useState<Batch[]>([])
   const [businessUnitId, setBusinessUnitId] = useState(searchParams.get('pondId') ?? '')
+  const [batchId, setBatchId] = useState('')
   const [measuredAt, setMeasuredAt] = useState(toLocalInputValue(new Date()))
   const [ammoniaPpm, setAmmoniaPpm] = useState('')
   const [ph, setPh] = useState('')
@@ -39,12 +53,31 @@ export function WaterQualityFormPage() {
   const [error, setError] = useState<string | null>(null)
   const [loading, setLoading] = useState(isEdit)
   const [submitting, setSubmitting] = useState(false)
+  const [config, setConfig] = useState<WaterQualityConfig | null>(null)
+  const [preview, setPreview] = useState<WaterQualityEvaluation | null>(null)
+
+  useEffect(() => {
+    getWaterQualityConfig()
+      .then((response) => setConfig(response.data))
+      .catch(() => setConfig(null))
+  }, [])
 
   useEffect(() => {
     listPonds('ACTIVE')
       .then((response) => setPonds(response.data))
       .catch((err) => setError(err instanceof Error ? err.message : 'Gagal memuat kolam'))
   }, [])
+
+  useEffect(() => {
+    if (!businessUnitId) {
+      setBatches([])
+      setBatchId('')
+      return
+    }
+    listBatches({ businessUnitId, status: 'ACTIVE' })
+      .then((response) => setBatches(response.data))
+      .catch(() => setBatches([]))
+  }, [businessUnitId])
 
   useEffect(() => {
     if (!isEdit || !id) return
@@ -54,6 +87,7 @@ export function WaterQualityFormPage() {
       .then((response) => {
         const log = response.data
         setBusinessUnitId(log.businessUnitId)
+        setBatchId(log.batchId ?? '')
         setMeasuredAt(toLocalInputValue(new Date(log.measuredAt)))
         setAmmoniaPpm(log.ammoniaPpm?.toString() ?? '')
         setPh(log.ph?.toString() ?? '')
@@ -63,6 +97,37 @@ export function WaterQualityFormPage() {
       .finally(() => setLoading(false))
   }, [id, isEdit])
 
+  const parsedAmmonia = ammoniaPpm ? Number(ammoniaPpm) : undefined
+  const parsedPh = ph ? Number(ph) : undefined
+
+  useEffect(() => {
+    const hasMeasurement =
+      (parsedAmmonia !== undefined && !Number.isNaN(parsedAmmonia)) ||
+      (parsedPh !== undefined && !Number.isNaN(parsedPh))
+    if (!hasMeasurement) {
+      setPreview(null)
+      return
+    }
+
+    const timer = window.setTimeout(() => {
+      evaluateWaterQuality({
+        ammoniaPpm: parsedAmmonia,
+        ph: parsedPh,
+      })
+        .then((response) => setPreview(response.data))
+        .catch(() => setPreview(null))
+    }, 400)
+
+    return () => window.clearTimeout(timer)
+  }, [parsedAmmonia, parsedPh])
+
+  const thresholdHint = useMemo(() => {
+    if (!config) {
+      return 'Threshold: ammonia ≥ 0.5 ppm waspada, ≥ 1.0 ppm bahaya. pH di luar 6.5–8.5 ditandai waspada.'
+    }
+    return `Threshold: ammonia ≥ ${config.ammoniaWarnPpm} ppm waspada, ≥ ${config.ammoniaDangerPpm} ppm bahaya. pH normal ${config.phMinNormal}–${config.phMaxNormal}.`
+  }, [config])
+
   const handleSubmit = async (event: React.FormEvent) => {
     event.preventDefault()
     setSubmitting(true)
@@ -70,6 +135,7 @@ export function WaterQualityFormPage() {
 
     const body = {
       businessUnitId,
+      batchId: batchId || undefined,
       measuredAt: new Date(measuredAt).toISOString(),
       ammoniaPpm: ammoniaPpm ? Number(ammoniaPpm) : undefined,
       ph: ph ? Number(ph) : undefined,
@@ -90,6 +156,20 @@ export function WaterQualityFormPage() {
     }
   }
 
+  const handleDelete = async () => {
+    if (!id || !window.confirm('Hapus catatan kualitas air ini? Tindakan tidak dapat dibatalkan.')) return
+    setSubmitting(true)
+    setError(null)
+    try {
+      await deleteWaterQualityLog(id)
+      navigate('/water-quality')
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Gagal menghapus catatan')
+    } finally {
+      setSubmitting(false)
+    }
+  }
+
   if (loading) {
     return (
       <div className="mx-auto max-w-3xl space-y-6">
@@ -101,46 +181,62 @@ export function WaterQualityFormPage() {
 
   return (
     <div className="mx-auto max-w-3xl space-y-6 pb-24 md:space-y-8 md:pb-0">
-      <Button asChild variant="ghost" className="-ml-1 h-auto px-1 py-1 text-sm hover:bg-transparent sm:px-0">
-        <Link to="/water-quality">
-          <ArrowLeft className="size-4" />
-          <span className="hidden sm:inline">Kembali ke daftar catatan</span>
-          <span className="sm:hidden">Kembali</span>
-        </Link>
-      </Button>
+      <BackLink to="/water-quality" label="Kembali ke daftar catatan" />
 
       <PageHeader
         title={isEdit ? 'Edit Catatan' : 'Catat Kualitas Air'}
         description="Minimal satu dari ammonia, pH, atau catatan harus diisi."
       />
 
-      <div className="rounded-2xl border border-primary/20 bg-primary/5 px-3 py-3 text-sm text-muted-foreground sm:px-4">
-        <div className="flex items-start gap-2">
-          <Info className="mt-0.5 size-4 shrink-0 text-primary" />
-          <p>
-            Threshold: ammonia ≥ 0.5 ppm waspada, ≥ 1.0 ppm bahaya. pH di luar 6.5–8.5 ditandai waspada.
-          </p>
+      <InfoCallout>
+        <p>{thresholdHint}</p>
+        {config?.ammoniaAnalyteNote && <p className="mt-2">{config.ammoniaAnalyteNote}</p>}
+      </InfoCallout>
+
+      {preview && preview.status !== 'NORMAL' && (
+        <div className="space-y-2">
+          <div className="flex items-center gap-2">
+            <span className="text-sm text-muted-foreground">Pratinjau status:</span>
+            <WaterQualityStatusBadge status={preview.status} />
+          </div>
+          <WaterQualityAdvicePanel advice={preview.advice} status={preview.status} />
         </div>
-      </div>
+      )}
 
       <PanelCard title="Form Observasi">
         <form id="water-quality-form" className="space-y-5" onSubmit={handleSubmit}>
-          <div className="space-y-2">
-            <Label htmlFor="businessUnitId">Kolam</Label>
-            <Select
-              id="businessUnitId"
-              value={businessUnitId}
-              onChange={(e) => setBusinessUnitId(e.target.value)}
-              required
-            >
-              <option value="">Pilih kolam</option>
-              {ponds.map((pond) => (
-                <option key={pond.id} value={pond.id}>
-                  {pond.name}
-                </option>
-              ))}
-            </Select>
-          </div>
+          <SelectField
+            label="Kolam"
+            id="businessUnitId"
+            value={businessUnitId}
+            onChange={(e) => setBusinessUnitId(e.target.value)}
+            required
+          >
+            <option value="">Pilih kolam</option>
+            {ponds.map((pond) => (
+              <option key={pond.id} value={pond.id}>
+                {pond.name}
+              </option>
+            ))}
+          </SelectField>
+
+          <SelectField
+            label="Batch (opsional)"
+            id="batchId"
+            value={batchId}
+            onChange={(e) => setBatchId(e.target.value)}
+            disabled={!businessUnitId}
+          >
+            <option value="">Tanpa batch</option>
+            {batches.map((batch) => (
+              <option key={batch.id} value={batch.id}>
+                {batch.name}
+              </option>
+            ))}
+          </SelectField>
+          {businessUnitId && batches.length === 0 && (
+            <p className="text-xs text-muted-foreground">Belum ada batch aktif untuk kolam ini.</p>
+          )}
 
           <TextField
             label="Waktu pengukuran"
@@ -173,15 +269,13 @@ export function WaterQualityFormPage() {
               onChange={(e) => setPh(e.target.value)}
             />
           </div>
-          <div className="space-y-2">
-            <Label htmlFor="notes">Catatan</Label>
-            <Textarea
-              id="notes"
-              value={notes}
-              onChange={(e) => setNotes(e.target.value)}
-              placeholder="Contoh: ikan aktif, warna air hijau, angin kencang..."
-            />
-          </div>
+          <TextareaField
+            label="Catatan"
+            id="notes"
+            value={notes}
+            onChange={(e) => setNotes(e.target.value)}
+            placeholder="Contoh: ikan aktif, warna air hijau, angin kencang..."
+          />
 
           {error && <ErrorAlert>{error}</ErrorAlert>}
 
@@ -193,21 +287,30 @@ export function WaterQualityFormPage() {
             <Button asChild variant="outline">
               <Link to="/water-quality">Batal</Link>
             </Button>
+            {isEdit && isAdmin && (
+              <Button type="button" variant="outline" disabled={submitting} onClick={() => void handleDelete()}>
+                <Trash2 className="size-4" />
+                Hapus
+              </Button>
+            )}
           </div>
         </form>
       </PanelCard>
 
-      <div className="safe-bottom fixed inset-x-0 bottom-[calc(5.5rem+env(safe-area-inset-bottom,0px))] z-20 border-t bg-background/95 p-3 backdrop-blur md:hidden">
-        <div className="mx-auto flex max-w-3xl gap-2">
-          <Button asChild variant="outline" className="flex-1">
-            <Link to="/water-quality">Batal</Link>
+      <MobileFormFooter>
+        {isEdit && isAdmin && (
+          <Button type="button" variant="outline" disabled={submitting} className="shrink-0 px-3" onClick={() => void handleDelete()}>
+            <Trash2 className="size-4" />
           </Button>
-          <Button type="submit" form="water-quality-form" disabled={submitting} className="flex-[1.4]">
-            <Save className="size-4" />
-            Simpan
-          </Button>
-        </div>
-      </div>
+        )}
+        <Button asChild variant="outline" className="flex-1">
+          <Link to="/water-quality">Batal</Link>
+        </Button>
+        <Button type="submit" form="water-quality-form" disabled={submitting} className="flex-[1.4]">
+          <Save className="size-4" />
+          Simpan
+        </Button>
+      </MobileFormFooter>
     </div>
   )
 }

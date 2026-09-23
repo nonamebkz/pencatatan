@@ -2,10 +2,10 @@
 
 | Field | Value |
 |---|---|
-| Versi | 1.3 |
-| Status | Final — selaras BRD v1.2 |
-| BRD Reference | [BRD.md](./BRD.md) v1.2 |
-| Arsitektur | React SPA + Go REST API + MariaDB + Redis |
+| Versi | 1.4 |
+| Status | Living document — selaras BRD v1.3 & codebase |
+| BRD Reference | [BRD.md](./BRD.md) v1.3 |
+| Arsitektur | React SPA + Go REST API + MySQL 8 (Redis rencana) |
 
 ---
 
@@ -13,25 +13,22 @@
 
 | Layer | Pilihan | Alasan |
 |---|---|---|
-| **Frontend** | **React 19** + **Vite 6** | SPA modern, web responsive, ecosystem matang |
-| FE Language | **TypeScript** | Type safety, shared types dengan kontrak API |
+| **Frontend** | **React 19** + **Vite 8** | SPA modern, web responsive |
+| FE Language | **TypeScript** | Type safety |
 | FE Routing | **React Router 7** | Client-side routing |
-| FE Data Fetching | **TanStack Query 5** | Cache client-side, sync dengan Redis invalidation |
-| FE UI | **Tailwind CSS 4 + shadcn/ui** | Responsive, accessible components |
-| FE Forms | **React Hook Form + Zod** | Validasi form kompleks |
-| FE HTTP Client | **Axios** | Interceptor JWT + workspace header |
-| **Backend** | **Go 1.23** | Performa, concurrency, deploy ringan |
-| API Framework | **Gin** | REST API, middleware ecosystem |
-| BE ORM | **GORM** | Migration + query builder, support MariaDB |
-| BE Validation | **go-playground/validator** | Struct tag validation |
-| BE Auth | **JWT** (golang-jwt) | Stateless token, Redis blacklist logout |
-| **Database** | **MariaDB 11** | Relational, JSON column support, familiar |
-| **Cache** | **Redis 7** | Dashboard, laporan, session token |
-| Migration | **golang-migrate** | SQL migration files versioned |
-| Date (FE) | **date-fns** | Locale id |
-| Testing FE | **Vitest + Playwright** | Unit + E2E |
-| Testing BE | **Go testing + testify** | Unit + integration |
-| Deploy | **Docker Compose** | mariadb + redis + api + frontend (nginx) |
+| FE Data Fetching | **fetch** (`api/client.ts`) | TanStack Query **belum** |
+| FE UI | **Tailwind CSS 4 + shadcn-style** | Responsive components |
+| FE Forms | Controlled inputs | React Hook Form + Zod **belum** |
+| FE HTTP Client | **fetch wrapper** | JWT + `X-Workspace-ID` |
+| **Backend** | **Go 1.26** | Performa, deploy ringan |
+| API Framework | **Fiber v2** | REST API (spec awal Gin) |
+| BE ORM | **database/sql** + SQL migrations | GORM **belum** |
+| BE Validation | Handler-level | go-playground/validator **belum** |
+| BE Auth | **JWT** (golang-jwt) + bcrypt | Logout blacklist Redis **belum** |
+| **Database** | **MySQL 8.4** | Primary DB (spec awal MariaDB) |
+| **Cache** | — | Redis **belum** |
+| Migration | **embed SQL** (`internal/migrate`) | golang-migrate CLI **belum** |
+| Deploy | **Docker Compose** | mysql + api + frontend (nginx) |
 
 ---
 
@@ -510,11 +507,19 @@ Base URL: `/api/v1`
 
 ### 5.1 Auth
 
-| Method | Endpoint | Body | Response |
-|---|---|---|---|
-| POST | `/auth/login` | `{ email, password }` | `{ token, user }` |
-| POST | `/auth/logout` | — | `{ message }` — blacklist token di Redis |
-| GET | `/auth/me` | — | `{ user }` |
+| Method | Endpoint | Body | Response | Status repo |
+|---|---|---|---|---|
+| POST | `/auth/login` | `{ email, password }` | `{ token, expiresAt, user }` | ✅ |
+| POST | `/auth/logout` | — | `{ message }` | ✅ (no Redis blacklist) |
+| GET | `/auth/me` | — | `{ user }` | ✅ |
+
+### 5.1b Users (ADMIN)
+
+| Method | Endpoint | Status repo |
+|---|---|---|
+| GET/POST | `/users` | ✅ |
+| GET/PUT/DELETE | `/users/:id` | ✅ |
+| PUT | `/users/:id/reset-password` | ✅ |
 
 ### 5.2 Workspace
 
@@ -533,7 +538,7 @@ Base URL: `/api/v1`
 | GET | `/ponds/:id` | — | `BusinessUnit` |
 | POST | `/ponds` | `{ name, location?, size?, ownerName?, notes? }` | `BusinessUnit` |
 | PUT | `/ponds/:id` | `{ ...fields }` | `BusinessUnit` |
-| DELETE | `/ponds/:id` | — | `204` |
+| DELETE | `/ponds/:id` | — | `204` | ✅ **Admin only** |
 
 ### 5.4 Batch
 
@@ -600,7 +605,10 @@ Base URL: `/api/v1`
 | GET | `/water-quality-logs/:id` | — | `WaterQualityLog` |
 | POST | `/water-quality-logs` | `{ businessUnitId, batchId?, measuredAt, ammoniaPpm?, ph?, notes? }` — **min 1 of ammoniaPpm/ph/notes** | `WaterQualityLog` |
 | PUT | `/water-quality-logs/:id` | `{ ...fields }` | `WaterQualityLog` |
-| DELETE | `/water-quality-logs/:id` | — | `204` |
+| DELETE | `/water-quality-logs/:id` | — | `204` | ✅ **Admin only** |
+| GET | `/water-quality/config` | — | `WaterQualityConfig` (threshold + teks saran) |
+| PUT | `/water-quality/config` | `WaterQualityConfig` | `WaterQualityConfig` | ✅ **Admin only** |
+| POST | `/water-quality/evaluate` | `{ ammoniaPpm?, ph? }` | `{ status, advice[] }` |
 | GET | `/water-quality-logs/trends` | `?businessUnitId=&days=7\|30` | `{ series: { ammonia[], ph[] }, measuredAt[] }` |
 
 **Validation (server):**
@@ -1224,104 +1232,87 @@ func main() {
 
 ## 18. Sprint → Technical Task Mapping
 
+*Checkbox = status di repo saat ini (bukan rencana kosong).*
+
 ### Sprint 0 — Foundation
 
 **Backend:**
-- [ ] Init Go module, Gin router, config loader
-- [ ] Docker Compose: MariaDB + Redis
-- [ ] Migration 000001_init
-- [ ] GORM connection + health check endpoint
+- [x] Init Go module, **Fiber** router, config loader
+- [x] Docker Compose: **MySQL** (Redis belum)
+- [x] Migration `000001_init`, `000002_auth`
+- [x] `database/sql` + health check `GET /health`
 - [ ] Redis client + cache helper
-- [ ] Auth: login, JWT middleware, logout blacklist
+- [x] Auth: login, JWT middleware
+- [ ] Logout blacklist Redis
+- [x] Seed admin (`EnsureAdmin`)
 
 **Frontend:**
-- [ ] `npm create vite@latest` — React + TypeScript
-- [ ] Tailwind + shadcn/ui setup
-- [ ] Axios client + auth interceptor
-- [ ] React Router + ProtectedRoute
-- [ ] LoginPage + AppLayout skeleton
+- [x] Vite + React + TypeScript
+- [x] Tailwind + shadcn-style components
+- [x] fetch client + JWT interceptor
+- [x] React Router + ProtectedRoute + AdminRoute
+- [x] LoginPage + AppLayout + User management pages
+- [ ] WorkspaceSwitcher
 
-**DoD:** Login → dapat JWT → hit `/health` → dashboard shell.
+**DoD:** Login → JWT → `/health` → dashboard shell. ⚠️ workspace switch belum.
 
 ### Sprint 1 — Master Data + Transaksi
 
-**Backend:**
-- [ ] Workspace CRUD + auto CashAccount
-- [ ] BusinessUnit (pond) CRUD
-- [ ] Batch CRUD
-- [ ] Purchase endpoint (Transaction + PurchaseLineItem)
-- [ ] Personal expense endpoint
-- [ ] Workspace middleware
+**Backend:** [ ] Workspace CRUD · [x] Pond CRUD · [x] Batch list (`GET /batches`) · [ ] Purchase · [ ] Personal expense · [ ] Workspace middleware penuh
 
-**Frontend:**
-- [ ] WorkspaceSwitcher (zustand store)
-- [ ] Pond list + form pages
-- [ ] Purchase form page
-- [ ] Personal expense page
-- [ ] Template config (lele + personal)
-
-**DoD:** CRUD kolam + catat pembelian + personal expense.
+**Frontend:** [ ] WorkspaceSwitcher · [x] Pond pages · [ ] Purchase · [ ] Personal
 
 ### Sprint 2 — Pakan + Sewa + Laporan 1
 
-**Backend:**
-- [ ] ConsumableLot CRUD + lifecycle endpoints
-- [ ] PeriodicContract + schedule generator
-- [ ] Pay schedule endpoint
-- [ ] Dashboard endpoint + Redis cache
-- [ ] Reports: purchases, feed, summary + Redis cache
-- [ ] Cache invalidation on writes
-
-**Frontend:**
-- [ ] Feed list + detail/lifecycle pages
-- [ ] ConsumablePromptDialog
-- [ ] Rent list + form + schedule table
-- [ ] Dashboard widgets
-- [ ] Report pages (3 pertama)
-
-**DoD:** Full loop pakan + sewa cicilan + 3 laporan + dashboard cached.
+**Backend / Frontend:** [ ] belum
 
 ### Sprint 3 — Bagi Hasil + Laporan 2 + Polish
 
-**Backend:**
-- [ ] DistributionScheme + Record CRUD
-- [ ] Distribution calculator + pay endpoint
-- [ ] Reports: price-history, rent, distribution
-- [ ] Seed script
-
-**Frontend:**
-- [ ] Profit share pages (scheme + record)
-- [ ] Report pages (3 sisanya)
-- [ ] Settings page
-- [ ] Responsive polish
-- [ ] Playwright E2E critical flows
-
-**DoD:** MVP lengkap sesuai BRD checklist.
+**Backend / Frontend:** [ ] belum
 
 ### Sprint 4 — Kualitas Air (T2)
 
 **Backend:**
-- [ ] Migration 000002_water_quality_logs
-- [ ] WaterQualityLog CRUD + validation (BR-F1–F11)
-- [ ] Threshold status calculator (NORMAL/WARNING/DANGER)
-- [ ] GET `/water-quality-logs/trends`
-- [ ] Extend dashboard response with `waterQualitySummary[]`
-- [ ] Report `/reports/water-quality` (RPT-07)
-- [ ] Cache invalidation on water quality writes
+- [x] `water_quality_logs` + CRUD + validation (BR-F1–F4, F6, F9–F11)
+- [x] BR-F5 kolam INACTIVE ditolak saat create/update
+- [x] Threshold NORMAL/WARNING/DANGER
+- [x] `GET /water-quality-logs/trends`, `/dashboard`, `/reports/water-quality`
+- [x] `GET /batches` (filter kolam)
+- [ ] Redis cache invalidation
 
 **Frontend:**
-- [ ] WaterQuality list + form pages
-- [ ] Tab "Kualitas Air" di PondDetailPage
-- [ ] WaterQualityWidget + WaterQualityStatusBadge di dashboard
-- [ ] Report page RPT-07 dengan line chart (7/30 hari)
-- [ ] Menu item "Kualitas Air" di lele template (business only)
+- [x] WaterQuality list + form (+ batch opsional)
+- [x] Riwayat di PondDetailPage
+- [x] Dashboard widget + badge
+- [x] `/water-quality/report` — grafik tren SVG 7/30 hari (RPT-07 partial)
 
-**DoD:** 9 acceptance criteria Epic E7 (BRD §15) terpenuhi.
+**DoD:** Epic E7 hampir lengkap; polish chart & batch CRUD UI opsional.
 
 ---
 
 ## 19. Referensi
 
-- [BRD.md](./BRD.md) — business requirements
+- [BRD.md](./BRD.md) — business requirements (v1.3 + §23 status)
 - [raw idea.md](./raw%20idea.md) — ide awal
 - [jangka panjang.md](./jangka%20panjang.md) — visi jangka panjang
+
+---
+
+## 20. Status Implementasi (Codebase)
+
+Ringkasan singkat — detail bisnis: [BRD §23](./BRD.md#23-status-implementasi-codebase).
+
+| Area | Endpoint / halaman utama | Status |
+|---|---|---|
+| Health | `GET /health` | ✅ |
+| Auth | `/api/v1/auth/*` | ✅ |
+| Users | `/api/v1/users/*` (ADMIN) | ✅ |
+| Kolam | `/ponds`, `/ponds/:id` | ✅ |
+| Batch | `GET /batches` | ✅ list only |
+| Kualitas air | `/water-quality-logs`, `/dashboard`, `/reports/water-quality` | ✅ |
+| FE | `/login`, `/`, `/ponds`, `/water-quality`, `/water-quality/report`, `/users` | ✅ |
+| Workspace | `X-Workspace-ID` default UUID | ⚠️ hardcoded |
+| Transaksi MVP | PURCHASE, sewa, pakan, bagi hasil | ❌ |
+| Redis | cache + logout blacklist | ❌ |
+
+**Backlog teknis berikutnya:** workspace CRUD + switcher → Transaction/Purchase (Sprint 1) → Redis production hardening.

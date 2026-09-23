@@ -3,7 +3,8 @@ import { useNavigate, useLocation } from 'react-router-dom'
 import { Lock, ShieldCheck, Waves } from 'lucide-react'
 
 import { TextField } from '@/components/shared/Field'
-import { ErrorAlert } from '@/components/shared/PanelCard'
+import { ErrorAlert } from '@/components/shared/ErrorAlert'
+import { InfoCallout } from '@/components/shared/InfoCallout'
 import { Button } from '@/components/ui/button'
 import { useAuth } from '@/contexts/AuthContext'
 
@@ -88,12 +89,9 @@ export function LoginPage() {
           </form>
         </div>
 
-        <div className="mt-6 flex items-start gap-2 rounded-2xl border border-primary/15 bg-primary/5 px-4 py-3 text-xs text-muted-foreground">
-          <ShieldCheck className="mt-0.5 size-4 shrink-0 text-primary" />
-          <p>
-            Tidak ada pendaftaran mandiri. Admin membuat akun pengguna untuk tim operasional kolam.
-          </p>
-        </div>
+        <InfoCallout icon={ShieldCheck} className="mt-6 text-xs">
+          <p>Tidak ada pendaftaran mandiri. Admin membuat akun pengguna untuk tim operasional kolam.</p>
+        </InfoCallout>
       </div>
     </div>
   )

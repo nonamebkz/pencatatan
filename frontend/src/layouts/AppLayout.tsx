@@ -1,5 +1,5 @@
 import { Link, NavLink, Outlet, useLocation } from 'react-router-dom'
-import { Droplets, Fish, LayoutDashboard, Plus, UserCog, Waves } from 'lucide-react'
+import { Droplets, Fish, LayoutDashboard, Plus, UserCog, Wallet, Waves } from 'lucide-react'
 
 import { UserMenu } from '@/components/auth/UserMenu'
 import { MobileBottomNav } from '@/components/mobile/MobileBottomNav'
@@ -8,6 +8,7 @@ import { cn } from '@/lib/utils'
 
 const navItems = [
   { to: '/', label: 'Beranda', description: 'Ringkasan harian', icon: LayoutDashboard, end: true },
+  { to: '/finance', label: 'Keuangan', description: 'Pembelian & pengeluaran', icon: Wallet },
   { to: '/ponds', label: 'Kolam', description: 'Master kolam', icon: Fish },
   { to: '/water-quality', label: 'Kualitas Air', description: 'Catatan observasi', icon: Droplets },
 ]
@@ -16,7 +17,12 @@ function pageTitle(pathname: string) {
   if (pathname.startsWith('/users/new')) return 'Tambah Pengguna'
   if (pathname.startsWith('/users/') && pathname.endsWith('/edit')) return 'Edit Pengguna'
   if (pathname.startsWith('/users')) return 'Pengguna'
+  if (pathname.startsWith('/finance/purchases/new')) return 'Catat Pembelian'
+  if (pathname.startsWith('/finance/purchases/')) return 'Detail Pembelian'
+  if (pathname.startsWith('/finance/expenses/new')) return 'Pengeluaran Lain'
+  if (pathname.startsWith('/finance')) return 'Keuangan'
   if (pathname.startsWith('/ponds/')) return 'Detail Kolam'
+  if (pathname.startsWith('/water-quality/report')) return 'Laporan Kualitas Air'
   if (pathname.startsWith('/water-quality/new')) return 'Catat Kualitas Air'
   if (pathname.includes('/water-quality/') && pathname.endsWith('/edit')) return 'Edit Catatan'
   const item = navItems.find((nav) => (nav.end ? pathname === nav.to : pathname.startsWith(nav.to)))
@@ -29,6 +35,7 @@ export function AppLayout() {
   const title = pageTitle(location.pathname)
   const hidePrimaryAction =
     location.pathname.startsWith('/water-quality/new') ||
+    location.pathname.startsWith('/finance/') ||
     location.pathname.endsWith('/edit') ||
     location.pathname.startsWith('/users')
 
@@ -97,7 +104,7 @@ export function AppLayout() {
               <Plus className="size-4" />
               Catat Cepat
             </Link>
-            <UserMenu />
+            <UserMenu layout="sidebar" />
           </div>
         </aside>
 
@@ -113,8 +120,8 @@ export function AppLayout() {
                 </p>
                 <h1 className="truncate text-lg font-semibold leading-tight md:text-xl">{title}</h1>
               </div>
-              <div className="md:hidden">
-                <UserMenu />
+              <div className="flex shrink-0 items-center md:hidden">
+                <UserMenu layout="header" />
               </div>
             </div>
           </header>

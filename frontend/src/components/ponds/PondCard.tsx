@@ -2,10 +2,18 @@ import { Link } from 'react-router-dom'
 import { ChevronRight, Fish, MapPin, Plus } from 'lucide-react'
 
 import type { Pond } from '@/api/water-quality'
+import { DeleteIconButton } from '@/components/shared/DeleteButton'
 import { Button } from '@/components/ui/button'
 import { cn } from '@/lib/utils'
 
-export function PondCard({ pond }: { pond: Pond }) {
+type PondCardProps = {
+  pond: Pond
+  canDelete?: boolean
+  deleting?: boolean
+  onDelete?: (pond: Pond) => void | Promise<void>
+}
+
+export function PondCard({ pond, canDelete, deleting, onDelete }: PondCardProps) {
   const isActive = pond.status === 'ACTIVE'
 
   return (
@@ -23,14 +31,24 @@ export function PondCard({ pond }: { pond: Pond }) {
             </p>
           </div>
         </div>
-        <span
-          className={cn(
-            'shrink-0 rounded-full px-2.5 py-1 text-xs font-medium',
-            isActive ? 'bg-emerald-500/10 text-emerald-700' : 'bg-muted text-muted-foreground',
+        <div className="flex shrink-0 flex-col items-end gap-1">
+          <span
+            className={cn(
+              'rounded-full px-2.5 py-1 text-xs font-medium',
+              isActive ? 'bg-emerald-500/10 text-emerald-700' : 'bg-muted text-muted-foreground',
+            )}
+          >
+            {isActive ? 'Aktif' : 'Nonaktif'}
+          </span>
+          {canDelete && onDelete && (
+            <DeleteIconButton
+              label="Hapus kolam"
+              confirmMessage={`Hapus kolam "${pond.name}"? Semua data terkait ikut terhapus: catatan kualitas air, batch, dan transaksi keuangan yang terhubung ke kolam ini.`}
+              disabled={deleting}
+              onConfirm={() => onDelete(pond)}
+            />
           )}
-        >
-          {isActive ? 'Aktif' : 'Nonaktif'}
-        </span>
+        </div>
       </div>
 
       {pond.notes && <p className="mt-3 line-clamp-2 text-sm text-muted-foreground sm:mt-4">{pond.notes}</p>}

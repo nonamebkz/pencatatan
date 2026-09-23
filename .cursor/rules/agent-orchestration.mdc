@@ -1,0 +1,44 @@
+---
+description: Kapan dan bagaimana spawn subagent untuk task BE/FE
+alwaysApply: true
+---
+
+# Orkestrasi agent
+
+## Kapan spawn subagent
+
+| Situasi | Tindakan |
+|---------|----------|
+| Fitur baru (UI + API) | Contract dulu (`feature-delivery.mdc`), lalu **2 subagent paralel** BE + FE |
+| Fitur hanya backend | 1 subagent backend + update spec |
+| Fitur hanya frontend (API sudah ada) | 1 subagent frontend; verifikasi contract di `TECHNICAL_SPEC.md` / `frontend/src/api` |
+| Eksplorasi codebase luas | `explore` subagent, thoroughness `medium`+ |
+| Investigasi CI satu check | `ci-investigator` |
+| Review bug/security eksplisit user | `bugbot` / `security-review` (lihat skill) |
+
+## Model subagent
+
+Gunakan slug yang diizinkan environment (`inherit`, `composer-2.5`, dll.). Default: **inherit**.
+
+## Parallel vs sequential
+
+- **Paralel**: BE dan FE setelah contract ready; investigasi test file berbeda; tidak share file yang sama.
+- **Sequential**: migrasi + seed harus jalan dulu; FE butuh response contoh dari BE baru; konflik edit file sama.
+
+## Koordinator tidak offload
+
+Agent utama tetap: tulis/review contract, dispatch subagent, integrasi build, perbaiki drift contract.
+
+## Akhir proses (semua task dengan perubahan kode)
+
+1. Verifikasi build.
+2. **`graphify update .`** di setiap folder yang kodenya berubah (`graphify-monorepo.mdc`).
+3. Baru laporkan selesai ke user.
+
+## Graphify
+
+Setiap subagent prompt **harus** menyertakan `.cursor/rules/graphify-monorepo.mdc`:
+
+- Agent FE: `cd <repo>/frontend` lalu `graphify …` (graf `frontend/graphify-out/`).
+- Agent BE: `cd <repo>/backend` lalu `graphify …` (graf `backend/graphify-out/`).
+- Jangan pakai `graphify-out/` root untuk eksplorasi scoped FE/BE.

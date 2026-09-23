@@ -1,21 +1,23 @@
 import { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
-import { Droplets, Plus } from 'lucide-react'
+import { Droplets, LineChart, Plus } from 'lucide-react'
 
-import { listPonds, listWaterQualityLogs, type Pond, type WaterQualityLog } from '@/api/water-quality'
+import { listPonds, listWaterQualityLogs, deleteWaterQualityLog, type Pond, type WaterQualityLog } from '@/api/water-quality'
 import { MobileFilterPanel } from '@/components/mobile/MobileFilterPanel'
 import { MobileSectionHeader } from '@/components/mobile/MobileSectionHeader'
 import { EmptyState } from '@/components/shared/EmptyState'
-import { ErrorAlert } from '@/components/shared/PanelCard'
+import { CountBadge } from '@/components/shared/CountBadge'
+import { ErrorAlert } from '@/components/shared/ErrorAlert'
+import { ListSkeleton } from '@/components/shared/ListSkeleton'
 import { PageHeader } from '@/components/shared/PageHeader'
+import { PageShell } from '@/components/shared/PageShell'
+import { SelectField, TextField } from '@/components/shared/Field'
 import { WaterQualityLogRow } from '@/components/water-quality/WaterQualityLogRow'
 import { Button } from '@/components/ui/button'
-import { Input } from '@/components/ui/input'
-import { Label } from '@/components/ui/label'
-import { Select } from '@/components/ui/select'
-import { Skeleton } from '@/components/ui/skeleton'
+import { useAuth } from '@/contexts/AuthContext'
 
 export function WaterQualityListPage() {
+  const { isAdmin } = useAuth()
   const [ponds, setPonds] = useState<Pond[]>([])
   const [logs, setLogs] = useState<WaterQualityLog[]>([])
   const [businessUnitId, setBusinessUnitId] = useState('')
@@ -23,6 +25,7 @@ export function WaterQualityListPage() {
   const [to, setTo] = useState('')
   const [error, setError] = useState<string | null>(null)
   const [loading, setLoading] = useState(true)
+  const [deletingLogId, setDeletingLogId] = useState<string | null>(null)
 
   const loadLogs = (showLoading = true) => {
     if (showLoading) setLoading(true)
@@ -38,18 +41,39 @@ export function WaterQualityListPage() {
     loadLogs()
   }, [])
 
+  const handleDeleteLog = async (log: WaterQualityLog) => {
+    setDeletingLogId(log.id)
+    setError(null)
+    try {
+      await deleteWaterQualityLog(log.id)
+      setLogs((prev) => prev.filter((item) => item.id !== log.id))
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Gagal menghapus catatan')
+    } finally {
+      setDeletingLogId(null)
+    }
+  }
+
   return (
-    <div className="space-y-6 md:space-y-8">
+    <PageShell>
       <PageHeader
         title="Kualitas Air"
         description="Catatan observasi ammonia, pH, dan catatan operasional."
         actions={
-          <Button asChild size="lg" className="hidden md:inline-flex">
-            <Link to="/water-quality/new">
-              <Plus className="size-4" />
-              Tambah Catatan
-            </Link>
-          </Button>
+          <div className="flex w-full flex-col gap-2 sm:w-auto sm:flex-row">
+            <Button asChild variant="outline" className="w-full sm:w-auto">
+              <Link to="/water-quality/report">
+                <LineChart className="size-4" />
+                Laporan tren
+              </Link>
+            </Button>
+            <Button asChild size="lg" className="hidden w-full md:inline-flex md:w-auto">
+              <Link to="/water-quality/new">
+                <Plus className="size-4" />
+                Tambah Catatan
+              </Link>
+            </Button>
+          </div>
         }
       />
 
@@ -59,25 +83,22 @@ export function WaterQualityListPage() {
         onApply={() => loadLogs()}
       >
         <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
-          <div className="space-y-2 sm:col-span-2 xl:col-span-1">
-            <Label htmlFor="filter-pond">Kolam</Label>
-            <Select id="filter-pond" value={businessUnitId} onChange={(e) => setBusinessUnitId(e.target.value)}>
-              <option value="">Semua kolam</option>
-              {ponds.map((pond) => (
-                <option key={pond.id} value={pond.id}>
-                  {pond.name}
-                </option>
-              ))}
-            </Select>
-          </div>
-          <div className="space-y-2">
-            <Label htmlFor="filter-from">Dari</Label>
-            <Input id="filter-from" type="date" value={from} onChange={(e) => setFrom(e.target.value)} />
-          </div>
-          <div className="space-y-2">
-            <Label htmlFor="filter-to">Sampai</Label>
-            <Input id="filter-to" type="date" value={to} onChange={(e) => setTo(e.target.value)} />
-          </div>
+          <SelectField
+            label="Kolam"
+            id="filter-pond"
+            className="sm:col-span-2 xl:col-span-1"
+            value={businessUnitId}
+            onChange={(e) => setBusinessUnitId(e.target.value)}
+          >
+            <option value="">Semua kolam</option>
+            {ponds.map((pond) => (
+              <option key={pond.id} value={pond.id}>
+                {pond.name}
+              </option>
+            ))}
+          </SelectField>
+          <TextField label="Dari" id="filter-from" type="date" value={from} onChange={(e) => setFrom(e.target.value)} />
+          <TextField label="Sampai" id="filter-to" type="date" value={to} onChange={(e) => setTo(e.target.value)} />
         </div>
       </MobileFilterPanel>
 
@@ -87,18 +108,12 @@ export function WaterQualityListPage() {
         <MobileSectionHeader
           title="Daftar Catatan"
           action={
-            <span className="rounded-full bg-muted px-3 py-1 text-xs font-medium text-muted-foreground">
-              {logs.length} entri
-            </span>
+            <CountBadge>{logs.length} entri</CountBadge>
           }
         />
 
         {loading ? (
-          <div className="space-y-3">
-            {Array.from({ length: 3 }).map((_, index) => (
-              <Skeleton key={index} className="h-28 rounded-2xl" />
-            ))}
-          </div>
+          <ListSkeleton count={3} className="h-28 rounded-2xl" />
         ) : logs.length === 0 ? (
           <EmptyState
             icon={Droplets}
@@ -113,11 +128,17 @@ export function WaterQualityListPage() {
         ) : (
           <div className="space-y-3">
             {logs.map((log) => (
-              <WaterQualityLogRow key={log.id} log={log} />
+              <WaterQualityLogRow
+                key={log.id}
+                log={log}
+                canDelete={isAdmin}
+                deleting={deletingLogId === log.id}
+                onDelete={handleDeleteLog}
+              />
             ))}
           </div>
         )}
       </div>
-    </div>
+    </PageShell>
   )
 }

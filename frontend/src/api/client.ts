@@ -35,7 +35,17 @@ async function request<T>(path: string, init?: RequestOptions): Promise<ApiRespo
     headers,
   })
 
-  const payload = (await response.json()) as ApiResponse<T>
+  let payload: ApiResponse<T>
+  if (response.status === 204 || response.status === 205) {
+    payload = { success: true, data: null as T }
+  } else {
+    const text = await response.text()
+    if (!text) {
+      payload = { success: response.ok, data: null as T }
+    } else {
+      payload = JSON.parse(text) as ApiResponse<T>
+    }
+  }
   if (!response.ok) {
     if (response.status === 401 && useAuth) {
       clearStoredToken()
