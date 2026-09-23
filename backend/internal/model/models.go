@@ -12,17 +12,18 @@ const (
 )
 
 type BusinessUnit struct {
-	ID          string             `json:"id"`
-	WorkspaceID string             `json:"workspaceId"`
-	UnitType    string             `json:"unitType"`
-	Name        string             `json:"name"`
-	Location    *string            `json:"location,omitempty"`
-	Size        *string            `json:"size,omitempty"`
-	OwnerName   *string            `json:"ownerName,omitempty"`
-	Status      BusinessUnitStatus `json:"status"`
-	Notes       *string            `json:"notes,omitempty"`
-	CreatedAt   time.Time          `json:"createdAt"`
-	UpdatedAt   time.Time          `json:"updatedAt"`
+	ID                 string             `json:"id"`
+	WorkspaceID        string             `json:"workspaceId"`
+	UnitType           string             `json:"unitType"`
+	Name               string             `json:"name"`
+	Location           *string            `json:"location,omitempty"`
+	Size               *string            `json:"size,omitempty"`
+	OwnerName          *string            `json:"ownerName,omitempty"`
+	Status             BusinessUnitStatus `json:"status"`
+	Notes              *string            `json:"notes,omitempty"`
+	WaterQualityConfig WaterQualityConfig `json:"waterQualityConfig"`
+	CreatedAt          time.Time          `json:"createdAt"`
+	UpdatedAt          time.Time          `json:"updatedAt"`
 }
 
 type WaterQualityStatus string
@@ -50,10 +51,11 @@ type WaterQualityLog struct {
 }
 
 type WaterQualityTrendPoint struct {
-	MeasuredAt time.Time `json:"measuredAt"`
-	AmmoniaPPM *float64  `json:"ammoniaPpm,omitempty"`
-	PH         *float64  `json:"ph,omitempty"`
-	Status     WaterQualityStatus `json:"status"`
+	BusinessUnitID string             `json:"businessUnitId,omitempty"`
+	MeasuredAt     time.Time          `json:"measuredAt"`
+	AmmoniaPPM     *float64           `json:"ammoniaPpm,omitempty"`
+	PH             *float64           `json:"ph,omitempty"`
+	Status         WaterQualityStatus `json:"status"`
 }
 
 type WaterQualitySummary struct {

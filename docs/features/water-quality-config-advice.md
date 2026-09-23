@@ -6,7 +6,7 @@
 
 ## Ringkasan
 
-Saat pH atau amonia di luar ambang, API mengembalikan `advice[]` (judul + langkah). Ambang dan teks saran disimpan **satu per workspace** di `workspace_settings` (`water_quality_config`). Semua kolam di workspace memakai konfigurasi yang sama. Bukan per kolam dan bukan per spesies.
+Saat pH atau amonia di luar ambang, API mengembalikan `advice[]` (judul + langkah). Halaman ini menyimpan **template workspace** di `workspace_settings` (`water_quality_config`). Penilaian harian memakai salinan di tiap kolam — lihat [`pond-water-quality-config.md`](./pond-water-quality-config.md).
 
 ## Business flow
 
@@ -19,7 +19,7 @@ Saat pH atau amonia di luar ambang, API mengembalikan `advice[]` (judul + langka
 
 | ID | Aturan | Jika gagal |
 |----|--------|------------|
-| BR-1 | Satu konfigurasi per workspace | — |
+| BR-1 | Satu template per workspace; penilaian memakai config kolam | — |
 | BR-2 | Amonia ≥ waspada → `WARNING`; ≥ bahaya → `DANGER` | — |
 | BR-3 | pH di luar min–maks → `WARNING` saja | — |
 | BR-4 | Bahaya amonia ≥ waspada; pH maks ≥ min; semua ambang > 0 | `VALIDATION_ERROR` |

@@ -81,7 +81,7 @@ Aturan bisnis lengkap: [BRD.md §9–§14](./BRD.md).
 | Bagi hasil | Max 2 pihak; persen total = 100% |
 | ConsumableLot | Link ke purchase opsional; manual allowed |
 | Anti double-count | Laporan sewa by kontrak; bagi hasil by record |
-| WaterQualityLog (T2) | Atom observasional; no Transaction; ambang & saran dari konfigurasi workspace (`water_quality_config`) |
+| WaterQualityLog (T2) | Atom observasional; no Transaction; ambang & saran dari konfigurasi kolam; template workspace untuk kolam baru |
 
 ---
 
@@ -608,15 +608,17 @@ Base URL: `/api/v1`
 | DELETE | `/water-quality-logs/:id` | — | `204` | ✅ **Admin only** |
 | GET | `/water-quality/config` | — | `WaterQualityConfig` (threshold + teks saran) |
 | PUT | `/water-quality/config` | `WaterQualityConfig` | `WaterQualityConfig` | ✅ **Admin only** |
-| POST | `/water-quality/evaluate` | `{ ammoniaPpm?, ph? }` | `{ status, advice[] }` |
+| POST | `/water-quality/evaluate` | `{ businessUnitId, ammoniaPpm?, ph? }` | `{ status, advice[] }` dari config kolam |
 | GET | `/water-quality-logs/trends` | `?businessUnitId=&days=7\|30` | `{ series: { ammonia[], ph[] }, measuredAt[] }` |
 
 **Validation (server):**
 - Reject if kolam status = `INACTIVE`
 - Reject if all of `ammoniaPpm`, `ph`, `notes` empty
-- Compute `status` dan `advice` dari konfigurasi workspace aktif (BR-F7, BR-F12), bukan konstanta di handler
+- Compute `status` dan `advice` dari `business_units.water_quality_config` kolam yang diukur (BR-F7, BR-F12)
+- `GET/PUT /water-quality/config` adalah **template** kolam baru (`workspace_settings`, key `water_quality_config`). Mengubah template tidak menulis ulang kolam yang sudah ada
+- `POST/PUT /ponds` menerima `waterQualityConfig` opsional. Create tanpa field menyalin template. Update tanpa field mempertahankan config lama
 
-**`WaterQualityConfig`** (disimpan di `workspace_settings`, key `water_quality_config`; di-merge dengan default jika field kosong):
+**`WaterQualityConfig`** (disimpan per kolam; template workspace di-merge dengan default jika field kosong):
 
 | Field | Default | Peran |
 |---|---|---|
@@ -659,7 +661,7 @@ Base URL: `/api/v1`
 }
 ```
 
-Jika status bukan `NORMAL`, item yang sama menyertakan `advice[]` (`code`, `title`, `steps`) dari konfigurasi workspace.
+Jika status bukan `NORMAL`, item yang sama menyertakan `advice[]` (`code`, `title`, `steps`) dari konfigurasi kolam itu.
 
 ### 5.12 Health
 
@@ -1283,7 +1285,7 @@ func main() {
 **Backend:**
 - [x] `water_quality_logs` + CRUD + validation (BR-F1–F4, F6, F9–F11)
 - [x] BR-F5 kolam INACTIVE ditolak saat create/update
-- [x] Status NORMAL/WARNING/DANGER + `advice` dari konfigurasi workspace (BR-F7, BR-F12)
+- [x] Status NORMAL/WARNING/DANGER + `advice` dari konfigurasi kolam (BR-F7, BR-F12)
 - [x] `GET/PUT /water-quality/config`, `POST /water-quality/evaluate`
 - [x] `GET /water-quality-logs/trends`, `/dashboard`, `/reports/water-quality`
 - [x] `GET /batches` (filter kolam)
@@ -1302,7 +1304,7 @@ func main() {
 
 ## 19. Referensi
 
-- [BRD.md](./BRD.md) — business requirements (v1.4 + §23 status)
+- [BRD.md](./BRD.md) — business requirements (v1.5 + §23 status)
 - [raw idea.md](./raw%20idea.md) — ide awal
 - [jangka panjang.md](./jangka%20panjang.md) — visi jangka panjang
 
@@ -1325,4 +1327,4 @@ Ringkasan singkat — detail bisnis: [BRD §23](./BRD.md#23-status-implementasi-
 | Transaksi MVP | Pembelian + pengeluaran lain | ⚠️ sewa, pakan, bagi hasil, histori harga ❌ |
 | Redis | cache + logout blacklist | ❌ |
 
-**Backlog teknis berikutnya:** workspace CRUD + switcher → histori harga & sisa modul keuangan → Redis production hardening. Ambang kualitas air tetap satu konfigurasi per workspace.
+**Backlog teknis berikutnya:** workspace CRUD + switcher → histori harga & sisa modul keuangan → Redis production hardening.

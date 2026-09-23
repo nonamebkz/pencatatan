@@ -51,7 +51,7 @@ func main() {
 	authHandler := handler.NewAuthHandler(userRepo, cfg.JWTSecret, cfg.JWTExpiry)
 	userHandler := handler.NewUserHandler(userRepo)
 	batchHandler := handler.NewBatchHandler(batchRepo)
-	pondHandler := handler.NewPondHandler(pondRepo)
+	pondHandler := handler.NewPondHandler(pondRepo, settingsRepo)
 	waterQualityHandler := handler.NewWaterQualityHandler(waterQualityRepo, pondRepo, settingsRepo)
 	financeHandler := handler.NewFinanceHandler(financeRepo)
 

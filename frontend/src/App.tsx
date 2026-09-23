@@ -6,6 +6,7 @@ import { AppLayout } from '@/layouts/AppLayout'
 import { DashboardPage } from '@/pages/DashboardPage'
 import { LoginPage } from '@/pages/LoginPage'
 import { PondDetailPage } from '@/pages/PondDetailPage'
+import { PondFormPage } from '@/pages/PondFormPage'
 import { PondListPage } from '@/pages/PondListPage'
 import { UserFormPage } from '@/pages/UserFormPage'
 import { UserListPage } from '@/pages/UserListPage'
@@ -31,6 +32,8 @@ function App() {
             <Route element={<AppLayout />}>
               <Route index element={<DashboardPage />} />
               <Route path="ponds" element={<PondListPage />} />
+              <Route path="ponds/new" element={<PondFormPage />} />
+              <Route path="ponds/:id/edit" element={<PondFormPage />} />
               <Route path="ponds/:id" element={<PondDetailPage />} />
               <Route path="water-quality" element={<WaterQualityListPage />} />
               <Route path="water-quality/report" element={<WaterQualityReportPage />} />

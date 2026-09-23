@@ -10,6 +10,7 @@ export type Pond = {
   ownerName?: string
   status: 'ACTIVE' | 'INACTIVE'
   notes?: string
+  waterQualityConfig: WaterQualityConfig
 }
 
 export type WaterQualityLog = {
@@ -90,8 +91,20 @@ export function listPonds(status?: string) {
   return api.get<Pond[]>(`/ponds${query}`)
 }
 
-export function createPond(body: Pick<Pond, 'name' | 'location' | 'notes'>) {
+export type PondInput = {
+  name: string
+  location?: string
+  notes?: string
+  status?: Pond['status']
+  waterQualityConfig?: WaterQualityConfig
+}
+
+export function createPond(body: PondInput) {
   return api.post<Pond>('/ponds', body)
+}
+
+export function updatePond(id: string, body: PondInput) {
+  return api.put<Pond>(`/ponds/${id}`, body)
 }
 
 export function getPond(id: string) {
@@ -164,6 +177,6 @@ export function updateWaterQualityConfig(body: WaterQualityConfig) {
   return api.put<WaterQualityConfig>('/water-quality/config', body)
 }
 
-export function evaluateWaterQuality(body: Pick<WaterQualityInput, 'ammoniaPpm' | 'ph'>) {
+export function evaluateWaterQuality(body: Pick<WaterQualityInput, 'businessUnitId' | 'ammoniaPpm' | 'ph'>) {
   return api.post<WaterQualityEvaluation>('/water-quality/evaluate', body)
 }

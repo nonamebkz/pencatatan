@@ -15,4 +15,5 @@ Aturan lengkap: `.cursor/rules/feature-delivery.mdc`
 
 | File | Status | Isi |
 |------|--------|-----|
-| [`water-quality-config-advice.md`](./water-quality-config-advice.md) | `done` | Ambang dan teks saran kualitas air, satu konfigurasi per workspace |
+| [`water-quality-config-advice.md`](./water-quality-config-advice.md) | `done` | Template ambang & saran untuk kolam baru |
+| [`pond-water-quality-config.md`](./pond-water-quality-config.md) | `done` | Salinan ambang & saran di tiap kolam |

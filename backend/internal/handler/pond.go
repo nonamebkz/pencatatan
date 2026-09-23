@@ -9,23 +9,26 @@ import (
 	"github.com/kikichan/pencatatan/backend/internal/httpx"
 	"github.com/kikichan/pencatatan/backend/internal/model"
 	"github.com/kikichan/pencatatan/backend/internal/repository"
+	"github.com/kikichan/pencatatan/backend/internal/service/waterquality"
 )
 
 type PondHandler struct {
-	repo *repository.PondRepository
+	repo     *repository.PondRepository
+	settings *repository.SettingsRepository
 }
 
-func NewPondHandler(repo *repository.PondRepository) *PondHandler {
-	return &PondHandler{repo: repo}
+func NewPondHandler(repo *repository.PondRepository, settings *repository.SettingsRepository) *PondHandler {
+	return &PondHandler{repo: repo, settings: settings}
 }
 
 type pondRequest struct {
-	Name      string  `json:"name"`
-	Location  *string `json:"location"`
-	Size      *string `json:"size"`
-	OwnerName *string `json:"ownerName"`
-	Status    *string `json:"status"`
-	Notes     *string `json:"notes"`
+	Name               string                     `json:"name"`
+	Location           *string                    `json:"location"`
+	Size               *string                    `json:"size"`
+	OwnerName          *string                    `json:"ownerName"`
+	Status             *string                    `json:"status"`
+	Notes              *string                    `json:"notes"`
+	WaterQualityConfig *model.WaterQualityConfig  `json:"waterQualityConfig"`
 }
 
 func (h *PondHandler) List(c *fiber.Ctx) error {
@@ -56,19 +59,25 @@ func (h *PondHandler) Create(c *fiber.Ctx) error {
 		return httpx.Fail(c, fiber.StatusBadRequest, "VALIDATION_ERROR", "Nama kolam wajib diisi")
 	}
 
+	cfg, err := h.resolveCreateConfig(c, req.WaterQualityConfig)
+	if err != nil {
+		return httpx.Fail(c, fiber.StatusBadRequest, "VALIDATION_ERROR", err.Error())
+	}
+
 	now := time.Now()
 	pond := &model.BusinessUnit{
-		ID:          uuid.NewString(),
-		WorkspaceID: workspaceID(c),
-		UnitType:    "POND",
-		Name:        req.Name,
-		Location:    req.Location,
-		Size:        req.Size,
-		OwnerName:   req.OwnerName,
-		Status:      model.BusinessUnitActive,
-		Notes:       req.Notes,
-		CreatedAt:   now,
-		UpdatedAt:   now,
+		ID:                 uuid.NewString(),
+		WorkspaceID:        workspaceID(c),
+		UnitType:           "POND",
+		Name:               req.Name,
+		Location:           req.Location,
+		Size:               req.Size,
+		OwnerName:          req.OwnerName,
+		Status:             model.BusinessUnitActive,
+		Notes:              req.Notes,
+		WaterQualityConfig: cfg,
+		CreatedAt:          now,
+		UpdatedAt:          now,
 	}
 	if req.Status != nil && *req.Status == string(model.BusinessUnitInactive) {
 		pond.Status = model.BusinessUnitInactive
@@ -118,6 +127,12 @@ func (h *PondHandler) Update(c *fiber.Ctx) error {
 			return httpx.Fail(c, fiber.StatusBadRequest, "VALIDATION_ERROR", "Status kolam tidak valid")
 		}
 	}
+	if req.WaterQualityConfig != nil {
+		if err := waterquality.ValidateConfig(*req.WaterQualityConfig); err != nil {
+			return httpx.Fail(c, fiber.StatusBadRequest, "VALIDATION_ERROR", err.Error())
+		}
+		existing.WaterQualityConfig = waterquality.MergeWithDefaults(*req.WaterQualityConfig)
+	}
 	existing.UpdatedAt = time.Now()
 
 	if err := h.repo.Update(c.Context(), existing); err != nil {
@@ -137,4 +152,17 @@ func (h *PondHandler) Delete(c *fiber.Ctx) error {
 		return httpx.Fail(c, fiber.StatusInternalServerError, "INTERNAL_ERROR", err.Error())
 	}
 	return c.SendStatus(fiber.StatusNoContent)
+}
+
+func (h *PondHandler) resolveCreateConfig(c *fiber.Ctx, cfg *model.WaterQualityConfig) (model.WaterQualityConfig, error) {
+	if cfg == nil {
+		if h.settings == nil {
+			return waterquality.DefaultConfig(), nil
+		}
+		return h.settings.GetWaterQualityConfig(c.Context(), workspaceID(c))
+	}
+	if err := waterquality.ValidateConfig(*cfg); err != nil {
+		return model.WaterQualityConfig{}, err
+	}
+	return waterquality.MergeWithDefaults(*cfg), nil
 }

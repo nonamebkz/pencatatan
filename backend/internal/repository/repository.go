@@ -3,6 +3,7 @@ package repository
 import (
 	"context"
 	"database/sql"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"strings"
@@ -22,7 +23,7 @@ func NewPondRepository(db *sql.DB) *PondRepository {
 
 func (r *PondRepository) List(ctx context.Context, workspaceID string, status string) ([]model.BusinessUnit, error) {
 	query := `
-		SELECT id, workspace_id, unit_type, name, location, size, owner_name, status, notes, created_at, updated_at
+		SELECT id, workspace_id, unit_type, name, location, size, owner_name, status, notes, water_quality_config, created_at, updated_at
 		FROM business_units
 		WHERE workspace_id = ?`
 	args := []any{workspaceID}
@@ -52,7 +53,7 @@ func (r *PondRepository) List(ctx context.Context, workspaceID string, status st
 
 func (r *PondRepository) GetByID(ctx context.Context, workspaceID, id string) (*model.BusinessUnit, error) {
 	row := r.db.QueryRowContext(ctx, `
-		SELECT id, workspace_id, unit_type, name, location, size, owner_name, status, notes, created_at, updated_at
+		SELECT id, workspace_id, unit_type, name, location, size, owner_name, status, notes, water_quality_config, created_at, updated_at
 		FROM business_units
 		WHERE workspace_id = ? AND id = ?`, workspaceID, id)
 
@@ -64,21 +65,29 @@ func (r *PondRepository) GetByID(ctx context.Context, workspaceID, id string) (*
 }
 
 func (r *PondRepository) Create(ctx context.Context, pond *model.BusinessUnit) error {
-	_, err := r.db.ExecContext(ctx, `
+	cfgJSON, err := marshalWaterQualityConfig(pond.WaterQualityConfig)
+	if err != nil {
+		return err
+	}
+	_, err = r.db.ExecContext(ctx, `
 		INSERT INTO business_units (
-			id, workspace_id, unit_type, name, location, size, owner_name, status, notes, created_at, updated_at
-		) VALUES (?, ?, 'POND', ?, ?, ?, ?, ?, ?, ?, ?)`,
-		pond.ID, pond.WorkspaceID, pond.Name, pond.Location, pond.Size, pond.OwnerName, pond.Status, pond.Notes, pond.CreatedAt, pond.UpdatedAt,
+			id, workspace_id, unit_type, name, location, size, owner_name, status, notes, water_quality_config, created_at, updated_at
+		) VALUES (?, ?, 'POND', ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+		pond.ID, pond.WorkspaceID, pond.Name, pond.Location, pond.Size, pond.OwnerName, pond.Status, pond.Notes, cfgJSON, pond.CreatedAt, pond.UpdatedAt,
 	)
 	return err
 }
 
 func (r *PondRepository) Update(ctx context.Context, pond *model.BusinessUnit) error {
+	cfgJSON, err := marshalWaterQualityConfig(pond.WaterQualityConfig)
+	if err != nil {
+		return err
+	}
 	result, err := r.db.ExecContext(ctx, `
 		UPDATE business_units
-		SET name = ?, location = ?, size = ?, owner_name = ?, status = ?, notes = ?, updated_at = ?
+		SET name = ?, location = ?, size = ?, owner_name = ?, status = ?, notes = ?, water_quality_config = ?, updated_at = ?
 		WHERE id = ? AND workspace_id = ?`,
-		pond.Name, pond.Location, pond.Size, pond.OwnerName, pond.Status, pond.Notes, pond.UpdatedAt, pond.ID, pond.WorkspaceID,
+		pond.Name, pond.Location, pond.Size, pond.OwnerName, pond.Status, pond.Notes, cfgJSON, pond.UpdatedAt, pond.ID, pond.WorkspaceID,
 	)
 	if err != nil {
 		return err
@@ -160,23 +169,46 @@ func deletePondRelatedData(ctx context.Context, tx *sql.Tx, workspaceID, busines
 
 func scanBusinessUnit(rows *sql.Rows) (model.BusinessUnit, error) {
 	var item model.BusinessUnit
+	var cfgRaw []byte
 	err := rows.Scan(
 		&item.ID, &item.WorkspaceID, &item.UnitType, &item.Name, &item.Location, &item.Size,
-		&item.OwnerName, &item.Status, &item.Notes, &item.CreatedAt, &item.UpdatedAt,
+		&item.OwnerName, &item.Status, &item.Notes, &cfgRaw, &item.CreatedAt, &item.UpdatedAt,
 	)
-	return item, err
+	if err != nil {
+		return item, err
+	}
+	item.WaterQualityConfig = parseWaterQualityConfigJSON(cfgRaw)
+	return item, nil
 }
 
 func scanBusinessUnitRow(row *sql.Row) (*model.BusinessUnit, error) {
 	var item model.BusinessUnit
+	var cfgRaw []byte
 	err := row.Scan(
 		&item.ID, &item.WorkspaceID, &item.UnitType, &item.Name, &item.Location, &item.Size,
-		&item.OwnerName, &item.Status, &item.Notes, &item.CreatedAt, &item.UpdatedAt,
+		&item.OwnerName, &item.Status, &item.Notes, &cfgRaw, &item.CreatedAt, &item.UpdatedAt,
 	)
 	if err != nil {
 		return nil, err
 	}
+	item.WaterQualityConfig = parseWaterQualityConfigJSON(cfgRaw)
 	return &item, nil
+}
+
+func parseWaterQualityConfigJSON(raw []byte) model.WaterQualityConfig {
+	if len(raw) == 0 {
+		return waterquality.MergeWithDefaults(waterquality.DefaultConfig())
+	}
+	var cfg model.WaterQualityConfig
+	if err := json.Unmarshal(raw, &cfg); err != nil {
+		return waterquality.MergeWithDefaults(waterquality.DefaultConfig())
+	}
+	return waterquality.MergeWithDefaults(cfg)
+}
+
+func marshalWaterQualityConfig(cfg model.WaterQualityConfig) ([]byte, error) {
+	cfg = waterquality.MergeWithDefaults(cfg)
+	return json.Marshal(cfg)
 }
 
 type WaterQualityFilter struct {
@@ -309,7 +341,7 @@ func (r *WaterQualityRepository) Trends(ctx context.Context, workspaceID, busine
 	}
 
 	query := `
-		SELECT measured_at, ammonia_ppm, ph
+		SELECT business_unit_id, measured_at, ammonia_ppm, ph
 		FROM water_quality_logs
 		WHERE workspace_id = ?
 		  AND measured_at >= DATE_SUB(NOW(), INTERVAL ? DAY)`
@@ -332,7 +364,7 @@ func (r *WaterQualityRepository) Trends(ctx context.Context, workspaceID, busine
 		var point model.WaterQualityTrendPoint
 		var ammonia sql.NullFloat64
 		var ph sql.NullFloat64
-		if err := rows.Scan(&point.MeasuredAt, &ammonia, &ph); err != nil {
+		if err := rows.Scan(&point.BusinessUnitID, &point.MeasuredAt, &ammonia, &ph); err != nil {
 			return nil, err
 		}
 		if ammonia.Valid {
@@ -343,7 +375,6 @@ func (r *WaterQualityRepository) Trends(ctx context.Context, workspaceID, busine
 			value := ph.Float64
 			point.PH = &value
 		}
-		point.Status = waterquality.ComputeStatusLegacy(point.AmmoniaPPM, point.PH)
 		points = append(points, point)
 	}
 	return points, rows.Err()

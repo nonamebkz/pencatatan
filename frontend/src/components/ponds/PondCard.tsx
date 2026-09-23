@@ -1,5 +1,5 @@
 import { Link } from 'react-router-dom'
-import { ChevronRight, Fish, MapPin, Plus } from 'lucide-react'
+import { ChevronRight, Fish, MapPin, Pencil, Plus } from 'lucide-react'
 
 import type { Pond } from '@/api/water-quality'
 import { DeleteIconButton } from '@/components/shared/DeleteButton'
@@ -53,14 +53,20 @@ export function PondCard({ pond, canDelete, deleting, onDelete }: PondCardProps)
 
       {pond.notes && <p className="mt-3 line-clamp-2 text-sm text-muted-foreground sm:mt-4">{pond.notes}</p>}
 
-      <div className="mt-4 grid grid-cols-2 gap-2 sm:mt-5 sm:flex sm:flex-wrap">
-        <Button asChild variant="outline" size="sm" className="w-full">
+      <div className="mt-4 grid grid-cols-3 gap-2 sm:mt-5">
+        <Button asChild variant="outline" size="sm" className="h-11 w-full touch-target">
           <Link to={`/ponds/${pond.id}`}>
             Detail
             <ChevronRight className="size-4" />
           </Link>
         </Button>
-        <Button asChild variant="ghost" size="sm" className="w-full">
+        <Button asChild variant="outline" size="sm" className="h-11 w-full touch-target">
+          <Link to={`/ponds/${pond.id}/edit`}>
+            <Pencil className="size-4" />
+            Ubah
+          </Link>
+        </Button>
+        <Button asChild variant="ghost" size="sm" className="h-11 w-full touch-target">
           <Link to={`/water-quality/new?pondId=${pond.id}`}>
             <Plus className="size-4" />
             Catat

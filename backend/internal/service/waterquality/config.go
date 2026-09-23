@@ -1,6 +1,23 @@
 package waterquality
 
-import "github.com/kikichan/pencatatan/backend/internal/model"
+import (
+	"errors"
+
+	"github.com/kikichan/pencatatan/backend/internal/model"
+)
+
+func ValidateConfig(cfg model.WaterQualityConfig) error {
+	if cfg.AmmoniaWarnPPM <= 0 || cfg.AmmoniaDangerPPM <= 0 || cfg.PHMinNormal <= 0 || cfg.PHMaxNormal <= 0 {
+		return errors.New("Ambang threshold harus lebih dari 0")
+	}
+	if cfg.AmmoniaDangerPPM < cfg.AmmoniaWarnPPM {
+		return errors.New("Ambang bahaya amonia harus ≥ waspada")
+	}
+	if cfg.PHMaxNormal < cfg.PHMinNormal {
+		return errors.New("pH maksimum harus ≥ minimum")
+	}
+	return nil
+}
 
 func DefaultConfig() model.WaterQualityConfig {
 	return model.WaterQualityConfig{

@@ -1,6 +1,6 @@
 # Ambang kualitas air per kolam
 
-> Status: `contract-ready`  
+> Status: `done`  
 > Tanggal: 2026-09-23  
 > Pemilik: —
 
@@ -133,14 +133,14 @@ Route `ponds/new` dan `ponds/:id/edit` didaftarkan sebelum `ponds/:id`.
 
 ## Verifikasi
 
-- [ ] `go build ./...`
-- [ ] `npm run build`
-- [ ] `cd backend && graphify update .`
-- [ ] `cd frontend && graphify update .`
+- [x] `go build ./...`
+- [x] `npm run build`
+- [x] `cd backend && graphify update .`
+- [x] `cd frontend && graphify update .`
 
 ## Implementasi
 
-- [ ] Kolom + backfill idempoten
-- [ ] Pond CRUD menyimpan config
-- [ ] Evaluasi log/dashboard/tren/laporan/evaluate per kolam
-- [ ] Form kolam + daftar + form catatan
+- [x] Kolom + backfill idempoten
+- [x] Pond CRUD menyimpan config
+- [x] Evaluasi log/dashboard/tren/laporan/evaluate per kolam
+- [x] Form kolam + daftar + form catatan

@@ -16,17 +16,7 @@ import { PanelCard } from '@/components/shared/PanelCard'
 import { PageHeader } from '@/components/shared/PageHeader'
 import { Button } from '@/components/ui/button'
 import { Skeleton } from '@/components/ui/skeleton'
-
-function linesFromSteps(steps: string[]) {
-  return steps.join('\n')
-}
-
-function stepsFromLines(text: string) {
-  return text
-    .split('\n')
-    .map((line) => line.trim())
-    .filter(Boolean)
-}
+import { linesFromSteps, stepsFromLines } from '@/lib/waterQualityAdvice'
 
 type AdviceFields = Pick<
   WaterQualityConfig,
@@ -120,14 +110,15 @@ export function WaterQualityConfigPage() {
       <BackLink to="/water-quality" label="Kembali ke daftar catatan" />
 
       <PageHeader
-        title="Konfigurasi Kualitas Air"
-        description="Ambang batas dan teks saran penanganan untuk seluruh workspace. Hanya administrator."
+        title="Template Kualitas Air"
+        description="Ambang dan saran default untuk kolam baru. Tidak dipakai untuk penilaian catatan harian kolam yang sudah ada."
       />
 
       <InfoCallout>
         <p>
-          Status dihitung dari nilai terukur vs ambang di bawah. Saran muncul otomatis saat status waspada atau bahaya.
-          Satu baris = satu langkah dalam daftar saran.
+          Ini adalah template workspace. Saat menambah kolam, nilai di sini disalin ke kolam tersebut. Mengubah template
+          tidak mengubah ambang kolam yang sudah tersimpan. Penilaian harian memakai ambang masing-masing kolam (atur
+          lewat Ubah kolam). Satu baris = satu langkah saran.
         </p>
       </InfoCallout>
 

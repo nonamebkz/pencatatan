@@ -184,9 +184,9 @@ Kolom **Optimum (SNI pembesaran)** = acuan formal Indonesia. **Peringatan / baha
 
 | Area | Kode / data | Selisih vs riset |
 |------|-------------|------------------|
-| Badge kualitas air | Konfigurasi per workspace (`workspace_settings.water_quality_config`). Default di `config.go`: amonia ≥0,5 ppm waspada, ≥1,0 bahaya; pH di luar 6,5–8,5 waspada. Satu set untuk semua kolam | SNI pembesaran NH₃ **<0,01 mg/L**; ambang app kemungkinan **TAN** atau lebih longgar — lihat §2 tabel. Admin bisa mengubah angka, tetapi belum per kolam/spesies |
+| Badge kualitas air | Config per kolam (`business_units.water_quality_config`), disalin dari template workspace saat kolam dibuat. Default template: amonia ≥0,5 ppm waspada, ≥1,0 bahaya; pH di luar 6,5–8,5 waspada | SNI pembesaran NH₃ **<0,01 mg/L**; ambang app kemungkinan **TAN** atau lebih longgar — lihat §2 tabel. Belum ada master spesies; ambang diedit di form kolam |
 | Master kolam | `business_units`: name, location, size (string), notes, status | Belum: luas, tinggi air, volume, fase, padat tebar (usulan § Gap analysis) |
-| Log kualitas air | ammonia, pH, notes, batch; saran dihitung saat dibaca dari konfigurasi workspace | Belum: suhu, DO, jenis analit TAN/NH₃ tersimpan di log, tindakan koreksi yang dicatat petugas |
+| Log kualitas air | ammonia, pH, notes, batch; saran dihitung saat dibaca dari konfigurasi kolam | Belum: suhu, DO, jenis analit TAN/NH₃ tersimpan di log, tindakan koreksi yang dicatat petugas |
 
 Langkah produk berikutnya: spesifikasi fitur `docs/features/pond-master-water-playbook.md` (belum dibuat).
 

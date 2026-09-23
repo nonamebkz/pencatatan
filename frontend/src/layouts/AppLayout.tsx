@@ -21,7 +21,10 @@ function pageTitle(pathname: string) {
   if (pathname.startsWith('/finance/purchases/')) return 'Detail Pembelian'
   if (pathname.startsWith('/finance/expenses/new')) return 'Pengeluaran Lain'
   if (pathname.startsWith('/finance')) return 'Keuangan'
-  if (pathname.startsWith('/ponds/')) return 'Detail Kolam'
+  if (pathname === '/ponds/new') return 'Tambah Kolam'
+  if (/^\/ponds\/[^/]+\/edit$/.test(pathname)) return 'Ubah Kolam'
+  if (/^\/ponds\/[^/]+$/.test(pathname)) return 'Detail Kolam'
+  if (pathname.startsWith('/ponds')) return 'Kolam'
   if (pathname.startsWith('/water-quality/report')) return 'Laporan Kualitas Air'
   if (pathname.startsWith('/water-quality/new')) return 'Catat Kualitas Air'
   if (pathname.includes('/water-quality/') && pathname.endsWith('/edit')) return 'Edit Catatan'
@@ -42,6 +45,7 @@ export function AppLayout() {
     onPondDetail
   const hidePrimaryAction =
     location.pathname.startsWith('/water-quality/new') ||
+    location.pathname === '/ponds/new' ||
     location.pathname.startsWith('/finance/') ||
     location.pathname.endsWith('/edit') ||
     location.pathname.startsWith('/users')

@@ -6,7 +6,6 @@ import {
   createWaterQualityLog,
   deleteWaterQualityLog,
   evaluateWaterQuality,
-  getWaterQualityConfig,
   getWaterQualityLog,
   listBatches,
   listPonds,
@@ -53,14 +52,7 @@ export function WaterQualityFormPage() {
   const [error, setError] = useState<string | null>(null)
   const [loading, setLoading] = useState(isEdit)
   const [submitting, setSubmitting] = useState(false)
-  const [config, setConfig] = useState<WaterQualityConfig | null>(null)
   const [preview, setPreview] = useState<WaterQualityEvaluation | null>(null)
-
-  useEffect(() => {
-    getWaterQualityConfig()
-      .then((response) => setConfig(response.data))
-      .catch(() => setConfig(null))
-  }, [])
 
   useEffect(() => {
     listPonds('ACTIVE')
@@ -97,6 +89,9 @@ export function WaterQualityFormPage() {
       .finally(() => setLoading(false))
   }, [id, isEdit])
 
+  const selectedPond = ponds.find((pond) => pond.id === businessUnitId)
+  const config: WaterQualityConfig | null = selectedPond?.waterQualityConfig ?? null
+
   const parsedAmmonia = ammoniaPpm ? Number(ammoniaPpm) : undefined
   const parsedPh = ph ? Number(ph) : undefined
 
@@ -104,13 +99,14 @@ export function WaterQualityFormPage() {
     const hasMeasurement =
       (parsedAmmonia !== undefined && !Number.isNaN(parsedAmmonia)) ||
       (parsedPh !== undefined && !Number.isNaN(parsedPh))
-    if (!hasMeasurement) {
+    if (!businessUnitId || !hasMeasurement) {
       setPreview(null)
       return
     }
 
     const timer = window.setTimeout(() => {
       evaluateWaterQuality({
+        businessUnitId,
         ammoniaPpm: parsedAmmonia,
         ph: parsedPh,
       })
@@ -119,14 +115,17 @@ export function WaterQualityFormPage() {
     }, 400)
 
     return () => window.clearTimeout(timer)
-  }, [parsedAmmonia, parsedPh])
+  }, [businessUnitId, parsedAmmonia, parsedPh])
 
   const thresholdHint = useMemo(() => {
-    if (!config) {
-      return 'Threshold: ammonia ≥ 0.5 ppm waspada, ≥ 1.0 ppm bahaya. pH di luar 6.5–8.5 ditandai waspada.'
+    if (!businessUnitId) {
+      return 'Pilih kolam untuk melihat ambang ammonia dan pH yang dipakai penilaian.'
     }
-    return `Threshold: ammonia ≥ ${config.ammoniaWarnPpm} ppm waspada, ≥ ${config.ammoniaDangerPpm} ppm bahaya. pH normal ${config.phMinNormal}–${config.phMaxNormal}.`
-  }, [config])
+    if (!config) {
+      return 'Ambang kolam belum tersedia. Muat ulang halaman atau periksa data kolam.'
+    }
+    return `Threshold kolam ini: ammonia ≥ ${config.ammoniaWarnPpm} ppm waspada, ≥ ${config.ammoniaDangerPpm} ppm bahaya. pH normal ${config.phMinNormal}–${config.phMaxNormal}.`
+  }, [businessUnitId, config])
 
   const handleSubmit = async (event: React.FormEvent) => {
     event.preventDefault()
