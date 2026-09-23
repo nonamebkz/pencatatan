@@ -85,6 +85,27 @@ export function listCashAccounts() {
   return api.get<CashAccount[]>('/cash-accounts')
 }
 
+export function getCashAccount(id: string) {
+  return api.get<CashAccount>(`/cash-accounts/${id}`)
+}
+
+export type CashAccountInput = {
+  name: string
+  isDefault?: boolean
+}
+
+export function createCashAccount(body: CashAccountInput) {
+  return api.post<CashAccount>('/cash-accounts', body)
+}
+
+export function updateCashAccount(id: string, body: CashAccountInput) {
+  return api.put<CashAccount>(`/cash-accounts/${id}`, body)
+}
+
+export function deleteCashAccount(id: string) {
+  return api.delete(`/cash-accounts/${id}`)
+}
+
 export function getFinanceSummary() {
   return api.get<FinanceSummary>('/finance/summary')
 }

@@ -94,6 +94,7 @@ func main() {
 	adminOnly.Delete("/users/:id", userHandler.Delete)
 	adminOnly.Delete("/ponds/:id", pondHandler.Delete)
 	adminOnly.Delete("/water-quality-logs/:id", waterQualityHandler.Delete)
+	adminOnly.Delete("/cash-accounts/:id", financeHandler.DeleteCashAccount)
 
 	protected.Put("/water-quality/config", waterQualityHandler.UpdateConfig)
 
@@ -109,6 +110,9 @@ func main() {
 	protected.Get("/dashboard", waterQualityHandler.DashboardSummary)
 
 	protected.Get("/cash-accounts", financeHandler.ListCashAccounts)
+	protected.Get("/cash-accounts/:id", financeHandler.GetCashAccount)
+	protected.Post("/cash-accounts", financeHandler.CreateCashAccount)
+	protected.Put("/cash-accounts/:id", financeHandler.UpdateCashAccount)
 	protected.Get("/finance/summary", financeHandler.Summary)
 	protected.Get("/transactions", financeHandler.ListTransactions)
 	protected.Get("/purchases", financeHandler.ListPurchases)

@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { Link, useNavigate } from 'react-router-dom'
 import { Save } from 'lucide-react'
 
 import { createOtherExpense } from '@/api/finance'
@@ -15,7 +15,7 @@ import { todayISO } from '@/lib/format'
 
 export function OtherExpenseFormPage() {
   const navigate = useNavigate()
-  const { accounts, ponds, cashAccountId, setCashAccountId } = useCashAccountAndPonds()
+  const { accounts, ponds, cashAccountId, setCashAccountId, accountsError } = useCashAccountAndPonds()
   const [transactionDate, setTransactionDate] = useState(todayISO())
   const [amount, setAmount] = useState('')
   const [description, setDescription] = useState('')
@@ -56,6 +56,16 @@ export function OtherExpenseFormPage() {
       />
 
       {error && <ErrorAlert>{error}</ErrorAlert>}
+      {accountsError && <ErrorAlert>{accountsError}</ErrorAlert>}
+      {!accountsError && accounts.length === 0 && (
+        <ErrorAlert>
+          Belum ada akun kas.{' '}
+          <Link to="/finance/cash-accounts/new" className="font-medium underline">
+            Tambah akun kas
+          </Link>{' '}
+          terlebih dahulu.
+        </ErrorAlert>
+      )}
 
       <form id="other-expense-form" onSubmit={handleSubmit}>
         <PanelCard className="overflow-hidden">
@@ -123,7 +133,12 @@ export function OtherExpenseFormPage() {
                 ))}
               </SelectField>
             </div>
-            <Button type="submit" size="lg" className="hidden w-full md:inline-flex" disabled={submitting}>
+            <Button
+              type="submit"
+              size="lg"
+              className="hidden w-full md:inline-flex"
+              disabled={submitting || accounts.length === 0}
+            >
               <Save className="size-4" />
               {submitting ? 'Menyimpan…' : 'Simpan pengeluaran'}
             </Button>
@@ -132,7 +147,13 @@ export function OtherExpenseFormPage() {
       </form>
 
       <MobileFormFooter maxWidthClassName="max-w-2xl">
-        <Button type="submit" form="other-expense-form" size="lg" className="flex-1" disabled={submitting}>
+        <Button
+          type="submit"
+          form="other-expense-form"
+          size="lg"
+          className="flex-1"
+          disabled={submitting || accounts.length === 0}
+        >
           <Save className="size-4" />
           {submitting ? 'Menyimpan…' : 'Simpan'}
         </Button>

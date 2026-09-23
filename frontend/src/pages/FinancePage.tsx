@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
-import { Plus, Receipt, ShoppingCart, Wallet } from 'lucide-react'
+import { Landmark, Plus, Receipt, ShoppingCart, Wallet } from 'lucide-react'
 
 import {
   getFinanceSummary,
@@ -63,6 +63,12 @@ export function FinancePage() {
         description="Catat pembelian barang dan pengeluaran operasional."
         actions={
           <div className="flex w-full flex-col gap-2 sm:w-auto sm:flex-row">
+            <Button asChild variant="outline" className="w-full sm:w-auto">
+              <Link to="/finance/cash-accounts">
+                <Landmark className="size-4" />
+                Akun kas
+              </Link>
+            </Button>
             <Button asChild variant="outline" className="w-full sm:w-auto">
               <Link to="/finance/expenses/new">
                 <Receipt className="size-4" />

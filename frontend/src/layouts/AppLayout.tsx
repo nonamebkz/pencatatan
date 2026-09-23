@@ -16,6 +16,9 @@ function pageTitle(pathname: string) {
   if (pathname.startsWith('/users/new')) return 'Tambah Pengguna'
   if (pathname.startsWith('/users/') && pathname.endsWith('/edit')) return 'Edit Pengguna'
   if (pathname.startsWith('/users')) return 'Pengguna'
+  if (pathname.startsWith('/finance/cash-accounts/new')) return 'Tambah Kas'
+  if (pathname.startsWith('/finance/cash-accounts/') && pathname.endsWith('/edit')) return 'Ubah Kas'
+  if (pathname.startsWith('/finance/cash-accounts')) return 'Akun Kas'
   if (pathname.startsWith('/finance/purchases/new')) return 'Catat Pembelian'
   if (pathname.startsWith('/finance/purchases/')) return 'Detail Pembelian'
   if (pathname.startsWith('/finance/expenses/new')) return 'Pengeluaran Lain'
@@ -44,7 +47,7 @@ export function AppLayout() {
   const hidePrimaryAction =
     location.pathname.startsWith('/water-quality/new') ||
     location.pathname === '/ponds/new' ||
-    location.pathname.startsWith('/finance/') ||
+    (location.pathname.startsWith('/finance/') && !location.pathname.startsWith('/finance/cash-accounts')) ||
     location.pathname.endsWith('/edit') ||
     location.pathname.startsWith('/users')
 

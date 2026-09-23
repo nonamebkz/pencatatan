@@ -18,6 +18,8 @@ import { FinancePage } from '@/pages/FinancePage'
 import { OtherExpenseFormPage } from '@/pages/OtherExpenseFormPage'
 import { PurchaseDetailPage } from '@/pages/PurchaseDetailPage'
 import { PurchaseFormPage } from '@/pages/PurchaseFormPage'
+import { CashAccountListPage } from '@/pages/CashAccountListPage'
+import { CashAccountFormPage } from '@/pages/CashAccountFormPage'
 
 function App() {
   return (
@@ -43,6 +45,9 @@ function App() {
               <Route path="finance/purchases/new" element={<PurchaseFormPage />} />
               <Route path="finance/purchases/:id" element={<PurchaseDetailPage />} />
               <Route path="finance/expenses/new" element={<OtherExpenseFormPage />} />
+              <Route path="finance/cash-accounts" element={<CashAccountListPage />} />
+              <Route path="finance/cash-accounts/new" element={<CashAccountFormPage />} />
+              <Route path="finance/cash-accounts/:id/edit" element={<CashAccountFormPage />} />
               <Route path="users" element={<UserListPage />} />
               <Route path="users/new" element={<UserFormPage />} />
               <Route path="users/:id/edit" element={<UserFormPage />} />

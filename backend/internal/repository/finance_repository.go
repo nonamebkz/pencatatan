@@ -67,6 +67,183 @@ func (r *FinanceRepository) DefaultCashAccountID(ctx context.Context, workspaceI
 	return id, err
 }
 
+func (r *FinanceRepository) GetCashAccount(ctx context.Context, workspaceID, id string) (*model.CashAccount, error) {
+	row := r.db.QueryRowContext(ctx, `
+		SELECT id, workspace_id, name, is_default, created_at
+		FROM cash_accounts
+		WHERE workspace_id = ? AND id = ?`, workspaceID, id)
+	var item model.CashAccount
+	var isDefault int
+	if err := row.Scan(&item.ID, &item.WorkspaceID, &item.Name, &isDefault, &item.CreatedAt); err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			return nil, nil
+		}
+		return nil, err
+	}
+	item.IsDefault = isDefault == 1
+	return &item, nil
+}
+
+func (r *FinanceRepository) CountCashAccounts(ctx context.Context, workspaceID string) (int, error) {
+	var count int
+	err := r.db.QueryRowContext(ctx, `
+		SELECT COUNT(*) FROM cash_accounts WHERE workspace_id = ?`, workspaceID).Scan(&count)
+	return count, err
+}
+
+func (r *FinanceRepository) CountTransactionsByCashAccount(ctx context.Context, workspaceID, cashAccountID string) (int, error) {
+	var count int
+	err := r.db.QueryRowContext(ctx, `
+		SELECT COUNT(*) FROM transactions
+		WHERE workspace_id = ? AND cash_account_id = ?`, workspaceID, cashAccountID).Scan(&count)
+	return count, err
+}
+
+func (r *FinanceRepository) CreateCashAccount(ctx context.Context, item *model.CashAccount) error {
+	tx, err := r.db.BeginTx(ctx, nil)
+	if err != nil {
+		return err
+	}
+	defer tx.Rollback()
+
+	if item.IsDefault {
+		if err := clearDefaultCashAccounts(ctx, tx, item.WorkspaceID, ""); err != nil {
+			return err
+		}
+	} else {
+		count, err := countCashAccountsTx(ctx, tx, item.WorkspaceID)
+		if err != nil {
+			return err
+		}
+		if count == 0 {
+			item.IsDefault = true
+		}
+	}
+
+	isDefault := 0
+	if item.IsDefault {
+		isDefault = 1
+	}
+	if _, err := tx.ExecContext(ctx, `
+		INSERT INTO cash_accounts (id, workspace_id, name, is_default, created_at)
+		VALUES (?, ?, ?, ?, ?)`,
+		item.ID, item.WorkspaceID, item.Name, isDefault, item.CreatedAt,
+	); err != nil {
+		return err
+	}
+	return tx.Commit()
+}
+
+func (r *FinanceRepository) UpdateCashAccount(ctx context.Context, item *model.CashAccount) error {
+	tx, err := r.db.BeginTx(ctx, nil)
+	if err != nil {
+		return err
+	}
+	defer tx.Rollback()
+
+	if item.IsDefault {
+		if err := clearDefaultCashAccounts(ctx, tx, item.WorkspaceID, item.ID); err != nil {
+			return err
+		}
+	}
+
+	isDefault := 0
+	if item.IsDefault {
+		isDefault = 1
+	}
+	result, err := tx.ExecContext(ctx, `
+		UPDATE cash_accounts SET name = ?, is_default = ?
+		WHERE id = ? AND workspace_id = ?`,
+		item.Name, isDefault, item.ID, item.WorkspaceID,
+	)
+	if err != nil {
+		return err
+	}
+	affected, _ := result.RowsAffected()
+	if affected == 0 {
+		return sql.ErrNoRows
+	}
+
+	if !item.IsDefault {
+		var defaults int
+		if err := tx.QueryRowContext(ctx, `
+			SELECT COUNT(*) FROM cash_accounts
+			WHERE workspace_id = ? AND is_default = 1`, item.WorkspaceID).Scan(&defaults); err != nil {
+			return err
+		}
+		if defaults == 0 {
+			if _, err := tx.ExecContext(ctx, `
+				UPDATE cash_accounts SET is_default = 1
+				WHERE workspace_id = ?
+				ORDER BY created_at ASC
+				LIMIT 1`, item.WorkspaceID); err != nil {
+				return err
+			}
+		}
+	}
+
+	return tx.Commit()
+}
+
+func (r *FinanceRepository) DeleteCashAccount(ctx context.Context, workspaceID, id string) error {
+	existing, err := r.GetCashAccount(ctx, workspaceID, id)
+	if err != nil {
+		return err
+	}
+	if existing == nil {
+		return sql.ErrNoRows
+	}
+
+	total, err := r.CountCashAccounts(ctx, workspaceID)
+	if err != nil {
+		return err
+	}
+	if total <= 1 {
+		return fmt.Errorf("minimal satu akun kas harus tetap ada")
+	}
+	if existing.IsDefault {
+		return fmt.Errorf("jadikan akun lain sebagai default sebelum menghapus")
+	}
+
+	txCount, err := r.CountTransactionsByCashAccount(ctx, workspaceID, id)
+	if err != nil {
+		return err
+	}
+	if txCount > 0 {
+		return fmt.Errorf("akun kas masih memiliki transaksi")
+	}
+
+	result, err := r.db.ExecContext(ctx, `
+		DELETE FROM cash_accounts WHERE id = ? AND workspace_id = ?`, id, workspaceID)
+	if err != nil {
+		return err
+	}
+	affected, _ := result.RowsAffected()
+	if affected == 0 {
+		return sql.ErrNoRows
+	}
+	return nil
+}
+
+func countCashAccountsTx(ctx context.Context, tx *sql.Tx, workspaceID string) (int, error) {
+	var count int
+	err := tx.QueryRowContext(ctx, `
+		SELECT COUNT(*) FROM cash_accounts WHERE workspace_id = ?`, workspaceID).Scan(&count)
+	return count, err
+}
+
+func clearDefaultCashAccounts(ctx context.Context, tx *sql.Tx, workspaceID, exceptID string) error {
+	if exceptID == "" {
+		_, err := tx.ExecContext(ctx, `
+			UPDATE cash_accounts SET is_default = 0 WHERE workspace_id = ?`, workspaceID)
+		return err
+	}
+	_, err := tx.ExecContext(ctx, `
+		UPDATE cash_accounts SET is_default = 0
+		WHERE workspace_id = ? AND id <> ?`, workspaceID, exceptID)
+	return err
+}
+
 func (r *FinanceRepository) ListTransactions(ctx context.Context, filter FinanceFilter) ([]model.Transaction, int, error) {
 	where, args := buildFinanceWhere(filter)
 

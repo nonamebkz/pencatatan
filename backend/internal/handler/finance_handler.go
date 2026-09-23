@@ -1,6 +1,7 @@
 package handler
 
 import (
+	"database/sql"
 	"fmt"
 	"strconv"
 	"strings"
@@ -40,6 +41,11 @@ type purchaseRequest struct {
 	Items           []purchaseItemRequest `json:"items"`
 }
 
+type cashAccountRequest struct {
+	Name      string `json:"name"`
+	IsDefault *bool  `json:"isDefault"`
+}
+
 type otherExpenseRequest struct {
 	CashAccountID   *string `json:"cashAccountId"`
 	TransactionDate string  `json:"transactionDate"`
@@ -56,6 +62,88 @@ func (h *FinanceHandler) ListCashAccounts(c *fiber.Ctx) error {
 		return httpx.Fail(c, fiber.StatusInternalServerError, "INTERNAL_ERROR", err.Error())
 	}
 	return httpx.OK(c, items)
+}
+
+func (h *FinanceHandler) GetCashAccount(c *fiber.Ctx) error {
+	item, err := h.repo.GetCashAccount(c.Context(), workspaceID(c), c.Params("id"))
+	if err != nil {
+		return httpx.Fail(c, fiber.StatusInternalServerError, "INTERNAL_ERROR", err.Error())
+	}
+	if item == nil {
+		return httpx.Fail(c, fiber.StatusNotFound, "NOT_FOUND", "Akun kas tidak ditemukan")
+	}
+	return httpx.OK(c, item)
+}
+
+func (h *FinanceHandler) CreateCashAccount(c *fiber.Ctx) error {
+	var req cashAccountRequest
+	if err := c.BodyParser(&req); err != nil {
+		return httpx.Fail(c, fiber.StatusBadRequest, "VALIDATION_ERROR", "Payload tidak valid")
+	}
+	name := strings.TrimSpace(req.Name)
+	if name == "" {
+		return httpx.Fail(c, fiber.StatusBadRequest, "VALIDATION_ERROR", "Nama kas wajib diisi")
+	}
+
+	now := time.Now()
+	item := &model.CashAccount{
+		ID:          uuid.New().String(),
+		WorkspaceID: workspaceID(c),
+		Name:        name,
+		IsDefault:   req.IsDefault != nil && *req.IsDefault,
+		CreatedAt:   now,
+	}
+	if err := h.repo.CreateCashAccount(c.Context(), item); err != nil {
+		return httpx.Fail(c, fiber.StatusInternalServerError, "INTERNAL_ERROR", err.Error())
+	}
+	return c.Status(fiber.StatusCreated).JSON(fiber.Map{"success": true, "data": item})
+}
+
+func (h *FinanceHandler) UpdateCashAccount(c *fiber.Ctx) error {
+	var req cashAccountRequest
+	if err := c.BodyParser(&req); err != nil {
+		return httpx.Fail(c, fiber.StatusBadRequest, "VALIDATION_ERROR", "Payload tidak valid")
+	}
+	name := strings.TrimSpace(req.Name)
+	if name == "" {
+		return httpx.Fail(c, fiber.StatusBadRequest, "VALIDATION_ERROR", "Nama kas wajib diisi")
+	}
+
+	ws := workspaceID(c)
+	existing, err := h.repo.GetCashAccount(c.Context(), ws, c.Params("id"))
+	if err != nil {
+		return httpx.Fail(c, fiber.StatusInternalServerError, "INTERNAL_ERROR", err.Error())
+	}
+	if existing == nil {
+		return httpx.Fail(c, fiber.StatusNotFound, "NOT_FOUND", "Akun kas tidak ditemukan")
+	}
+
+	existing.Name = name
+	if req.IsDefault != nil {
+		existing.IsDefault = *req.IsDefault
+	}
+	if err := h.repo.UpdateCashAccount(c.Context(), existing); err != nil {
+		if err == sql.ErrNoRows {
+			return httpx.Fail(c, fiber.StatusNotFound, "NOT_FOUND", "Akun kas tidak ditemukan")
+		}
+		return httpx.Fail(c, fiber.StatusInternalServerError, "INTERNAL_ERROR", err.Error())
+	}
+	return httpx.OK(c, existing)
+}
+
+func (h *FinanceHandler) DeleteCashAccount(c *fiber.Ctx) error {
+	if err := h.repo.DeleteCashAccount(c.Context(), workspaceID(c), c.Params("id")); err != nil {
+		if err == sql.ErrNoRows {
+			return httpx.Fail(c, fiber.StatusNotFound, "NOT_FOUND", "Akun kas tidak ditemukan")
+		}
+		if msg := err.Error(); msg == "minimal satu akun kas harus tetap ada" ||
+			msg == "jadikan akun lain sebagai default sebelum menghapus" ||
+			msg == "akun kas masih memiliki transaksi" {
+			return httpx.Fail(c, fiber.StatusBadRequest, "VALIDATION_ERROR", msg)
+		}
+		return httpx.Fail(c, fiber.StatusInternalServerError, "INTERNAL_ERROR", err.Error())
+	}
+	return c.SendStatus(fiber.StatusNoContent)
 }
 
 func (h *FinanceHandler) Summary(c *fiber.Ctx) error {
@@ -233,10 +321,19 @@ func (h *FinanceHandler) buildPurchaseInput(c *fiber.Ctx, req purchaseRequest) (
 }
 
 func (h *FinanceHandler) resolveCashAccount(c *fiber.Ctx, id *string) (string, error) {
+	ws := workspaceID(c)
 	if id != nil && strings.TrimSpace(*id) != "" {
-		return strings.TrimSpace(*id), nil
+		accountID := strings.TrimSpace(*id)
+		account, err := h.repo.GetCashAccount(c.Context(), ws, accountID)
+		if err != nil {
+			return "", fmt.Errorf("akun kas tidak valid")
+		}
+		if account == nil {
+			return "", fmt.Errorf("akun kas tidak ditemukan")
+		}
+		return accountID, nil
 	}
-	return h.repo.DefaultCashAccountID(c.Context(), workspaceID(c))
+	return h.repo.DefaultCashAccountID(c.Context(), ws)
 }
 
 func parseFinanceFilter(c *fiber.Ctx) (repository.FinanceFilter, error) {

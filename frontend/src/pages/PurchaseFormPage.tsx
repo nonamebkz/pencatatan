@@ -1,5 +1,5 @@
 import { useMemo, useState } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { Link, useNavigate } from 'react-router-dom'
 import { Plus, Save, Trash2 } from 'lucide-react'
 
 import {
@@ -35,7 +35,7 @@ function emptyLine(): LineDraft {
 
 export function PurchaseFormPage() {
   const navigate = useNavigate()
-  const { accounts, ponds, cashAccountId, setCashAccountId } = useCashAccountAndPonds()
+  const { accounts, ponds, cashAccountId, setCashAccountId, accountsError } = useCashAccountAndPonds()
   const [transactionDate, setTransactionDate] = useState(todayISO())
   const [description, setDescription] = useState('')
   const [businessUnitId, setBusinessUnitId] = useState('')
@@ -83,6 +83,16 @@ export function PurchaseFormPage() {
       />
 
       {error && <ErrorAlert>{error}</ErrorAlert>}
+      {accountsError && <ErrorAlert>{accountsError}</ErrorAlert>}
+      {!accountsError && accounts.length === 0 && (
+        <ErrorAlert>
+          Belum ada akun kas.{' '}
+          <Link to="/finance/cash-accounts/new" className="font-medium underline">
+            Tambah akun kas
+          </Link>{' '}
+          terlebih dahulu.
+        </ErrorAlert>
+      )}
 
       <form id="purchase-form" onSubmit={handleSubmit} className="space-y-6">
         <PanelCard title="Informasi transaksi" className="overflow-hidden" contentClassName="p-0">
@@ -231,7 +241,12 @@ export function PurchaseFormPage() {
               <p className="text-sm text-muted-foreground">Total pembelian</p>
               <p className="text-2xl font-semibold">{formatIDR(total)}</p>
             </div>
-            <Button type="submit" size="lg" disabled={submitting} className="hidden w-full sm:w-auto md:inline-flex">
+            <Button
+              type="submit"
+              size="lg"
+              disabled={submitting || accounts.length === 0}
+              className="hidden w-full sm:w-auto md:inline-flex"
+            >
               <Save className="size-4" />
               {submitting ? 'Menyimpan…' : 'Simpan pembelian'}
             </Button>
@@ -240,7 +255,13 @@ export function PurchaseFormPage() {
       </form>
 
       <MobileFormFooter>
-        <Button type="submit" form="purchase-form" size="lg" className="flex-1" disabled={submitting}>
+        <Button
+          type="submit"
+          form="purchase-form"
+          size="lg"
+          className="flex-1"
+          disabled={submitting || accounts.length === 0}
+        >
           <Save className="size-4" />
           {submitting ? 'Menyimpan…' : `Simpan · ${formatIDR(total)}`}
         </Button>
