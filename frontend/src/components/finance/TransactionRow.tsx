@@ -11,10 +11,10 @@ type TransactionRowProps = {
 }
 
 export function TransactionRow({ item, showDetailLink }: TransactionRowProps) {
-  const isPurchase = item.transactionType === 'PURCHASE'
+  const canOpenDetail = Boolean(showDetailLink)
   const subtitle =
     item.description ||
-    (isPurchase && item.items?.length
+    (item.transactionType === 'PURCHASE' && item.items?.length
       ? `${item.items.length} barang`
       : item.category || item.businessUnitName || '—')
 
@@ -22,7 +22,7 @@ export function TransactionRow({ item, showDetailLink }: TransactionRowProps) {
     <div
       className={cn(
         'flex items-center gap-3 rounded-2xl border bg-card p-4 transition',
-        showDetailLink && isPurchase && 'hover:border-primary/30',
+        canOpenDetail && 'hover:border-primary/30',
       )}
     >
       <div className="min-w-0 flex-1">
@@ -39,14 +39,14 @@ export function TransactionRow({ item, showDetailLink }: TransactionRowProps) {
       </div>
       <div className="flex shrink-0 items-center gap-1 text-right">
         <p className="text-sm font-semibold text-destructive">-{formatIDR(item.amount)}</p>
-        {showDetailLink && isPurchase && <ChevronRight className="size-4 text-muted-foreground" />}
+        {canOpenDetail && <ChevronRight className="size-4 text-muted-foreground" />}
       </div>
     </div>
   )
 
-  if (showDetailLink && isPurchase) {
+  if (canOpenDetail) {
     return (
-      <Link to={`/finance/purchases/${item.id}`} className="block">
+      <Link to={`/finance/transactions/${item.id}`} className="block">
         {inner}
       </Link>
     )

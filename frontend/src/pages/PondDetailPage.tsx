@@ -20,6 +20,7 @@ import { WaterQualityLogRow } from '@/components/water-quality/WaterQualityLogRo
 import { Button } from '@/components/ui/button'
 import { Skeleton } from '@/components/ui/skeleton'
 import { useAuth } from '@/contexts/AuthContext'
+import { RECORD_LIST_LIMIT } from '@/lib/listing'
 import { cn } from '@/lib/utils'
 
 export function PondDetailPage() {
@@ -32,17 +33,37 @@ export function PondDetailPage() {
   const [loading, setLoading] = useState(true)
   const [deletingPond, setDeletingPond] = useState(false)
   const [deletingLogId, setDeletingLogId] = useState<string | null>(null)
+  const [logsPage, setLogsPage] = useState(1)
+  const [logsTotal, setLogsTotal] = useState(0)
+  const [loadingMoreLogs, setLoadingMoreLogs] = useState(false)
 
   useEffect(() => {
     setLoading(true)
-    Promise.all([getPond(id), listWaterQualityLogs({ businessUnitId: id, limit: 20 })])
+    Promise.all([
+      getPond(id),
+      listWaterQualityLogs({ businessUnitId: id, page: 1, limit: RECORD_LIST_LIMIT }),
+    ])
       .then(([pondResponse, logsResponse]) => {
         setPond(pondResponse.data)
         setLogs(logsResponse.data)
+        setLogsTotal(Number(logsResponse.meta?.total ?? logsResponse.data.length))
+        setLogsPage(1)
       })
       .catch((err) => setError(err instanceof Error ? err.message : 'Gagal memuat detail kolam'))
       .finally(() => setLoading(false))
   }, [id])
+
+  const loadMoreLogs = () => {
+    setLoadingMoreLogs(true)
+    listWaterQualityLogs({ businessUnitId: id, page: logsPage + 1, limit: RECORD_LIST_LIMIT })
+      .then((response) => {
+        setLogs((prev) => [...prev, ...response.data])
+        setLogsPage((p) => p + 1)
+        setLogsTotal(Number(response.meta?.total ?? 0))
+      })
+      .catch((err) => setError(err instanceof Error ? err.message : 'Gagal memuat catatan'))
+      .finally(() => setLoadingMoreLogs(false))
+  }
 
   const handleDeletePond = async () => {
     if (!pond) return
@@ -166,6 +187,11 @@ export function PondDetailPage() {
                 onDelete={handleDeleteLog}
               />
             ))}
+            {logs.length < logsTotal && (
+              <Button type="button" variant="outline" className="w-full" disabled={loadingMoreLogs} onClick={loadMoreLogs}>
+                {loadingMoreLogs ? 'Memuat…' : 'Muat lebih banyak'}
+              </Button>
+            )}
           </div>
         )}
       </PanelCard>

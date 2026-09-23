@@ -14,6 +14,7 @@ import { SelectField, TextField } from '@/components/shared/Field'
 import { WaterQualityLogRow } from '@/components/water-quality/WaterQualityLogRow'
 import { Button } from '@/components/ui/button'
 import { useAuth } from '@/contexts/AuthContext'
+import { RECORD_LIST_LIMIT } from '@/lib/listing'
 
 export function WaterQualityListPage() {
   const { canDelete } = useAuth()
@@ -22,22 +23,42 @@ export function WaterQualityListPage() {
   const [businessUnitId, setBusinessUnitId] = useState('')
   const [from, setFrom] = useState('')
   const [to, setTo] = useState('')
+  const [page, setPage] = useState(1)
+  const [total, setTotal] = useState(0)
   const [error, setError] = useState<string | null>(null)
   const [loading, setLoading] = useState(true)
+  const [loadingMore, setLoadingMore] = useState(false)
   const [deletingLogId, setDeletingLogId] = useState<string | null>(null)
 
-  const loadLogs = (showLoading = true) => {
+  const loadLogs = (opts?: { page?: number; append?: boolean; showLoading?: boolean }) => {
+    const nextPage = opts?.page ?? 1
+    const append = opts?.append ?? false
+    const showLoading = opts?.showLoading ?? !append
     if (showLoading) setLoading(true)
+    if (append) setLoadingMore(true)
     setError(null)
-    listWaterQualityLogs({ businessUnitId, from, to, limit: 100 })
-      .then((response) => setLogs(response.data))
+    listWaterQualityLogs({
+      businessUnitId,
+      from,
+      to,
+      page: nextPage,
+      limit: RECORD_LIST_LIMIT,
+    })
+      .then((response) => {
+        setTotal(Number(response.meta?.total ?? response.data.length))
+        setPage(nextPage)
+        setLogs((prev) => (append ? [...prev, ...response.data] : response.data))
+      })
       .catch((err) => setError(err instanceof Error ? err.message : 'Gagal memuat catatan'))
-      .finally(() => setLoading(false))
+      .finally(() => {
+        setLoading(false)
+        setLoadingMore(false)
+      })
   }
 
   useEffect(() => {
-    listPonds('ACTIVE').then((response) => setPonds(response.data)).catch(() => undefined)
-    loadLogs()
+    listPonds().then((response) => setPonds(response.data)).catch(() => undefined)
+    loadLogs({ page: 1 })
   }, [])
 
   const handleDeleteLog = async (log: WaterQualityLog) => {
@@ -76,7 +97,7 @@ export function WaterQualityListPage() {
         }
       />
 
-      <MobileFilterPanel title="Filter" onApply={() => loadLogs()}>
+      <MobileFilterPanel title="Filter" onApply={() => loadLogs({ page: 1 })}>
         <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
           <SelectField
             label="Kolam"
@@ -100,7 +121,10 @@ export function WaterQualityListPage() {
 
       <div className="space-y-4">
         <div className="flex justify-end">
-          <CountBadge>{logs.length} entri</CountBadge>
+          <CountBadge>
+            {logs.length}
+            {total > logs.length ? ` / ${total}` : ''} entri
+          </CountBadge>
         </div>
 
         {loading ? (
@@ -127,6 +151,17 @@ export function WaterQualityListPage() {
                 onDelete={handleDeleteLog}
               />
             ))}
+            {logs.length < total && (
+              <Button
+                type="button"
+                variant="outline"
+                className="w-full"
+                disabled={loadingMore}
+                onClick={() => loadLogs({ page: page + 1, append: true })}
+              >
+                {loadingMore ? 'Memuat…' : 'Muat lebih banyak'}
+              </Button>
+            )}
           </div>
         )}
       </div>

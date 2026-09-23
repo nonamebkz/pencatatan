@@ -21,6 +21,7 @@ import { Button } from '@/components/ui/button'
 import { SelectField, TextField } from '@/components/shared/Field'
 import { Skeleton } from '@/components/ui/skeleton'
 import { formatIDR } from '@/lib/format'
+import { RECORD_LIST_LIMIT } from '@/lib/listing'
 import { skeleton } from '@/lib/design'
 
 export function FinancePage() {
@@ -31,9 +32,16 @@ export function FinancePage() {
   const [to, setTo] = useState('')
   const [error, setError] = useState<string | null>(null)
   const [loading, setLoading] = useState(true)
+  const [loadingMore, setLoadingMore] = useState(false)
+  const [page, setPage] = useState(1)
+  const [total, setTotal] = useState(0)
 
-  const load = (showLoading = true) => {
+  const load = (opts?: { page?: number; append?: boolean; showLoading?: boolean }) => {
+    const nextPage = opts?.page ?? 1
+    const append = opts?.append ?? false
+    const showLoading = opts?.showLoading ?? !append
     if (showLoading) setLoading(true)
+    if (append) setLoadingMore(true)
     setError(null)
     Promise.all([
       getFinanceSummary(),
@@ -41,15 +49,21 @@ export function FinancePage() {
         transactionType: transactionType || undefined,
         from: from || undefined,
         to: to || undefined,
-        limit: 100,
+        page: nextPage,
+        limit: RECORD_LIST_LIMIT,
       }),
     ])
       .then(([summaryRes, txRes]) => {
         setSummary(summaryRes.data)
-        setTransactions(txRes.data)
+        setTotal(Number(txRes.meta?.total ?? txRes.data.length))
+        setPage(nextPage)
+        setTransactions((prev) => (append ? [...prev, ...txRes.data] : txRes.data))
       })
       .catch((err) => setError(err instanceof Error ? err.message : 'Gagal memuat keuangan'))
-      .finally(() => setLoading(false))
+      .finally(() => {
+        setLoading(false)
+        setLoadingMore(false)
+      })
   }
 
   useEffect(() => {
@@ -118,7 +132,7 @@ export function FinancePage() {
         )}
       </div>
 
-      <MobileFilterPanel title="Filter" onApply={() => load()}>
+      <MobileFilterPanel title="Filter" onApply={() => load({ page: 1 })}>
         <div className="grid gap-4 md:grid-cols-3">
           <SelectField
             label="Jenis"
@@ -137,7 +151,10 @@ export function FinancePage() {
 
       <div className="space-y-4">
         <div className="flex justify-end">
-          <CountBadge>{transactions.length} entri</CountBadge>
+          <CountBadge>
+            {transactions.length}
+            {total > transactions.length ? ` / ${total}` : ''} entri
+          </CountBadge>
         </div>
 
         {loading ? (
@@ -161,6 +178,17 @@ export function FinancePage() {
             {transactions.map((item) => (
               <TransactionRow key={item.id} item={item} showDetailLink />
             ))}
+            {transactions.length < total && (
+              <Button
+                type="button"
+                variant="outline"
+                className="w-full"
+                disabled={loadingMore}
+                onClick={() => load({ page: page + 1, append: true })}
+              >
+                {loadingMore ? 'Memuat…' : 'Muat lebih banyak'}
+              </Button>
+            )}
           </div>
         )}
       </div>

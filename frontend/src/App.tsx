@@ -17,6 +17,8 @@ import { WaterQualityConfigPage } from '@/pages/WaterQualityConfigPage'
 import { FinancePage } from '@/pages/FinancePage'
 import { OtherExpenseFormPage } from '@/pages/OtherExpenseFormPage'
 import { PurchaseDetailPage } from '@/pages/PurchaseDetailPage'
+import { TransactionDetailPage } from '@/pages/TransactionDetailPage'
+import { WaterQualityDetailPage } from '@/pages/WaterQualityDetailPage'
 import { PurchaseFormPage } from '@/pages/PurchaseFormPage'
 import { CashAccountListPage } from '@/pages/CashAccountListPage'
 import { CashAccountFormPage } from '@/pages/CashAccountFormPage'
@@ -41,9 +43,11 @@ function App() {
               <Route path="water-quality/report" element={<WaterQualityReportPage />} />
               <Route path="water-quality/new" element={<WaterQualityFormPage />} />
               <Route path="water-quality/:id/edit" element={<WaterQualityFormPage />} />
+              <Route path="water-quality/:id" element={<WaterQualityDetailPage />} />
               <Route path="finance" element={<FinancePage />} />
               <Route path="finance/purchases/new" element={<PurchaseFormPage />} />
               <Route path="finance/purchases/:id" element={<PurchaseDetailPage />} />
+              <Route path="finance/transactions/:id" element={<TransactionDetailPage />} />
               <Route path="finance/expenses/new" element={<OtherExpenseFormPage />} />
               <Route path="finance/cash-accounts" element={<CashAccountListPage />} />
               <Route path="finance/cash-accounts/new" element={<CashAccountFormPage />} />

@@ -32,7 +32,7 @@ export function WaterQualityReportPage() {
   }
 
   useEffect(() => {
-    listPonds('ACTIVE').then((response) => setPonds(response.data)).catch(() => undefined)
+    listPonds().then((response) => setPonds(response.data)).catch(() => undefined)
     loadTrends()
   }, [])
 

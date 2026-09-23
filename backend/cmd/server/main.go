@@ -115,6 +115,7 @@ func main() {
 	protected.Put("/cash-accounts/:id", financeHandler.UpdateCashAccount)
 	protected.Get("/finance/summary", financeHandler.Summary)
 	protected.Get("/transactions", financeHandler.ListTransactions)
+	protected.Get("/transactions/:id", financeHandler.GetTransaction)
 	protected.Get("/purchases", financeHandler.ListPurchases)
 	protected.Get("/purchases/:id", financeHandler.GetPurchase)
 	protected.Post("/purchases", financeHandler.CreatePurchase)

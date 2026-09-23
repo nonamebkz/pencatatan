@@ -6,7 +6,9 @@ type AuthContextValue = {
   user: AuthUser | null
   loading: boolean
   isAdmin: boolean
-  /** Hanya ADMIN — hapus kolam, catatan, pengguna */
+  /** Semua user login — lihat seluruh pencatatan workspace (tanpa filter per user). */
+  canViewAllRecords: boolean
+  /** Hanya ADMIN — hapus kolam, catatan, pengguna, kas */
   canDelete: boolean
   login: (email: string, password: string) => Promise<void>
   logout: () => Promise<void>
@@ -54,6 +56,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       user,
       loading,
       isAdmin: user?.role === 'ADMIN',
+      canViewAllRecords: Boolean(user),
       canDelete: user?.role === 'ADMIN',
       login,
       logout,

@@ -68,7 +68,7 @@ export function WaterQualityLogRow({ log, canDelete, deleting, onDelete }: Water
       <WaterQualityAdvicePanel advice={log.advice} status={log.status} variant="collapsible" className="mt-3" />
 
       <Link
-        to={`/water-quality/${log.id}/edit`}
+        to={`/water-quality/${log.id}`}
         className="mt-3 flex items-center justify-between text-xs font-medium text-primary md:hidden"
       >
         Lihat detail

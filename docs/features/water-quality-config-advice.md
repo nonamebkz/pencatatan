@@ -23,7 +23,7 @@ Saat pH atau amonia di luar ambang, API mengembalikan `advice[]` (judul + langka
 | BR-2 | Amonia ≥ waspada → `WARNING`; ≥ bahaya → `DANGER` | — |
 | BR-3 | pH di luar min–maks → `WARNING` saja | — |
 | BR-4 | Bahaya amonia ≥ waspada; pH maks ≥ min; semua ambang > 0 | `VALIDATION_ERROR` |
-| BR-5 | `PUT` hanya admin; `GET` dan evaluate untuk user login | `403` pada PUT |
+| BR-5 | `GET` config & evaluate untuk semua user login; `PUT` template untuk semua user login (MVP) | — |
 | BR-6 | Status `NORMAL` tidak mengirim saran | `advice` kosong |
 | BR-7 | Nilai di luar ambang tetap boleh disimpan di log | — |
 
@@ -56,4 +56,4 @@ Log, ringkasan dashboard, dan laporan memuat `status` + `advice` yang dihitung u
 
 - Form panjang: ambang angka di atas, empat teks saran (satu langkah per baris) di bawah.
 - Simpan menempel di footer mobile (`MobileFormFooter`).
-- Menu hanya tampil untuk admin (sidebar dan menu pengguna).
+- Menu konfigurasi tersedia untuk semua user login (sidebar / menu pengguna).

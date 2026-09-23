@@ -119,6 +119,10 @@ export function listTransactions(params: Record<string, string | number | undefi
   return api.get<Transaction[]>(`/transactions${query ? `?${query}` : ''}`)
 }
 
+export function getTransaction(id: string) {
+  return api.get<Transaction>(`/transactions/${id}`)
+}
+
 export function getPurchase(id: string) {
   return api.get<Transaction>(`/purchases/${id}`)
 }

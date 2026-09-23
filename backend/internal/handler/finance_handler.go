@@ -158,6 +158,17 @@ func (h *FinanceHandler) Summary(c *fiber.Ctx) error {
 	return httpx.OK(c, summary)
 }
 
+func (h *FinanceHandler) GetTransaction(c *fiber.Ctx) error {
+	item, err := h.repo.GetTransaction(c.Context(), workspaceID(c), c.Params("id"))
+	if err != nil {
+		return httpx.Fail(c, fiber.StatusInternalServerError, "INTERNAL_ERROR", err.Error())
+	}
+	if item == nil {
+		return httpx.Fail(c, fiber.StatusNotFound, "NOT_FOUND", "Transaksi tidak ditemukan")
+	}
+	return httpx.OK(c, item)
+}
+
 func (h *FinanceHandler) ListTransactions(c *fiber.Ctx) error {
 	filter, err := parseFinanceFilter(c)
 	if err != nil {
