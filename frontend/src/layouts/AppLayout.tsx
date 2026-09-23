@@ -25,6 +25,7 @@ function pageTitle(pathname: string) {
   if (pathname.startsWith('/water-quality/report')) return 'Laporan Kualitas Air'
   if (pathname.startsWith('/water-quality/new')) return 'Catat Kualitas Air'
   if (pathname.includes('/water-quality/') && pathname.endsWith('/edit')) return 'Edit Catatan'
+  if (pathname.startsWith('/settings/water-quality')) return 'Konfigurasi Kualitas Air'
   const item = navItems.find((nav) => (nav.end ? pathname === nav.to : pathname.startsWith(nav.to)))
   return item?.label ?? 'Budidaya Lele'
 }
@@ -33,6 +34,12 @@ export function AppLayout() {
   const location = useLocation()
   const { isAdmin } = useAuth()
   const title = pageTitle(location.pathname)
+  const onPondDetail = /^\/ponds\/[^/]+$/.test(location.pathname)
+  const hideQuickRecord =
+    location.pathname === '/water-quality' ||
+    location.pathname.startsWith('/water-quality/new') ||
+    (location.pathname.includes('/water-quality/') && location.pathname.endsWith('/edit')) ||
+    onPondDetail
   const hidePrimaryAction =
     location.pathname.startsWith('/water-quality/new') ||
     location.pathname.startsWith('/finance/') ||
@@ -97,32 +104,32 @@ export function AppLayout() {
           </nav>
 
           <div className="mt-auto space-y-4 pt-8">
-            <Link
-              to="/water-quality/new"
-              className="flex items-center justify-center gap-2 rounded-2xl bg-primary px-4 py-3 text-sm font-medium text-primary-foreground shadow-sm transition hover:bg-primary/90"
-            >
-              <Plus className="size-4" />
-              Catat Cepat
-            </Link>
+            {!hideQuickRecord && (
+              <Link
+                to="/water-quality/new"
+                className="flex items-center justify-center gap-2 rounded-2xl bg-primary px-4 py-3 text-sm font-medium text-primary-foreground shadow-sm transition hover:bg-primary/90"
+              >
+                <Plus className="size-4" />
+                Catat Cepat
+              </Link>
+            )}
             <UserMenu layout="sidebar" />
           </div>
         </aside>
 
         <div className="flex min-w-0 flex-1 flex-col">
-          <header className="safe-top sticky top-0 z-20 border-b bg-background/95 px-4 py-3 backdrop-blur md:px-8 md:py-4">
+          <header className="safe-top sticky top-0 z-20 border-b bg-background/95 px-4 py-3 backdrop-blur md:hidden">
             <div className="flex items-center gap-3">
-              <div className="flex size-9 shrink-0 items-center justify-center rounded-xl bg-primary/10 text-primary md:hidden">
+              <div className="flex size-9 shrink-0 items-center justify-center rounded-xl bg-primary/10 text-primary">
                 <Waves className="size-4" />
               </div>
               <div className="min-w-0 flex-1">
-                <p className="text-[10px] font-medium uppercase tracking-wider text-muted-foreground md:hidden">
+                <p className="text-[10px] font-medium uppercase tracking-wider text-muted-foreground">
                   Budidaya Lele
                 </p>
-                <h1 className="truncate text-lg font-semibold leading-tight md:text-xl">{title}</h1>
+                <h1 className="text-lg font-semibold leading-tight">{title}</h1>
               </div>
-              <div className="flex shrink-0 items-center md:hidden">
-                <UserMenu layout="header" />
-              </div>
+              <UserMenu layout="header" />
             </div>
           </header>
 

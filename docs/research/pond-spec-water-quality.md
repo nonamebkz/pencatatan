@@ -184,9 +184,9 @@ Kolom **Optimum (SNI pembesaran)** = acuan formal Indonesia. **Peringatan / baha
 
 | Area | Kode / data | Selisih vs riset |
 |------|-------------|------------------|
-| Badge kualitas air | `backend/internal/service/waterquality/threshold.go` — amonia ≥0,5 ppm waspada, ≥1,0 bahaya; pH di luar 6,5–8,5 waspada | SNI pembesaran NH₃ **<0,01 mg/L**; ambang app kemungkinan **TAN** atau lebih longgar — lihat §2 tabel |
+| Badge kualitas air | Konfigurasi per workspace (`workspace_settings.water_quality_config`). Default di `config.go`: amonia ≥0,5 ppm waspada, ≥1,0 bahaya; pH di luar 6,5–8,5 waspada. Satu set untuk semua kolam | SNI pembesaran NH₃ **<0,01 mg/L**; ambang app kemungkinan **TAN** atau lebih longgar — lihat §2 tabel. Admin bisa mengubah angka, tetapi belum per kolam/spesies |
 | Master kolam | `business_units`: name, location, size (string), notes, status | Belum: luas, tinggi air, volume, fase, padat tebar (usulan § Gap analysis) |
-| Log kualitas air | ammonia, pH, notes, batch | Belum: suhu, DO, jenis analit TAN/NH₃, tindakan koreksi |
+| Log kualitas air | ammonia, pH, notes, batch; saran dihitung saat dibaca dari konfigurasi workspace | Belum: suhu, DO, jenis analit TAN/NH₃ tersimpan di log, tindakan koreksi yang dicatat petugas |
 
 Langkah produk berikutnya: spesifikasi fitur `docs/features/pond-master-water-playbook.md` (belum dibuat).
 

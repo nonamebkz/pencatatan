@@ -7,7 +7,7 @@ alwaysApply: true
 
 1. **DRY** — Satu implementasi per pola. UI berulang → `frontend/src/components/shared/` + `frontend/src/lib/design.ts`.
 2. **SOLID (praktis)** — Halaman tipis (data/routing); komponen fokus; perluas lewat props, bukan duplikasi markup.
-3. **Frontend** — Ikuti `.cursor/rules/frontend-dry-solid.mdc` (shadcn `new-york`, hierarki ui → shared → domain → pages).
+3. **Frontend** — **`mobile-first.mdc`** (ponsel dulu), lalu `design-system.mdc` + `frontend-dry-solid.mdc`.
 4. **Backend** — Ikuti `.cursor/rules/backend-dry-solid.mdc` (layer handler → service → repository, `httpx`, workspace, migrasi).
 
 5. **Fitur baru** — Ikuti `.cursor/rules/feature-delivery.mdc`: dokumen `docs/features/<slug>.md` (flow + kontrak API/FE) sebelum kode; spawn subagent BE/FE paralel setelah `contract-ready` (lihat `agent-orchestration.mdc`).

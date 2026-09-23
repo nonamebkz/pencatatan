@@ -1,0 +1,49 @@
+---
+description: Mobile-first — desain & implementasi dimulai dari ponsel
+globs: frontend/**/*
+alwaysApply: false
+---
+
+# Mobile-first (prioritas utama UI)
+
+Pengguna utama di lapangan kolam memakai **ponsel**. Desktop adalah perluasan, bukan acuan desain.
+
+## Prinsip
+
+1. **Desain & implementasi dimulai dari lebar ~360px** (iPhone SE class), lalu `sm:` / `md:` untuk tablet/desktop.
+2. **Breakpoint app**: sidebar + layout lebar = `md:` (768px). Di bawah `md` = mode mobile (`AppLayout` header + `MobileBottomNav`).
+3. **Uji mental setiap layar**: apakah CTA utama terlihat tanpa scroll berlebihan? Apakah jari bisa mencapai tombol (min ~44px — `h-11`, `touch-target`)?
+4. **Tanpa hover-only**: semua aksi harus jelas di touch (`active:scale-*`, border, chevron).
+5. **Satu kolom dulu**: grid multi-kolom hanya dari `sm:` atau `md:` (kecuali stat 2 kolom di dashboard — OK).
+
+## Layout wajib
+
+| Area | Mobile |
+|------|--------|
+| Konten utama | `main` sudah `px-4`, `pb-mobile-nav` — jangan kurangi padding bawah di halaman form |
+| Form panjang | `pb-24` + **`MobileFormFooter`** + `form` id; submit desktop `hidden md:inline-flex` |
+| Aksi di header | `PageHeader` actions = `w-full` stack; tombol sekunder `outline` di bawah utama di footer |
+| Filter | **`MobileFilterPanel`** (bukan bar filter horizontal desktop-only) |
+| Navigasi kembali | **`BackLink`** (area tap cukup besar) |
+| List primary action | FAB/fixed seperti `UserListPage` — hormati `safe-area-inset-bottom` |
+
+## Typography & form
+
+- Input/Select sudah `text-base` di mobile (`components/ui`) — jangan turunkan ke `text-sm` di mobile (hindari zoom iOS).
+- Label panjang: biarkan wrap; hindari `truncate` pada instruksi penting.
+
+## Konten & media
+
+- Gambar dekoratif besar: **`hidden md:block`** (lihat dashboard hero).
+- Tabel lebar: kartu/stack di mobile atau `overflow-x-auto` + padding — jangan memaksa pinch-zoom seluruh halaman.
+- Grafik: `WaterQualityTrendChart` — scroll horizontal boleh jika dilabeli jelas.
+
+## Checklist sebelum selesai UI
+
+- [ ] Layar 360px: tidak ada overflow horizontal pada `body`
+- [ ] CTA utama reachable (footer sticky atau above fold)
+- [ ] Tidak ada teks tombol terpotong pada nav bawah
+- [ ] Form dengan banyak field punya `MobileFormFooter` di `md:hidden`
+- [ ] `npm run build` + `cd frontend && graphify update .`
+
+Acuan visual lengkap: `design-system.mdc` (token, komponen).

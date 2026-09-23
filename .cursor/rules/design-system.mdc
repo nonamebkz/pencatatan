@@ -1,0 +1,109 @@
+---
+description: Design system UI — token, layout, mobile, pola visual konsisten
+globs: frontend/**/*
+alwaysApply: false
+---
+
+# Design system — Pencatatan Usaha
+
+Aplikasi budidaya lele. **Prioritas #1: mobile** — baca dulu **`mobile-first.mdc`** (360px, bottom nav, sticky footer, touch).
+
+Stack: **shadcn `new-york`**, **Lucide**, token CSS di `frontend/src/index.css`, utilitas di `frontend/src/lib/design.ts`.
+
+Ikuti juga `frontend-dry-solid.mdc` (DRY/SOLID). Rule ini fokus **tampilan & UX**.
+
+## Warna & token
+
+- **Jangan** hardcode hex/oklch di komponen halaman — pakai semantic Tailwind: `background`, `foreground`, `card`, `primary`, `muted`, `muted-foreground`, `destructive`, `border`.
+- Aksen brand = **`primary`** (hijau oklch di `:root`). Status:
+  - sukses/aktif: `emerald-*` atau `IconTone` `success`
+  - peringatan: `amber-*` / `warning`
+  - bahaya/error: `destructive` / `danger`
+- Dark mode: class `.dark` — uji kontras untuk teks di atas `bg-primary/5` dan `bg-card`.
+
+## Tipografi
+
+| Elemen | Kelas |
+|--------|--------|
+| Judul halaman | `PageHeader` (h2: `hidden` di bawah `md`, `md:text-3xl`, `font-bold`) |
+| Judul section / panel | `PanelCard` title atau `MobileSectionHeader` (`text-base` / `sm:text-lg`, `font-semibold`) |
+| Body | `text-sm`, deskripsi `text-muted-foreground` |
+| Label form | `Label` / `Field` |
+| Angka uang / stat | `tabular-nums`, `font-semibold` |
+| Eyebrow brand | `text-xs font-semibold uppercase tracking-[0.18em] text-primary` (hanya header/login/sidebar) |
+
+Satu halaman = **satu** judul. Di ponsel judul ada di header `AppLayout` (h1); `PageHeader` h2 disembunyikan di bawah `md`. Di desktop header layout disembunyikan (`md:hidden`) dan `PageHeader` yang menjadi judul.
+
+## Spacing & layout
+
+- Daftar halaman dalam layout: **`PageShell`** (`space-y-6 md:space-y-8`).
+- Form panjang: `mx-auto max-w-2xl` atau `max-w-3xl`; padding bawah mobile `pb-24` jika ada sticky footer.
+- Grid metrik: `grid gap-3 sm:grid-cols-2` atau `sm:grid-cols-3`.
+- Main content: `px-4 py-4 pb-mobile-nav` (mobile) — jangan override kecuali halaman full-bleed khusus.
+
+## Radius & surface
+
+- Panel/kartu aplikasi: **`rounded-2xl`** via `surface.*` di `design.ts` atau `PanelCard` / `MetricCard`.
+- Jangan campur `rounded-xl` untuk kartu halaman utama (primitif shadcn `Card` internal boleh `rounded-xl` jika tidak di-wrap).
+- **`PanelCard`**: header terpisah; isi custom pakai `contentClassName="p-0"` + padding dalam child (hindari double padding).
+
+## Pola UI — gunakan komponen ini
+
+| Kebutuhan | Komponen |
+|-----------|----------|
+| Layout halaman | `PageShell` |
+| Judul + aksi | `PageHeader` |
+| Kartu berisi form/list | `PanelCard` |
+| KPI / ringkasan angka | `MetricCard`, dashboard `StatCard` |
+| Badge jumlah | `CountBadge` |
+| Kosong | `EmptyState` |
+| Error | `ErrorAlert` |
+| Info / hint | `InfoCallout` |
+| Kembali | `BackLink` |
+| Form field | `TextField`, `SelectField`, `TextareaField`, `Field` |
+| Loading list | `ListSkeleton` + `skeleton.*` dari `design.ts` |
+| Submit mobile | `MobileFormFooter` + `form` id |
+| Hapus (admin) | `DeleteOutlineButton` |
+| Filter daftar | `MobileFilterPanel` — desktop satu baris tanpa judul panel; ponsel accordion "Filter" |
+| Subjudul list | `MobileSectionHeader` |
+| Ikon dalam kartu | `iconBadge(tone)` |
+
+**Anti-pattern:** `rounded-2xl border bg-card p-4` copy-paste di halaman; `Label`+`Input` manual jika sudah ada `*Field`.
+
+## Tombol & aksi
+
+- Primitif: `@/components/ui/button`.
+- Aksi utama: `default` / `size="lg"`; sekunder: `outline`; navigasi ringan: `ghost`.
+- Mobile: aksi utama full width di footer (`MobileFormFooter`) atau `w-full sm:w-auto` di `PageHeader` actions.
+- FAB/list: ikuti pola `UserListPage` (fixed + safe area), jangan FAB baru tanpa alasan.
+
+## Mobile & safe area
+
+Detail wajib: **`mobile-first.mdc`**. Ringkas:
+
+- Class util: `safe-top`, `safe-bottom`, `pb-mobile-nav`, `touch-target` (`index.css`).
+- Sticky footer form: `MobileFormFooter` (offset di atas `MobileBottomNav`).
+- Sembunyikan duplikasi CTA desktop di mobile (`hidden md:flex` / `md:inline-flex`).
+- Grid desktop: `grid-cols-1` default → `sm:grid-cols-2` / `md:grid-cols-*`.
+
+## Ikon
+
+- **Lucide** saja (`size-4` inline, `size-5`/`size-6` hero).
+- Warna ikon mengikuti teks parent atau `text-primary` di callout.
+
+## Desain fitur baru
+
+Sebelum UI baru:
+
+1. Cek komponen shared + `design.ts` — extend token/komponen jika pola akan dipakai ≥2 kali.
+2. Di `docs/features/<slug>.md` → bagian **UI / design**: halaman, states (loading/empty/error), komponen shared.
+3. Primitif shadcn baru: tambah via CLI/MCP ke `components/ui/`, jangan fork style acak.
+4. Setelah implement: `npm run build`, `cd frontend && graphify update .`.
+
+## Review visual cepat
+
+- [ ] Hanya token semantic (bukan warna raw arbitrary kecuali gradient layout yang sudah ada di `AppLayout`/login).
+- [ ] `PageShell` + `PageHeader` pada halaman list/form standar.
+- [ ] Loading/error/empty memakai pola shared.
+- [ ] Form mobile punya footer sticky jika submit di bawah fold.
+- [ ] Kontras teks & tap target cukup di viewport 360px.

@@ -10,7 +10,6 @@ import {
 } from '@/api/finance'
 import { TransactionRow } from '@/components/finance/TransactionRow'
 import { MobileFilterPanel } from '@/components/mobile/MobileFilterPanel'
-import { MobileSectionHeader } from '@/components/mobile/MobileSectionHeader'
 import { CountBadge } from '@/components/shared/CountBadge'
 import { EmptyState } from '@/components/shared/EmptyState'
 import { ErrorAlert } from '@/components/shared/ErrorAlert'
@@ -113,8 +112,8 @@ export function FinancePage() {
         )}
       </div>
 
-      <MobileFilterPanel title="Filter transaksi" description="Jenis dan tanggal" onApply={() => load()}>
-        <div className="grid gap-4 sm:grid-cols-3">
+      <MobileFilterPanel title="Filter" onApply={() => load()}>
+        <div className="grid gap-4 md:grid-cols-3">
           <SelectField
             label="Jenis"
             id="filter-type"
@@ -131,12 +130,9 @@ export function FinancePage() {
       </MobileFilterPanel>
 
       <div className="space-y-4">
-        <MobileSectionHeader
-          title="Riwayat transaksi"
-          action={
-            <CountBadge>{transactions.length} entri</CountBadge>
-          }
-        />
+        <div className="flex justify-end">
+          <CountBadge>{transactions.length} entri</CountBadge>
+        </div>
 
         {loading ? (
           <ListSkeleton count={4} />

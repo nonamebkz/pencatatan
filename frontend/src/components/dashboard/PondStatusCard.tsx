@@ -56,14 +56,14 @@ export function PondStatusCard({ summary }: { summary: WaterQualitySummary }) {
             pH
           </div>
           <p className="text-xl font-semibold tabular-nums">{summary.ph ?? '—'}</p>
-          <p className="text-[11px] text-muted-foreground">skala 0–14</p>
         </div>
       </div>
 
       <WaterQualityAdvicePanel
         advice={summary.advice}
         status={summary.status}
-        className="mt-4 pointer-events-none"
+        variant="summary"
+        className="mt-4"
       />
 
       <div className="mt-4 flex items-center justify-between text-xs font-medium text-primary md:text-sm">

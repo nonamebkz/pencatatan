@@ -10,3 +10,9 @@ Setiap fitur baru yang butuh UI dan/atau API **wajib** punya dokumen di folder i
 Aturan lengkap: `.cursor/rules/feature-delivery.mdc`
 
 **Riset domain** (sebelum spesifikasi): lihat [`../research/`](../research/) — contoh [`pond-spec-water-quality.md`](../research/pond-spec-water-quality.md) untuk kolam & kualitas air lele.
+
+## Dokumen yang ada
+
+| File | Status | Isi |
+|------|--------|-----|
+| [`water-quality-config-advice.md`](./water-quality-config-advice.md) | `done` | Ambang dan teks saran kualitas air, satu konfigurasi per workspace |

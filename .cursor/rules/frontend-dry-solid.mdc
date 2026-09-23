@@ -28,19 +28,13 @@ alwaysApply: false
 | Domain | `components/<domain>/` | `TransactionRow`, `PondCard` |
 | Halaman | `pages/` | Fetch state, susun shared + domain |
 
-## Konvensi visual
+## Design
 
-- Gunakan helper `design.ts`: `surface.panel`, `surface.metric`, `skeleton.block`, `iconBadge(tone)`.
-- Radius panel aplikasi: `rounded-2xl` (bukan campur aduk `rounded-xl` di panel besar kecuali di dalam shadcn default yang belum di-wrap).
-- Spacing halaman: bungkus konten dengan `PageShell` (`space-y-6 md:space-y-8`).
-- Error: `ErrorAlert` (shadcn `Alert` destructive), bukan div custom baru.
-- Info: `InfoCallout`, bukan border primary manual di halaman.
+Konvensi visual, tipografi, mobile, dan mapping komponen: **`.cursor/rules/design-system.mdc`**.
 
 ## Checklist sebelum merge UI
 
-- [ ] Tidak ada blok `rounded-2xl border bg-card` duplikat — pakai `MetricCard` / `PanelCard`.
-- [ ] Form field memakai `Field` / `TextField` / `SelectField` / `TextareaField`.
-- [ ] Form keuangan: `useCashAccountAndPonds`, `MobileFormFooter` + `form` id di mobile.
-- [ ] Import dari `@/components/ui/*` untuk kontrol interaktif.
-- [ ] Jalankan `npm run build` atau lint di `frontend/`.
-- [ ] Jika ada perubahan kode: `cd frontend && graphify update .` sebelum selesai.
+- [ ] Sesuai `mobile-first.mdc` + `design-system.mdc`.
+- [ ] Form field: `Field` / `TextField` / `SelectField` / `TextareaField`.
+- [ ] Form keuangan: `useCashAccountAndPonds`, `MobileFormFooter` + `form` id.
+- [ ] `npm run build`; `cd frontend && graphify update .` jika kode berubah.

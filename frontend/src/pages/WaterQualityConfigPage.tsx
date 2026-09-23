@@ -1,12 +1,13 @@
 import { useEffect, useState } from 'react'
-import { Link, useNavigate } from 'react-router-dom'
-import { ArrowLeft, Save } from 'lucide-react'
+import { useNavigate } from 'react-router-dom'
+import { Save } from 'lucide-react'
 
 import {
   getWaterQualityConfig,
   updateWaterQualityConfig,
   type WaterQualityConfig,
 } from '@/api/water-quality'
+import { BackLink } from '@/components/shared/BackLink'
 import { TextField, TextareaField } from '@/components/shared/Field'
 import { ErrorAlert } from '@/components/shared/ErrorAlert'
 import { InfoCallout } from '@/components/shared/InfoCallout'
@@ -116,12 +117,7 @@ export function WaterQualityConfigPage() {
 
   return (
     <div className="mx-auto max-w-3xl space-y-6 pb-24 md:space-y-8 md:pb-0">
-      <Button asChild variant="ghost" className="-ml-1 h-auto px-1 py-1 text-sm hover:bg-transparent sm:px-0">
-        <Link to="/water-quality">
-          <ArrowLeft className="size-4" />
-          Kembali
-        </Link>
-      </Button>
+      <BackLink to="/water-quality" label="Kembali ke daftar catatan" />
 
       <PageHeader
         title="Konfigurasi Kualitas Air"

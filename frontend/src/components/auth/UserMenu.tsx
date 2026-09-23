@@ -71,7 +71,7 @@ export function UserMenu({ layout = 'header' }: UserMenuProps) {
           <span className="flex size-8 shrink-0 items-center justify-center rounded-lg bg-primary/10 text-primary">
             <UserRound className="size-4" />
           </span>
-          <span className="min-w-0 truncate font-medium">{user.name.split(' ')[0]}</span>
+          <span className="hidden min-w-0 truncate font-medium sm:inline">{user.name.split(' ')[0]}</span>
           <ChevronDown className={cn('size-4 shrink-0 text-muted-foreground transition', open && 'rotate-180')} />
         </button>
 

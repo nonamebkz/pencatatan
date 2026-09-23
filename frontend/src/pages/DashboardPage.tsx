@@ -5,7 +5,6 @@ import {
   CheckCircle2,
   ChevronRight,
   Fish,
-  Plus,
   RefreshCw,
   Waves,
 } from 'lucide-react'
@@ -16,6 +15,7 @@ import { PondStatusCard } from '@/components/dashboard/PondStatusCard'
 import { StatCard } from '@/components/dashboard/StatCard'
 import { MobileSectionHeader } from '@/components/mobile/MobileSectionHeader'
 import { ErrorAlert } from '@/components/shared/ErrorAlert'
+import { PageShell } from '@/components/shared/PageShell'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Skeleton } from '@/components/ui/skeleton'
@@ -78,7 +78,7 @@ export function DashboardPage() {
   }).format(now)
 
   return (
-    <div className="space-y-6 md:space-y-8">
+    <PageShell>
       <section className="relative overflow-hidden rounded-2xl border bg-gradient-to-br from-primary/10 via-card to-background p-4 shadow-sm md:rounded-3xl md:p-8">
         <div className="relative z-10 flex flex-col gap-4 md:grid md:grid-cols-[1.2fr_0.8fr] md:items-center md:gap-6">
           <div className="space-y-3">
@@ -88,7 +88,7 @@ export function DashboardPage() {
                 type="button"
                 onClick={() => void loadDashboard(true)}
                 disabled={refreshing}
-                className="touch-target inline-flex size-9 items-center justify-center rounded-xl border bg-background/80 text-muted-foreground md:hidden"
+                className="touch-target inline-flex size-11 items-center justify-center rounded-xl border bg-background/80 text-muted-foreground md:hidden"
                 aria-label="Refresh dashboard"
               >
                 <RefreshCw className={refreshing ? 'size-4 animate-spin' : 'size-4'} />
@@ -100,12 +100,6 @@ export function DashboardPage() {
             </p>
 
             <div className="hidden flex-wrap gap-3 md:flex">
-              <Button asChild size="lg">
-                <Link to="/water-quality/new">
-                  <Plus className="size-4" />
-                  Catat Sekarang
-                </Link>
-              </Button>
               <Button variant="outline" size="lg" onClick={() => void loadDashboard(true)} disabled={refreshing}>
                 <RefreshCw className={refreshing ? 'size-4 animate-spin' : 'size-4'} />
                 Refresh
@@ -181,9 +175,8 @@ export function DashboardPage() {
       <section className="space-y-4">
         <MobileSectionHeader
           title="Status Kolam"
-          description="Nilai terakhir dan indikator kesehatan air"
           action={
-            <Button asChild variant="ghost" size="sm" className="hidden shrink-0 sm:inline-flex">
+            <Button asChild variant="outline" size="sm" className="shrink-0">
               <Link to="/water-quality">Semua catatan</Link>
             </Button>
           }
@@ -220,6 +213,6 @@ export function DashboardPage() {
           </div>
         )}
       </section>
-    </div>
+    </PageShell>
   )
 }

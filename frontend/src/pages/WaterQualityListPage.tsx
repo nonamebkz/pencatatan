@@ -4,7 +4,6 @@ import { Droplets, LineChart, Plus } from 'lucide-react'
 
 import { listPonds, listWaterQualityLogs, deleteWaterQualityLog, type Pond, type WaterQualityLog } from '@/api/water-quality'
 import { MobileFilterPanel } from '@/components/mobile/MobileFilterPanel'
-import { MobileSectionHeader } from '@/components/mobile/MobileSectionHeader'
 import { EmptyState } from '@/components/shared/EmptyState'
 import { CountBadge } from '@/components/shared/CountBadge'
 import { ErrorAlert } from '@/components/shared/ErrorAlert'
@@ -77,16 +76,11 @@ export function WaterQualityListPage() {
         }
       />
 
-      <MobileFilterPanel
-        title="Filter Catatan"
-        description="Kolam dan rentang tanggal"
-        onApply={() => loadLogs()}
-      >
-        <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
+      <MobileFilterPanel title="Filter" onApply={() => loadLogs()}>
+        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
           <SelectField
             label="Kolam"
             id="filter-pond"
-            className="sm:col-span-2 xl:col-span-1"
             value={businessUnitId}
             onChange={(e) => setBusinessUnitId(e.target.value)}
           >
@@ -105,12 +99,9 @@ export function WaterQualityListPage() {
       {error && <ErrorAlert>{error}</ErrorAlert>}
 
       <div className="space-y-4">
-        <MobileSectionHeader
-          title="Daftar Catatan"
-          action={
-            <CountBadge>{logs.length} entri</CountBadge>
-          }
-        />
+        <div className="flex justify-end">
+          <CountBadge>{logs.length} entri</CountBadge>
+        </div>
 
         {loading ? (
           <ListSkeleton count={3} className="h-28 rounded-2xl" />

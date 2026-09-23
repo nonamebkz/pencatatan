@@ -12,6 +12,8 @@ type MobileFilterPanelProps = {
   onApply?: () => void
   applyLabel?: string
   className?: string
+  /** Di desktop, sembunyikan judul panel agar field dan tombol satu baris. */
+  desktopHeader?: boolean
 }
 
 export function MobileFilterPanel({
@@ -21,6 +23,7 @@ export function MobileFilterPanel({
   onApply,
   applyLabel = 'Terapkan',
   className,
+  desktopHeader = false,
 }: MobileFilterPanelProps) {
   const [open, setOpen] = useState(false)
 
@@ -44,15 +47,23 @@ export function MobileFilterPanel({
         <ChevronDown className={cn('size-4 text-muted-foreground transition', open && 'rotate-180')} />
       </button>
 
-      <div className="hidden border-b px-5 py-4 md:block">
-        <h3 className="font-semibold">{title}</h3>
-        {description && <p className="mt-1 text-sm text-muted-foreground">{description}</p>}
-      </div>
+      {desktopHeader && (
+        <div className="hidden border-b px-5 py-4 md:block">
+          <h3 className="font-semibold">{title}</h3>
+          {description && <p className="mt-1 text-sm text-muted-foreground">{description}</p>}
+        </div>
+      )}
 
-      <div className={cn('p-4 md:p-6', !open && 'hidden md:block')}>
-        {children}
+      <div
+        className={cn(
+          'p-4 md:p-6',
+          !open && 'hidden md:block',
+          !desktopHeader && 'md:flex md:items-end md:gap-4 md:p-4',
+        )}
+      >
+        <div className={cn(!desktopHeader && 'min-w-0 md:flex-1')}>{children}</div>
         {onApply && (
-          <div className="mt-4">
+          <div className={cn('mt-4', !desktopHeader && 'md:mt-0 md:shrink-0')}>
             <Button onClick={onApply} className="touch-target w-full md:w-auto">
               <Filter className="size-4" />
               {applyLabel}

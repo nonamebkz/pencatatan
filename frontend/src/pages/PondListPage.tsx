@@ -1,6 +1,5 @@
 import { useEffect, useState } from 'react'
-import { Link } from 'react-router-dom'
-import { Fish, Plus, Sparkles } from 'lucide-react'
+import { Fish, Plus } from 'lucide-react'
 
 import { createPond, deletePond, listPonds, type Pond } from '@/api/water-quality'
 import { PondCard } from '@/components/ponds/PondCard'
@@ -77,14 +76,6 @@ export function PondListPage() {
       <PageHeader
         title="Kolam"
         description="Kelola master kolam sebelum mencatat kualitas air harian."
-        actions={
-          <Button asChild variant="outline" className="hidden md:inline-flex">
-            <Link to="/water-quality/new">
-              <Sparkles className="size-4" />
-              Catat Kualitas Air
-            </Link>
-          </Button>
-        }
       />
 
       {error && <ErrorAlert>{error}</ErrorAlert>}
@@ -113,8 +104,7 @@ export function PondListPage() {
         </PanelCard>
 
         <div className="order-1 space-y-4 xl:order-2">
-          <div className="flex items-center justify-between">
-            <h3 className="text-lg font-semibold">Daftar Kolam</h3>
+          <div className="flex justify-end">
             <CountBadge>{ponds.length} kolam</CountBadge>
           </div>
 

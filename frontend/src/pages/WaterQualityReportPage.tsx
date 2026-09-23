@@ -48,8 +48,8 @@ export function WaterQualityReportPage() {
         }
       />
 
-      <MobileFilterPanel title="Filter tren" description="Kolam dan rentang hari" onApply={loadTrends} applyLabel="Muat grafik">
-        <div className="grid gap-4 sm:grid-cols-2">
+      <MobileFilterPanel title="Filter" onApply={loadTrends} applyLabel="Muat grafik">
+        <div className="grid gap-4 md:grid-cols-2">
           <SelectField
             label="Kolam"
             id="trend-pond"

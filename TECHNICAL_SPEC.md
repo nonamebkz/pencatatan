@@ -81,7 +81,7 @@ Aturan bisnis lengkap: [BRD.md §9–§14](./BRD.md).
 | Bagi hasil | Max 2 pihak; persen total = 100% |
 | ConsumableLot | Link ke purchase opsional; manual allowed |
 | Anti double-count | Laporan sewa by kontrak; bagi hasil by record |
-| WaterQualityLog (T2) | Atom observasional; no Transaction; threshold hardcoded |
+| WaterQualityLog (T2) | Atom observasional; no Transaction; ambang & saran dari konfigurasi workspace (`water_quality_config`) |
 
 ---
 
@@ -614,17 +614,19 @@ Base URL: `/api/v1`
 **Validation (server):**
 - Reject if kolam status = `INACTIVE`
 - Reject if all of `ammoniaPpm`, `ph`, `notes` empty
-- Compute `status`: `NORMAL` \| `WARNING` \| `DANGER` from hardcoded thresholds (BR-F7)
+- Compute `status` dan `advice` dari konfigurasi workspace aktif (BR-F7, BR-F12), bukan konstanta di handler
 
-**Threshold constants (T2):**
-```go
-const (
-    AmmoniaWarnPPM  = 0.5
-    AmmoniaDangerPPM = 1.0
-    PHMinNormal = 6.5
-    PHMaxNormal = 8.5
-)
-```
+**`WaterQualityConfig`** (disimpan di `workspace_settings`, key `water_quality_config`; di-merge dengan default jika field kosong):
+
+| Field | Default | Peran |
+|---|---|---|
+| `ammoniaWarnPpm` | 0.5 | ≥ nilai ini → `WARNING` |
+| `ammoniaDangerPpm` | 1.0 | ≥ nilai ini → `DANGER` (harus ≥ waspada) |
+| `phMinNormal` / `phMaxNormal` | 6.5 / 8.5 | di luar rentang → `WARNING` saja |
+| `ammoniaAnalyteNote` | catatan kit TAN vs NH₃ | teks bantu di halaman pengaturan |
+| `advicePhLow`, `advicePhHigh`, `adviceAmmoniaWarn`, `adviceAmmoniaDanger` | langkah di `DefaultConfig()` | isi `advice[].steps` |
+
+`PUT` menolak ambang ≤ 0, bahaya < waspada, atau pH maks < min. Respons log, ringkasan, dan laporan menyertakan `advice` saat status bukan `NORMAL`. Satu konfigurasi untuk seluruh workspace.
 
 ### 5.10 Reports
 
@@ -642,7 +644,7 @@ const (
 
 | Method | Endpoint | Query | Response |
 |---|---|---|---|
-| GET | `/dashboard` | `month?, year?` | `{ cards, activeFeedLots, expiringContracts, waterQualitySummary[] }` |
+| GET | `/dashboard` | — | `{ waterQualitySummary[] }` (kartu keuangan §13 belum di endpoint ini) |
 
 **`waterQualitySummary[]` item (T2):**
 ```json
@@ -656,6 +658,8 @@ const (
   "notMeasuredToday": false
 }
 ```
+
+Jika status bukan `NORMAL`, item yang sama menyertakan `advice[]` (`code`, `title`, `steps`) dari konfigurasi workspace.
 
 ### 5.12 Health
 
@@ -968,6 +972,8 @@ const router = createBrowserRouter([
       { path: 'water-quality', element: <WaterQualityListPage /> },
       { path: 'water-quality/new', element: <WaterQualityFormPage /> },
       { path: 'water-quality/:id/edit', element: <WaterQualityFormPage /> },
+      { path: 'water-quality/report', element: <WaterQualityReportPage /> },
+      // admin: { path: 'settings/water-quality', element: <WaterQualityConfigPage /> },
       { path: 'purchases', element: <PurchaseListPage /> },
       { path: 'purchases/new', element: <PurchaseFormPage /> },
       { path: 'feed', element: <FeedListPage /> },
@@ -984,6 +990,8 @@ const router = createBrowserRouter([
   },
 ]);
 ```
+
+Blok di atas adalah sketsa target. Route yang hidup ada di `frontend/src/App.tsx`: kualitas air di `/water-quality`, `/water-quality/report`, `/water-quality/new`, `/water-quality/:id/edit`; konfigurasi admin di `/settings/water-quality`; keuangan di `/finance`.
 
 ### TanStack Query Example
 
@@ -1258,9 +1266,9 @@ func main() {
 
 ### Sprint 1 — Master Data + Transaksi
 
-**Backend:** [ ] Workspace CRUD · [x] Pond CRUD · [x] Batch list (`GET /batches`) · [ ] Purchase · [ ] Personal expense · [ ] Workspace middleware penuh
+**Backend:** [ ] Workspace CRUD · [x] Pond CRUD · [x] Batch list (`GET /batches`) · [x] Purchase create/list · [x] Other expense create · [ ] Personal expense · [ ] Workspace middleware penuh · [ ] Histori harga
 
-**Frontend:** [ ] WorkspaceSwitcher · [x] Pond pages · [ ] Purchase · [ ] Personal
+**Frontend:** [ ] WorkspaceSwitcher · [x] Pond pages · [x] `/finance` + form pembelian & pengeluaran lain · [ ] Personal
 
 ### Sprint 2 — Pakan + Sewa + Laporan 1
 
@@ -1275,16 +1283,18 @@ func main() {
 **Backend:**
 - [x] `water_quality_logs` + CRUD + validation (BR-F1–F4, F6, F9–F11)
 - [x] BR-F5 kolam INACTIVE ditolak saat create/update
-- [x] Threshold NORMAL/WARNING/DANGER
+- [x] Status NORMAL/WARNING/DANGER + `advice` dari konfigurasi workspace (BR-F7, BR-F12)
+- [x] `GET/PUT /water-quality/config`, `POST /water-quality/evaluate`
 - [x] `GET /water-quality-logs/trends`, `/dashboard`, `/reports/water-quality`
 - [x] `GET /batches` (filter kolam)
 - [ ] Redis cache invalidation
 
 **Frontend:**
-- [x] WaterQuality list + form (+ batch opsional)
+- [x] WaterQuality list + form (+ batch opsional, pratinjau saran)
 - [x] Riwayat di PondDetailPage
-- [x] Dashboard widget + badge
-- [x] `/water-quality/report` — grafik tren SVG 7/30 hari (RPT-07 partial)
+- [x] Dashboard widget + badge + saran
+- [x] `/water-quality/report` — grafik tren SVG 7/30 hari (RPT-07)
+- [x] Admin `/settings/water-quality` — ambang dan teks saran
 
 **DoD:** Epic E7 hampir lengkap; polish chart & batch CRUD UI opsional.
 
@@ -1292,7 +1302,7 @@ func main() {
 
 ## 19. Referensi
 
-- [BRD.md](./BRD.md) — business requirements (v1.3 + §23 status)
+- [BRD.md](./BRD.md) — business requirements (v1.4 + §23 status)
 - [raw idea.md](./raw%20idea.md) — ide awal
 - [jangka panjang.md](./jangka%20panjang.md) — visi jangka panjang
 
@@ -1309,10 +1319,10 @@ Ringkasan singkat — detail bisnis: [BRD §23](./BRD.md#23-status-implementasi-
 | Users | `/api/v1/users/*` (ADMIN) | ✅ |
 | Kolam | `/ponds`, `/ponds/:id` | ✅ |
 | Batch | `GET /batches` | ✅ list only |
-| Kualitas air | `/water-quality-logs`, `/dashboard`, `/reports/water-quality` | ✅ |
-| FE | `/login`, `/`, `/ponds`, `/water-quality`, `/water-quality/report`, `/users` | ✅ |
-| Workspace | `X-Workspace-ID` default UUID | ⚠️ hardcoded |
-| Transaksi MVP | PURCHASE, sewa, pakan, bagi hasil | ❌ |
+| Kualitas air | `/water-quality-logs`, `/water-quality/config`, `/dashboard`, `/reports/water-quality` | ✅ |
+| FE | `/login`, `/`, `/ponds`, `/water-quality`, `/water-quality/report`, `/settings/water-quality`, `/finance`, `/users` | ✅ |
+| Workspace | `X-Workspace-ID` default UUID | ⚠️ satu workspace seed |
+| Transaksi MVP | Pembelian + pengeluaran lain | ⚠️ sewa, pakan, bagi hasil, histori harga ❌ |
 | Redis | cache + logout blacklist | ❌ |
 
-**Backlog teknis berikutnya:** workspace CRUD + switcher → Transaction/Purchase (Sprint 1) → Redis production hardening.
+**Backlog teknis berikutnya:** workspace CRUD + switcher → histori harga & sisa modul keuangan → Redis production hardening. Ambang kualitas air tetap satu konfigurasi per workspace.

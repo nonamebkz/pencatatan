@@ -1,16 +1,16 @@
 import { useEffect, useState } from 'react'
-import { Link, useNavigate, useParams } from 'react-router-dom'
-import { ArrowLeft, KeyRound, Save, Trash2 } from 'lucide-react'
+import { useNavigate, useParams } from 'react-router-dom'
+import { KeyRound, Save, Trash2 } from 'lucide-react'
 
 import type { UserRole } from '@/api/auth'
 import { createUser, deleteUser, getUser, resetUserPassword, updateUser } from '@/api/users'
-import { TextField } from '@/components/shared/Field'
+import { SelectField, TextField } from '@/components/shared/Field'
+import { BackLink } from '@/components/shared/BackLink'
 import { ErrorAlert } from '@/components/shared/ErrorAlert'
+import { MobileFormFooter } from '@/components/shared/MobileFormFooter'
 import { PanelCard } from '@/components/shared/PanelCard'
 import { PageHeader } from '@/components/shared/PageHeader'
 import { Button } from '@/components/ui/button'
-import { Label } from '@/components/ui/label'
-import { Select } from '@/components/ui/select'
 import { Skeleton } from '@/components/ui/skeleton'
 import { useAuth } from '@/contexts/AuthContext'
 
@@ -93,12 +93,7 @@ export function UserFormPage() {
 
   return (
     <div className="mx-auto max-w-2xl space-y-6 pb-24 md:space-y-8 md:pb-0">
-      <Button asChild variant="ghost" className="-ml-1 h-auto px-1 py-1 text-sm hover:bg-transparent sm:px-0">
-        <Link to="/users">
-          <ArrowLeft className="size-4" />
-          Kembali
-        </Link>
-      </Button>
+      <BackLink to="/users" label="Kembali ke daftar pengguna" />
 
       <PageHeader
         title={isEdit ? 'Edit Pengguna' : 'Tambah Pengguna'}
@@ -118,26 +113,21 @@ export function UserFormPage() {
             required
           />
 
-          <div className="grid gap-4 sm:grid-cols-2">
-            <div className="space-y-2">
-              <Label htmlFor="role">Peran</Label>
-              <Select id="role" value={role} onChange={(e) => setRole(e.target.value as UserRole)}>
-                <option value="USER">User — operasional harian</option>
-                <option value="ADMIN">Admin — kelola pengguna</option>
-              </Select>
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="isActive">Status</Label>
-              <Select
-                id="isActive"
-                value={isActive ? '1' : '0'}
-                onChange={(e) => setIsActive(e.target.value === '1')}
-                disabled={isSelf}
-              >
-                <option value="1">Aktif</option>
-                <option value="0">Nonaktif</option>
-              </Select>
-            </div>
+          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+            <SelectField label="Peran" id="role" value={role} onChange={(e) => setRole(e.target.value as UserRole)}>
+              <option value="USER">User — operasional harian</option>
+              <option value="ADMIN">Admin — kelola pengguna</option>
+            </SelectField>
+            <SelectField
+              label="Status"
+              id="isActive"
+              value={isActive ? '1' : '0'}
+              onChange={(e) => setIsActive(e.target.value === '1')}
+              disabled={isSelf}
+            >
+              <option value="1">Aktif</option>
+              <option value="0">Nonaktif</option>
+            </SelectField>
           </div>
 
           {!isEdit ? (
@@ -188,19 +178,17 @@ export function UserFormPage() {
         </PanelCard>
       )}
 
-      <div className="safe-bottom fixed inset-x-0 bottom-[calc(5.5rem+env(safe-area-inset-bottom,0px))] z-20 border-t bg-background/95 p-3 backdrop-blur md:hidden">
-        <div className="mx-auto flex max-w-2xl gap-2">
-          {isEdit && !isSelf && (
-            <Button type="button" variant="outline" disabled={submitting} className="flex-1" onClick={() => void handleDelete()}>
-              <Trash2 className="size-4" />
-            </Button>
-          )}
-          <Button type="submit" form="user-form" disabled={submitting} className="flex-[1.6]">
-            <Save className="size-4" />
-            Simpan
+      <MobileFormFooter maxWidthClassName="max-w-2xl">
+        {isEdit && !isSelf && (
+          <Button type="button" variant="outline" disabled={submitting} className="flex-1" onClick={() => void handleDelete()}>
+            <Trash2 className="size-4" />
           </Button>
-        </div>
-      </div>
+        )}
+        <Button type="submit" form="user-form" disabled={submitting} className="flex-[1.6]">
+          <Save className="size-4" />
+          Simpan
+        </Button>
+      </MobileFormFooter>
     </div>
   )
 }

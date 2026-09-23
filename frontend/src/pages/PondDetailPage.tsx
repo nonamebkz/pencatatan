@@ -143,7 +143,7 @@ export function PondDetailPage() {
         </div>
       </section>
 
-      <PanelCard title="Riwayat Kualitas Air" description="Semua observasi ammonia, pH, dan catatan untuk kolam ini.">
+      <PanelCard title="Riwayat Kualitas Air">
         {logs.length === 0 ? (
           <EmptyState
             icon={Droplets}

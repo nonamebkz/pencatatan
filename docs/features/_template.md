@@ -77,8 +77,12 @@ Base: `/api/v1`. Headers: `Authorization`, `X-Workspace-ID` (lihat `TECHNICAL_SP
 
 ### UI / design
 
-- Shared: `PageShell`, `Field`, …
-- Empty / error / loading: …
+Ikuti `.cursor/rules/design-system.mdc`.
+
+- Halaman & layout: `PageShell`, `PageHeader`, lebar `max-w-*`
+- Shared: `PanelCard`, `Field`, `EmptyState`, `ErrorAlert`, …
+- Mobile (wajib review): viewport 360px, `MobileFormFooter`, `MobileFilterPanel`, `pb-mobile-nav` — `mobile-first.mdc`
+- States: loading (`ListSkeleton`), empty, error
 
 ## Verifikasi
 

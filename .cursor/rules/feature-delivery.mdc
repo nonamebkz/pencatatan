@@ -12,7 +12,7 @@ Jangan mulai implementasi BE/FE untuk **fitur baru** (bukan bugfix satu baris) s
 1. Ada file `docs/features/<slug>.md` (salin dari `docs/features/_template.md`).
 2. Bagian **Business flow** + **Aturan bisnis** + **Edge cases** terisi.
 3. Bagian **API contract** lengkap per endpoint (method, path, auth, body, `data`, kode error).
-4. Bagian **Frontend contract** (route, halaman, file API, types).
+4. Bagian **Frontend contract** (route, halaman, file API, types) + **UI / design** (`mobile-first.mdc`, `design-system.mdc` — states mobile: loading, sticky submit, filter).
 5. Status dokumen minimal **`contract-ready`** (user menyetujui atau eksplisit "lanjut implement").
 
 Fitur hanya-UI tanpa API: tetap isi flow + states UI; tulis "Tidak ada endpoint baru".
@@ -58,7 +58,7 @@ MANDATORY graphify per folder (.cursor/rules/graphify-monorepo.mdc):
 - Backend: cd …/pencatatan/backend && graphify query|path|explain …
 - Frontend: cd …/pencatatan/frontend && graphify query|path|explain …
 Jangan eksplorasi dengan graf root untuk tugas satu-sisi.
-Ikuti .cursor/rules/<backend-dry-solid|frontend-dry-solid>.mdc.
+Ikuti .cursor/rules/<backend-dry-solid|frontend-dry-solid|mobile-first|design-system>.mdc (FE wajib mobile-first + design-system).
 
 Tugas: [Backend ONLY | Frontend ONLY] — implement bagian checklist di spec.
 Jangan ubah folder lawan (FE agent tidak edit backend/).

@@ -1,11 +1,12 @@
-# BRD v1.3 — Pencatatan Operasional Usaha
+# BRD v1.4 — Pencatatan Operasional Usaha
 
 | Field | Value |
 |---|---|
-| Versi | 1.3 |
+| Versi | 1.4 |
 | Status | Living document — selaras dengan codebase `pencatatan-usaha` |
 | Produk | Aplikasi pencatatan operasional + pengeluaran usaha |
 | Codename | `pencatatan-usaha` |
+| Changelog v1.4 | Ambang & teks saran kualitas air dikonfigurasi **per workspace** (bukan hardcoded, bukan per kolam); selaraskan §2, §7, §9, §15–§16, §23 |
 | Changelog v1.3 | Tambah §23 Status Implementasi; selaraskan scope auth/multi-user & modul Kualitas Air yang sudah live di repo |
 | Changelog v1.2 | Tambah modul Kualitas Air (`WaterQualityLog`) — desain T2 |
 | Changelog v1.1 | Tambah glossary, business rules, state machine, validation, report spec, dashboard metrics, personal workspace, perkuat acceptance criteria |
@@ -24,7 +25,7 @@
 
 **Bukan scope MVP (tetap):** akuntansi penuh, revenue otomatis, **pendaftaran mandiri (register)**, export, reminder push, offline.
 
-**Sudah diimplementasi di repo (slice awal, lihat §23):** login JWT, kelola pengguna (admin), master kolam, kualitas air + dashboard operasional air, UI web responsive. Modul keuangan (pembelian, sewa, pakan, bagi hasil) dan multi-workspace penuh **belum**.
+**Sudah diimplementasi di repo (slice awal, lihat §23):** login JWT, kelola pengguna (admin), master kolam, kualitas air (log, ambang & saran per workspace, dashboard), pembelian + pengeluaran lain (sebagian), UI web responsive. Sewa, pakan, bagi hasil, dan multi-workspace penuh **belum**.
 
 ---
 
@@ -50,7 +51,7 @@
 | Q16 | Status kontrak: **2 dimensi terpisah** (waktu + pembayaran) |
 | Q17 | Kualitas air: atom **`WaterQualityLog`** observasional, **tanpa Transaction** |
 | Q18 | Metrik T2: **ammonia (ppm)** + **pH** + **notes**; minimal satu field wajib terisi |
-| Q19 | Threshold T2: **hardcoded** — ammonia ≥0.5 waspada, ≥1.0 bahaya; pH di luar 6.5–8.5 waspada |
+| Q19 | Ambang & saran kualitas air: **satu konfigurasi per workspace** (admin). Default jika belum disimpan: ammonia ≥0.5 ppm waspada, ≥1.0 bahaya; pH di luar 6.5–8.5 waspada. Bukan per kolam |
 | Q20 | UI T2: menu **Kualitas Air** + tab riwayat di detail Kolam; **business workspace only** |
 
 ---
@@ -81,7 +82,7 @@
 | **CashAccount** | Sumber/tujuan dana. MVP: 1 "Kas Utama" per workspace. |
 | **Batch** | Metadata opsional untuk mengelompokkan biaya per siklus tebar/panen. Nullable di semua modul. |
 | **Hasil (bagi hasil)** | Nilai uang hasil panen/omzet yang diinput manual per periode. Bukan stok ikan. |
-| **WaterQualityLog** | Catatan observasional kualitas air kolam: ammonia (ppm), pH, dan catatan teks. Tidak terkait Transaction. |
+| **WaterQualityLog** | Catatan observasional kualitas air kolam: ammonia (ppm), pH, dan catatan teks. Tidak terkait Transaction. Status dan saran dihitung dari konfigurasi workspace, tidak disimpan di baris log. |
 
 ---
 
@@ -161,7 +162,7 @@ Workspace
 |---|---|---|
 | MVP-01 | Multi-workspace (usaha + personal) | ❌ |
 | MVP-02 | Master kolam (BusinessUnit) | ✅ |
-| MVP-03 | Pembelian barang multi-item + histori harga | ❌ |
+| MVP-03 | Pembelian barang multi-item + histori harga | ⚠️ (create multi-item live; histori harga belum) |
 | MVP-04 | Kontrak sewa + jadwal cicilan auto-generate | ❌ |
 | MVP-05 | Pakan (ConsumableLot): lifecycle + buat manual/direct | ❌ |
 | MVP-06 | Bagi hasil: skema 2 pihak + realisasi manual | ❌ |
@@ -189,15 +190,15 @@ Workspace
 |---|---|
 | Auth & pengguna | Login, logout, JWT; CRUD user admin-only; seed admin |
 | Kolam | CRUD BusinessUnit (pond) + detail |
-| Kualitas air | CRUD log, threshold, dashboard widget, filter list, API tren & laporan |
+| Kualitas air | CRUD log, ambang + teks saran per workspace, dashboard widget, filter list, API tren & laporan |
 | Infrastruktur | Docker Compose, MySQL, health check, API `/api/v1` |
 
 ### Roadmap
 
 | Tahap | Tambahan |
 |---|---|
-| **T2** | **Kualitas Air** — *sebagian sudah live* (§23); sisa: grafik UI RPT-07, validasi kolam INACTIVE saat input, batch di form; Reminder sewa/pakan; master supplier; multi-kas; master item |
-| **T3** | Revenue otomatis, laba otomatis, self-service multi-tenant; threshold kualitas air konfigurasi per workspace; metrik tambahan (DO, suhu) |
+| **T2** | **Kualitas Air** — *live* (§23), termasuk ambang & saran per workspace; sisa: CRUD batch di UI. Juga rencana: reminder sewa/pakan, master supplier, multi-kas, master item |
+| **T3** | Revenue otomatis, laba otomatis, self-service multi-tenant; metrik kualitas air tambahan (DO, suhu) |
 | **Visi** | Template usaha lain, extension API |
 
 ### In Scope — Tahap 2 (Kualitas Air)
@@ -207,7 +208,8 @@ Workspace
 | T2-01 | CRUD `WaterQualityLog` (ammonia_ppm, ph, notes) | ✅ |
 | T2-02 | Kolam wajib, batch opsional, `measured_at` bebas (backdate OK) | ✅ (batch opsional di form; CRUD batch belum) |
 | T2-03 | Validasi: minimal satu dari ammonia_ppm / ph / notes terisi | ✅ |
-| T2-04 | Soft warning threshold (hardcoded T2) | ✅ |
+| T2-04 | Soft warning dari konfigurasi workspace (default ammonia 0,5 / 1,0 ppm, pH 6,5–8,5) | ✅ |
+| T2-09 | Admin mengatur ambang + teks saran; panel saran di list, dashboard, form, laporan | ✅ |
 | T2-05 | Menu Kualitas Air + tab riwayat di detail Kolam | ✅ |
 | T2-06 | Dashboard widget nilai terakhir per kolam aktif + badge waspada | ✅ |
 | T2-07 | Reminder in-app "belum diukur hari ini" (bukan push) | ✅ (banner/kartu dashboard) |
@@ -299,13 +301,16 @@ Workspace
 - BR-F4: Minimal **satu** dari `ammonia_ppm`, `ph`, atau `notes` harus terisi saat simpan.
 - BR-F5: Kolam `INACTIVE` → log lama read-only; **input baru ditolak**.
 - BR-F6: Hapus kolam → **semua data terkait kolam** ikut terhapus: catatan kualitas air, batch, transaksi keuangan (termasuk baris pembelian) yang terhubung ke kolam/batch tersebut.
-- BR-F7: Threshold T2 **hardcoded**:
-  - Ammonia ≥ 0.5 ppm → waspada; ≥ 1.0 ppm → bahaya
-  - pH < 6.5 atau > 8.5 → waspada
+- BR-F7: Status dihitung dari **konfigurasi workspace** (`workspace_settings.water_quality_config`), bukan angka tetap di kode. Jika belum disimpan, pakai default:
+  - Ammonia ≥ ambang waspada (default 0,5 ppm) → `WARNING`; ≥ ambang bahaya (default 1,0 ppm) → `DANGER`
+  - pH di luar min–maks normal (default 6,5–8,5) → `WARNING` (pH sendiri tidak menaikkan ke `DANGER`)
+  - Jika amonia sudah `DANGER`, status tetap `DANGER` meski pH juga di luar rentang
+  - Ambang bahaya amonia harus ≥ waspada; pH maksimum harus ≥ minimum; nilai ≤ 0 ditolak saat simpan
 - BR-F8: Soft warning saja — nilai di luar range tetap bisa disimpan.
 - BR-F9: CRUD penuh (create, read, update, delete).
 - BR-F10: Hanya tampil di **business workspace**, bukan personal.
 - BR-F11: "Belum diukur hari ini" = tidak ada log dengan `measured_at` date = today (timezone Asia/Jakarta) untuk kolam aktif tersebut.
+- BR-F12: Saat status bukan `NORMAL`, respons log, ringkasan dashboard, laporan, dan `POST /water-quality/evaluate` menyertakan `advice[]` (judul + langkah) dari teks di konfigurasi yang sama. Admin mengubahnya di `/settings/water-quality`. Satu konfigurasi berlaku untuk semua kolam di workspace.
 
 ---
 
@@ -447,7 +452,7 @@ Status waktu dan pembayaran dihitung on-read, bukan disimpan sebagai single enum
 
 | Widget | Definisi |
 |---|---|
-| Kualitas Air Terakhir | Per kolam ACTIVE: ammonia + pH + measured_at terakhir + badge waspada/bahaya jika di luar threshold |
+| Kualitas Air Terakhir | Per kolam ACTIVE: ammonia + pH + measured_at terakhir + badge waspada/bahaya + saran penanganan jika di luar ambang workspace |
 | Belum Diukur Hari Ini | Badge in-app jika kolam ACTIVE belum punya log dengan measured_at date = today |
 
 ### Personal Workspace — Kartu
@@ -534,7 +539,7 @@ Status waktu dan pembayaran dihitung on-read, bukan disimpan sebagai single enum
 | **Grafik** | Line chart ammonia + pH per kolam; periode 7 atau 30 hari |
 | **Footer** | Jumlah entri, kolam belum diukur hari ini |
 | **Sumber** | WaterQualityLog |
-| **Catatan** | Observasional; **bukan** transaksi keuangan |
+| **Catatan** | Observasional; **bukan** transaksi keuangan. Status dan saran dihitung saat dibaca dari konfigurasi workspace aktif (tidak disimpan di baris log) |
 
 ### RPT-P: Personal Ringkasan
 
@@ -585,7 +590,8 @@ Status waktu dan pembayaran dihitung on-read, bukan disimpan sebagai single enum
 |---|---|
 | US-7.1 Simpan log | **Given** kolam aktif + ammonia 0.3 + pH 7.2, **When** save, **Then** WaterQualityLog tersimpan tanpa Transaction |
 | US-7.2 Validasi kosong | **Given** semua field ammonia/ph/notes kosong, **When** save, **Then** error validasi |
-| US-7.3 Soft warning | **Given** ammonia 1.2 ppm, **When** save, **Then** tersimpan + badge bahaya di list & dashboard |
+| US-7.3 Soft warning | **Given** ammonia 1.2 ppm dan ambang default, **When** save, **Then** tersimpan + badge bahaya + saran amonia bahaya di list & dashboard |
+| US-7.7 Atur ambang | **Given** admin, **When** ubah ambang waspada amonia jadi 0,3 dan simpan, **Then** log baru dan ringkasan memakai 0,3; pengguna non-admin tidak bisa membuka halaman pengaturan |
 | US-7.4 Kolam nonaktif | **Given** kolam INACTIVE, **When** coba buat log baru, **Then** error; riwayat lama tetap tampil |
 | US-7.5 Belum diukur | **Given** kolam aktif tanpa log hari ini, **When** lihat dashboard, **Then** badge "belum diukur hari ini" muncul |
 | US-7.6 Tren | **Given** log 30 hari untuk Kolam A, **When** buka RPT-07 days=30, **Then** grafik ammonia + pH tampil |
@@ -599,12 +605,13 @@ Status waktu dan pembayaran dihitung on-read, bukan disimpan sebagai single enum
 | P-01 | Login | Email + password; tanpa register | ✅ `/login` |
 | P-02 | Pengguna (admin) | CRUD akun tim | ✅ `/users` |
 | P-03 | Dashboard | Business vs Personal layout berbeda (§8); widget kualitas air | ⚠️ hanya widget kualitas air |
-| P-06 | Pembelian — Form | Multi-item | ❌ |
+| P-06 | Pembelian — Form | Multi-item | ⚠️ `/finance/purchases/new` (histori harga belum) |
 | P-17 | Laporan — Detail | Kolom §14; RPT-07 tren | ⚠️ `/water-quality/report` (WQ saja) |
 | P-19 | Master Kolam — List/Form | | ✅ `/ponds` |
 | P-20 | Kualitas Air — List | Filter kolam/periode; badge status | ✅ `/water-quality` |
 | P-21 | Kualitas Air — Form | ammonia + pH + catatan + measured_at | ✅ |
 | P-22 | Kolam — Detail | Riwayat kualitas air | ✅ `/ponds/:id` |
+| P-23 | Pengaturan kualitas air (admin) | Ambang ammonia/pH + teks saran; satu set per workspace | ✅ `/settings/water-quality` |
 
 ---
 
@@ -655,7 +662,7 @@ Status waktu dan pembayaran dihitung on-read, bukan disimpan sebagai single enum
 | Report column spec | ✅ Closed v1.1 | Sprint 2–3 |
 | Master item / supplier | 🔜 T2 | — |
 | Reminder | 🔜 T2 | — |
-| Kualitas air (WaterQualityLog) | ✅ Desain v1.2; **implementasi sebagian live** (§23) | T2 sisa: grafik UI, batch, BR-F5 |
+| Kualitas air (WaterQualityLog) | ✅ Live, termasuk ambang & saran per workspace | Sisa: CRUD batch di UI |
 | Auth multi-user (admin) | ✅ Live | Tanpa register |
 | Revenue otomatis | 🔜 T3 | — |
 
@@ -668,10 +675,10 @@ Status waktu dan pembayaran dihitung on-read, bukan disimpan sebagai single enum
 | Sprint | DoD rencana | Status aktual |
 |---|---|---|
 | **0 — Foundation** | Login → workspace switch → health check | ⚠️ Login ✅; health ✅; workspace switch ❌ |
-| **1 — Master + Transaksi** | Multi-item purchase + histori harga + personal | ❌ |
+| **1 — Master + Transaksi** | Multi-item purchase + histori harga + personal | ⚠️ pembelian + pengeluaran lain; histori harga & personal ❌ |
 | **2 — Pakan + Sewa + Lap 1–3** | Lifecycle + kontrak + dashboard keuangan + RPT 01,04,06 | ❌ |
 | **3 — Bagi Hasil + Lap 4–6 + Polish** | Distribution + all reports + QA | ❌ |
-| **4 — Kualitas Air (T2)** | WQ CRUD + widget + RPT-07 + tab kolam | ⚠️ ~80% (grafik UI & batch sisa) |
+| **4 — Kualitas Air (T2)** | WQ CRUD + widget + RPT-07 + tab kolam + konfigurasi ambang/saran | ✅ (sisa: CRUD batch UI) |
 | **+ Auth & users** | *(di luar sprint asli)* | ✅ Admin user management |
 
 ---
@@ -684,7 +691,7 @@ Status waktu dan pembayaran dihitung on-read, bukan disimpan sebagai single enum
 - [x] Kelola pengguna (admin, tanpa register)
 - [ ] Multi-workspace (business + personal) dengan menu berbeda
 - [x] CRUD kolam
-- [ ] Multi-item purchase + histori harga normalized
+- [ ] Histori harga normalized (pembelian multi-item create sudah ada di `/finance`)
 - [ ] Consumable: from purchase + manual + lifecycle
 - [ ] Kontrak sewa lunas & cicilan + dual status
 - [ ] Bayar schedule → transaction, no double count
@@ -727,37 +734,39 @@ Status waktu dan pembayaran dihitung on-read, bukan disimpan sebagai single enum
 | IMP-AUTH | Login `/login`, JWT, `/auth/me`, `/auth/logout` | Token di localStorage; protected routes |
 | IMP-USER | User management admin | `GET/POST/PUT/DELETE /users`, reset password; role ADMIN/USER |
 | IMP-POND | Master kolam | CRUD ponds; hapus kolam **admin only** — cascade: WQ, batch, transaksi & pembelian terkait |
-| IMP-WQ | Kualitas air | CRUD logs; hapus catatan **admin only**; validasi minimal 1 field; threshold ammonia/pH |
+| IMP-WQ | Kualitas air | CRUD logs; hapus catatan **admin only**; validasi minimal 1 field; status + `advice` dari konfigurasi workspace |
+| IMP-WQ-CFG | Ambang & saran | `GET/PUT /water-quality/config` (PUT admin); default di `DefaultConfig`; UI `/settings/water-quality` |
 | IMP-DASH-WQ | Dashboard operasional air | Ringkasan per kolam, stat, alert belum diukur hari ini |
 | IMP-UI | Layout responsive | Bottom nav mobile, halaman kolam & kualitas air |
+| IMP-FIN | Pembelian & pengeluaran lain | List/create pembelian multi-item, pengeluaran lain, kas, ringkasan; UI `/finance` | 
 | IMP-OPS | Health + Docker | `GET /health`, compose MySQL + API + FE |
 
 ### ⚠️ Sebagian (gap ke BRD)
 
 | ID | Fitur | Yang sudah | Yang belum |
 |---|---|---|---|
-| PART-WQ | T2 / BR-F | CRUD, dashboard, filter, grafik tren UI, batch di form | CRUD batch UI; polish chart |
+| PART-WQ | T2 / BR-F | CRUD, dashboard, filter, grafik tren UI, batch opsional di form log, ambang & saran per workspace | CRUD batch (hanya `GET /batches`) |
 | PART-POND | FR-04 | name, location, notes, status | Form UI untuk size, ownerName |
 | PART-WS | MVP-01 / FR-01 | Satu workspace seed `Usaha Lele` | CRUD workspace, switcher, personal workspace |
-| PART-DASH | MVP-07 / §13 | Kartu kualitas air | Kartu Total Belanja, Pakan, Sewa, Bagi Hasil |
+| PART-FIN | MVP-03 / MVP-11 | Create pembelian multi-item, pengeluaran lain, list kas & transaksi | Histori harga, ubah/hapus pembelian, sewa, pakan, bagi hasil |
+| PART-DASH | MVP-07 / §13 | Kartu kualitas air; ringkasan keuangan di `/finance` | Kartu Total Belanja, Pakan, Sewa, Bagi Hasil di dashboard utama |
 | PART-AUTH | FR-02 spec | JWT 24h | Redis blacklist logout |
 
 ### ❌ Belum ada (masih sesuai rencana MVP asli)
 
 | ID | Fitur BRD |
 |---|---|
-| MVP-03 | Pembelian multi-item + histori harga |
 | MVP-04 | Kontrak sewa + jadwal cicilan |
 | MVP-05 | ConsumableLot / pakan |
 | MVP-06 | Bagi hasil 2 pihak |
 | MVP-08 | Laporan RPT-01 s/d RPT-06 + RPT-P |
-| MVP-09 | Batch di UI (tabel ada, form log belum) |
-| MVP-11 | Kas default / CashAccount |
+| MVP-09 | CRUD batch di UI (`GET /batches` + pilihan di form log sudah ada) |
+| MVP-11 | Kas: hanya list + pemakaian di transaksi (bukan CRUD kas) |
 | MVP-01 | Multi-workspace penuh + menu personal |
 
 ### Prioritas suggested (backlog BRD)
 
 1. **Sprint 0 sisa:** workspace switcher + seed personal (placeholder).
-2. **Sprint 1:** Transaction + pembelian multi-item (inti MVP keuangan) + CRUD batch.
+2. **Sprint 1 sisa:** histori harga pembelian + CRUD batch. Create pembelian multi-item sudah live.
 3. **Redis + logout blacklist** (sesuai TECHNICAL_SPEC) saat deploy production.
-4. **Polish T2:** CRUD batch di UI; field size/ownerName di form kolam.
+4. **Sisa T2:** CRUD batch di UI; field size/ownerName di form kolam. Ambang kualitas air tetap satu per workspace (bukan per kolam).

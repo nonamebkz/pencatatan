@@ -18,7 +18,9 @@ Dokumen ringkas untuk manusia dan AI. Aturan detail ada di `.cursor/rules/`.
 | `project-principles.mdc` | DRY, SOLID, arah repo |
 | `feature-delivery.mdc` | Gate contract, urutan implement, spawn BE/FE |
 | `agent-orchestration.mdc` | Kapan pakai subagent |
-| `frontend-dry-solid.mdc` | UI, shadcn, shared components |
+| `frontend-dry-solid.mdc` | DRY/SOLID, hierarki komponen |
+| `mobile-first.mdc` | **Prioritas** — desain dari 360px, footer, touch |
+| `design-system.mdc` | Token, tipografi, pola UI konsisten |
 | `backend-dry-solid.mdc` | Handler, repo, httpx, migrasi |
 | `graphify-monorepo.mdc` | Graphify dari `frontend/` atau `backend/` (masing-masing `graphify-out/`) |
 

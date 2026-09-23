@@ -58,7 +58,6 @@ export function WaterQualityLogRow({ log, canDelete, deleting, onDelete }: Water
             pH
           </div>
           <p className="text-lg font-semibold tabular-nums">{log.ph ?? '—'}</p>
-          <p className="text-[11px] text-muted-foreground">skala 0–14</p>
         </div>
       </div>
 
@@ -66,7 +65,7 @@ export function WaterQualityLogRow({ log, canDelete, deleting, onDelete }: Water
         <p className="mt-3 line-clamp-2 text-sm text-muted-foreground">{log.notes}</p>
       )}
 
-      <WaterQualityAdvicePanel advice={log.advice} status={log.status} className="mt-3" />
+      <WaterQualityAdvicePanel advice={log.advice} status={log.status} variant="collapsible" className="mt-3" />
 
       <Link
         to={`/water-quality/${log.id}/edit`}
