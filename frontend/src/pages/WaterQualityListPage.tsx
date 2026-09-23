@@ -16,7 +16,7 @@ import { Button } from '@/components/ui/button'
 import { useAuth } from '@/contexts/AuthContext'
 
 export function WaterQualityListPage() {
-  const { isAdmin } = useAuth()
+  const { canDelete } = useAuth()
   const [ponds, setPonds] = useState<Pond[]>([])
   const [logs, setLogs] = useState<WaterQualityLog[]>([])
   const [businessUnitId, setBusinessUnitId] = useState('')
@@ -122,7 +122,7 @@ export function WaterQualityListPage() {
               <WaterQualityLogRow
                 key={log.id}
                 log={log}
-                canDelete={isAdmin}
+                canDelete={canDelete}
                 deleting={deletingLogId === log.id}
                 onDelete={handleDeleteLog}
               />

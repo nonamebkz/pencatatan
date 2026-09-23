@@ -78,13 +78,11 @@ func main() {
 	protected.Post("/auth/logout", authHandler.Logout)
 	protected.Get("/auth/me", authHandler.Me)
 
-	admin := protected.Group("/users", middleware.AdminOnly())
-	admin.Get("/", userHandler.List)
-	admin.Get("/:id", userHandler.Get)
-	admin.Post("/", userHandler.Create)
-	admin.Put("/:id", userHandler.Update)
-	admin.Put("/:id/reset-password", userHandler.ResetPassword)
-	admin.Delete("/:id", userHandler.Delete)
+	protected.Get("/users", userHandler.List)
+	protected.Get("/users/:id", userHandler.Get)
+	protected.Post("/users", userHandler.Create)
+	protected.Put("/users/:id", userHandler.Update)
+	protected.Put("/users/:id/reset-password", userHandler.ResetPassword)
 
 	protected.Get("/batches", batchHandler.List)
 	protected.Get("/ponds", pondHandler.List)
@@ -92,10 +90,12 @@ func main() {
 	protected.Post("/ponds", pondHandler.Create)
 	protected.Put("/ponds/:id", pondHandler.Update)
 
-	adminData := protected.Group("", middleware.AdminOnly())
-	adminData.Delete("/ponds/:id", pondHandler.Delete)
-	adminData.Delete("/water-quality-logs/:id", waterQualityHandler.Delete)
-	adminData.Put("/water-quality/config", waterQualityHandler.UpdateConfig)
+	adminOnly := protected.Group("", middleware.AdminOnly())
+	adminOnly.Delete("/users/:id", userHandler.Delete)
+	adminOnly.Delete("/ponds/:id", pondHandler.Delete)
+	adminOnly.Delete("/water-quality-logs/:id", waterQualityHandler.Delete)
+
+	protected.Put("/water-quality/config", waterQualityHandler.UpdateConfig)
 
 	protected.Get("/water-quality-logs/trends", waterQualityHandler.Trends)
 	protected.Get("/water-quality/config", waterQualityHandler.GetConfig)

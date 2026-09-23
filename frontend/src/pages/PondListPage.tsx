@@ -14,7 +14,7 @@ import { Skeleton } from '@/components/ui/skeleton'
 import { useAuth } from '@/contexts/AuthContext'
 
 export function PondListPage() {
-  const { isAdmin } = useAuth()
+  const { canDelete } = useAuth()
   const [ponds, setPonds] = useState<Pond[]>([])
   const [error, setError] = useState<string | null>(null)
   const [loading, setLoading] = useState(true)
@@ -85,7 +85,7 @@ export function PondListPage() {
             <PondCard
               key={pond.id}
               pond={pond}
-              canDelete={isAdmin}
+              canDelete={canDelete}
               deleting={deletingId === pond.id}
               onDelete={handleDeletePond}
             />

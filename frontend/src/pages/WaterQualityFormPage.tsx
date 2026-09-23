@@ -37,7 +37,7 @@ function toLocalInputValue(date: Date) {
 export function WaterQualityFormPage() {
   const navigate = useNavigate()
   const { id } = useParams()
-  const { isAdmin } = useAuth()
+  const { canDelete } = useAuth()
   const [searchParams] = useSearchParams()
   const isEdit = Boolean(id)
 
@@ -286,7 +286,7 @@ export function WaterQualityFormPage() {
             <Button asChild variant="outline">
               <Link to="/water-quality">Batal</Link>
             </Button>
-            {isEdit && isAdmin && (
+            {isEdit && canDelete && (
               <Button type="button" variant="outline" disabled={submitting} onClick={() => void handleDelete()}>
                 <Trash2 className="size-4" />
                 Hapus
@@ -297,7 +297,7 @@ export function WaterQualityFormPage() {
       </PanelCard>
 
       <MobileFormFooter>
-        {isEdit && isAdmin && (
+        {isEdit && canDelete && (
           <Button type="button" variant="outline" disabled={submitting} className="shrink-0 px-3" onClick={() => void handleDelete()}>
             <Trash2 className="size-4" />
           </Button>

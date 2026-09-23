@@ -1,6 +1,6 @@
 import { BrowserRouter, Navigate, Route, Routes } from 'react-router-dom'
 
-import { AdminRoute, GuestRoute, ProtectedRoute } from '@/components/auth/AuthRoutes'
+import { GuestRoute, ProtectedRoute } from '@/components/auth/AuthRoutes'
 import { AuthProvider } from '@/contexts/AuthContext'
 import { AppLayout } from '@/layouts/AppLayout'
 import { DashboardPage } from '@/pages/DashboardPage'
@@ -43,15 +43,10 @@ function App() {
               <Route path="finance/purchases/new" element={<PurchaseFormPage />} />
               <Route path="finance/purchases/:id" element={<PurchaseDetailPage />} />
               <Route path="finance/expenses/new" element={<OtherExpenseFormPage />} />
-            </Route>
-
-            <Route element={<AdminRoute />}>
-              <Route element={<AppLayout />}>
-                <Route path="users" element={<UserListPage />} />
-                <Route path="users/new" element={<UserFormPage />} />
-                <Route path="users/:id/edit" element={<UserFormPage />} />
-                <Route path="settings/water-quality" element={<WaterQualityConfigPage />} />
-              </Route>
+              <Route path="users" element={<UserListPage />} />
+              <Route path="users/new" element={<UserFormPage />} />
+              <Route path="users/:id/edit" element={<UserFormPage />} />
+              <Route path="settings/water-quality" element={<WaterQualityConfigPage />} />
             </Route>
           </Route>
 

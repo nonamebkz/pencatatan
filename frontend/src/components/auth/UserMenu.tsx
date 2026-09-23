@@ -11,7 +11,7 @@ type UserMenuProps = {
 }
 
 export function UserMenu({ layout = 'header' }: UserMenuProps) {
-  const { user, isAdmin } = useAuth()
+  const { user } = useAuth()
   const [open, setOpen] = useState(false)
 
   if (!user) return null
@@ -32,24 +32,20 @@ export function UserMenu({ layout = 'header' }: UserMenuProps) {
           </div>
         </div>
 
-        {isAdmin && (
-          <>
-            <Link
-              to="/users"
-              className="flex items-center gap-2 rounded-xl px-3 py-2.5 text-sm text-muted-foreground transition hover:bg-muted hover:text-foreground"
-            >
-              <UserCog className="size-4" />
-              Kelola Pengguna
-            </Link>
-            <Link
-              to="/settings/water-quality"
-              className="flex items-center gap-2 rounded-xl px-3 py-2.5 text-sm text-muted-foreground transition hover:bg-muted hover:text-foreground"
-            >
-              <Settings2 className="size-4" />
-              Kualitas Air
-            </Link>
-          </>
-        )}
+        <Link
+          to="/users"
+          className="flex items-center gap-2 rounded-xl px-3 py-2.5 text-sm text-muted-foreground transition hover:bg-muted hover:text-foreground"
+        >
+          <UserCog className="size-4" />
+          Kelola Pengguna
+        </Link>
+        <Link
+          to="/settings/water-quality"
+          className="flex items-center gap-2 rounded-xl px-3 py-2.5 text-sm text-muted-foreground transition hover:bg-muted hover:text-foreground"
+        >
+          <Settings2 className="size-4" />
+          Kualitas Air
+        </Link>
 
         <LogoutButton variant="outline" />
       </div>
@@ -87,28 +83,24 @@ export function UserMenu({ layout = 'header' }: UserMenuProps) {
                 <p className="truncate text-xs text-muted-foreground">{user.email}</p>
               </div>
               <div className="space-y-1 p-2">
-                {isAdmin && (
-                  <>
-                    <Link
-                      to="/users"
-                      role="menuitem"
-                      onClick={() => setOpen(false)}
-                      className="flex items-center gap-2 rounded-xl px-3 py-2.5 text-sm hover:bg-muted"
-                    >
-                      <UserCog className="size-4" />
-                      Kelola Pengguna
-                    </Link>
-                    <Link
-                      to="/settings/water-quality"
-                      role="menuitem"
-                      onClick={() => setOpen(false)}
-                      className="flex items-center gap-2 rounded-xl px-3 py-2.5 text-sm hover:bg-muted"
-                    >
-                      <Settings2 className="size-4" />
-                      Kualitas Air
-                    </Link>
-                  </>
-                )}
+                <Link
+                  to="/users"
+                  role="menuitem"
+                  onClick={() => setOpen(false)}
+                  className="flex items-center gap-2 rounded-xl px-3 py-2.5 text-sm hover:bg-muted"
+                >
+                  <UserCog className="size-4" />
+                  Kelola Pengguna
+                </Link>
+                <Link
+                  to="/settings/water-quality"
+                  role="menuitem"
+                  onClick={() => setOpen(false)}
+                  className="flex items-center gap-2 rounded-xl px-3 py-2.5 text-sm hover:bg-muted"
+                >
+                  <Settings2 className="size-4" />
+                  Kualitas Air
+                </Link>
                 <div className="px-1 pb-1" onClick={() => setOpen(false)}>
                   <LogoutButton variant="ghost" className="w-full" />
                 </div>

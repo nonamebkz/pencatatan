@@ -17,7 +17,7 @@ import { useAuth } from '@/contexts/AuthContext'
 export function UserFormPage() {
   const navigate = useNavigate()
   const { id } = useParams()
-  const { user: currentUser } = useAuth()
+  const { user: currentUser, canDelete } = useAuth()
   const isEdit = Boolean(id)
 
   const [name, setName] = useState('')
@@ -159,7 +159,7 @@ export function UserFormPage() {
               <Save className="size-4" />
               Simpan
             </Button>
-            {isEdit && !isSelf && (
+            {isEdit && canDelete && !isSelf && (
               <Button type="button" variant="outline" disabled={submitting} onClick={() => void handleDelete()}>
                 <Trash2 className="size-4" />
                 Hapus
@@ -179,7 +179,7 @@ export function UserFormPage() {
       )}
 
       <MobileFormFooter maxWidthClassName="max-w-2xl">
-        {isEdit && !isSelf && (
+        {isEdit && canDelete && !isSelf && (
           <Button type="button" variant="outline" disabled={submitting} className="flex-1" onClick={() => void handleDelete()}>
             <Trash2 className="size-4" />
           </Button>

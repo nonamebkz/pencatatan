@@ -25,7 +25,7 @@ import { cn } from '@/lib/utils'
 export function PondDetailPage() {
   const navigate = useNavigate()
   const { id = '' } = useParams()
-  const { isAdmin } = useAuth()
+  const { canDelete } = useAuth()
   const [pond, setPond] = useState<Pond | null>(null)
   const [logs, setLogs] = useState<WaterQualityLog[]>([])
   const [error, setError] = useState<string | null>(null)
@@ -129,7 +129,7 @@ export function PondDetailPage() {
                 Catat Kualitas Air
               </Link>
             </Button>
-            {isAdmin && (
+            {canDelete && (
               <DeleteOutlineButton
                 className="w-full lg:w-auto"
                 disabled={deletingPond}
@@ -161,7 +161,7 @@ export function PondDetailPage() {
               <WaterQualityLogRow
                 key={log.id}
                 log={log}
-                canDelete={isAdmin}
+                canDelete={canDelete}
                 deleting={deletingLogId === log.id}
                 onDelete={handleDeleteLog}
               />

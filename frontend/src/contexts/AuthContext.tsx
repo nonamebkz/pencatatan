@@ -6,6 +6,8 @@ type AuthContextValue = {
   user: AuthUser | null
   loading: boolean
   isAdmin: boolean
+  /** Hanya ADMIN — hapus kolam, catatan, pengguna */
+  canDelete: boolean
   login: (email: string, password: string) => Promise<void>
   logout: () => Promise<void>
   refreshUser: () => Promise<void>
@@ -52,6 +54,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       user,
       loading,
       isAdmin: user?.role === 'ADMIN',
+      canDelete: user?.role === 'ADMIN',
       login,
       logout,
       refreshUser,

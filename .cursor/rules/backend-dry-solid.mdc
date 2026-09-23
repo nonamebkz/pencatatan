@@ -62,7 +62,7 @@ Jika logic > ~15 baris dan bukan sekadar validasi, pindah ke service.
 ## Keamanan & data
 
 - Jangan log password, token, atau isi JWT.
-- Admin-only untuk hapus data sensitif (kolam, catatan, user) — ikuti pola `adminData` di `main.go`.
+- **ADMIN**: akses penuh termasuk DELETE. **USER**: sama kecuali DELETE (kolam, catatan kualitas air, pengguna). Kelola user & konfigurasi template kualitas air untuk semua user login — ikuti pola `adminOnly` di `main.go`.
 - Parameter query untuk filter: parse di helper (`parseFinanceFilter`, `parseWaterQualityFilter`), validasi tipe/range sebelum SQL.
 
 ## Testing (arah)

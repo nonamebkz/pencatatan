@@ -3,7 +3,6 @@ import { Droplets, Fish, LayoutDashboard, Plus, UserCog, Wallet, Waves } from 'l
 
 import { UserMenu } from '@/components/auth/UserMenu'
 import { MobileBottomNav } from '@/components/mobile/MobileBottomNav'
-import { useAuth } from '@/contexts/AuthContext'
 import { cn } from '@/lib/utils'
 
 const navItems = [
@@ -35,7 +34,6 @@ function pageTitle(pathname: string) {
 
 export function AppLayout() {
   const location = useLocation()
-  const { isAdmin } = useAuth()
   const title = pageTitle(location.pathname)
   const onPondDetail = /^\/ponds\/[^/]+$/.test(location.pathname)
   const hideQuickRecord =
@@ -86,25 +84,23 @@ export function AppLayout() {
               </NavLink>
             ))}
 
-            {isAdmin && (
-              <NavLink
-                to="/users"
-                className={({ isActive }) =>
-                  cn(
-                    'flex items-start gap-3 rounded-2xl px-3 py-3 text-sm transition',
-                    isActive
-                      ? 'bg-primary text-primary-foreground shadow-sm'
-                      : 'text-muted-foreground hover:bg-muted hover:text-foreground',
-                  )
-                }
-              >
-                <UserCog className="mt-0.5 size-4 shrink-0" />
-                <span>
-                  <span className="block font-medium">Pengguna</span>
-                  <span className="block text-xs opacity-80">Kelola akun tim</span>
-                </span>
-              </NavLink>
-            )}
+            <NavLink
+              to="/users"
+              className={({ isActive }) =>
+                cn(
+                  'flex items-start gap-3 rounded-2xl px-3 py-3 text-sm transition',
+                  isActive
+                    ? 'bg-primary text-primary-foreground shadow-sm'
+                    : 'text-muted-foreground hover:bg-muted hover:text-foreground',
+                )
+              }
+            >
+              <UserCog className="mt-0.5 size-4 shrink-0" />
+              <span>
+                <span className="block font-medium">Pengguna</span>
+                <span className="block text-xs opacity-80">Kelola akun tim</span>
+              </span>
+            </NavLink>
           </nav>
 
           <div className="mt-auto space-y-4 pt-8">
