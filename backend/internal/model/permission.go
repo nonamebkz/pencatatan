@@ -21,6 +21,9 @@ const (
 	PermCashAccountCreate  = "cash_account.create"
 	PermCashAccountUpdate  = "cash_account.update"
 	PermCashAccountDelete  = "cash_account.delete"
+	PermFinanceRentRead    = "finance.rent.read"
+	PermFinanceRentCreate  = "finance.rent.create"
+	PermFinanceRentPay     = "finance.rent.pay"
 )
 
 // AllPermissionCodes daftar lengkap untuk seed workspace_admin.

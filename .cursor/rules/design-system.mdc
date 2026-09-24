@@ -92,6 +92,9 @@ Jangan membuat warna status baru tanpa kebutuhan.
 | `statusTone.*` | Badge aktif/nonaktif (`success`, `muted`, `danger`) |
 | `wqStatusSurface.*` | Border kartu dashboard per status WQ |
 | `alertInline.warning` | Callout peringatan inline (belum diukur, dll.) |
+| `alertInline.warningLink` | Banner peringatan yang bisa diketuk (dashboard) |
+| `advicePanelSurface.*` | Panel saran WQ warning/danger |
+| `surface.chart` | Wrapper grafik tren (scroll horizontal) |
 | `pageLayout.*` | Lebar form/detail |
 | `skeleton.*` | Loading placeholder |
 | `iconBadge(tone)` | Ikon dalam kartu |

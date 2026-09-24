@@ -6,6 +6,7 @@ export const surface = {
   metric: 'rounded-2xl border bg-card p-4 shadow-sm',
   empty: 'rounded-2xl border border-dashed bg-card/50',
   stickyBar: 'border-t bg-background/95 backdrop-blur',
+  chart: 'overflow-x-auto rounded-2xl border bg-card p-3',
 } as const
 
 /** Kartu list / link domain — hindari copy `rounded-2xl border bg-card`. */
@@ -28,6 +29,14 @@ export const wqStatusSurface = {
 export const alertInline = {
   warning:
     'flex items-center gap-2 rounded-2xl border border-amber-200/80 bg-amber-50 px-3 py-2 text-xs text-amber-900 dark:border-amber-900/40 dark:bg-amber-950/40 dark:text-amber-200',
+  warningLink:
+    'flex items-center justify-between gap-3 rounded-2xl border border-amber-200/80 bg-amber-50 px-4 py-4 text-sm text-amber-900 transition active:scale-[0.99] dark:border-amber-900/40 dark:bg-amber-950/30 dark:text-amber-100',
+} as const
+
+/** Panel saran kualitas air (warning / danger). */
+export const advicePanelSurface = {
+  warning: 'border-amber-500/30 bg-amber-500/5',
+  danger: 'border-destructive/30 bg-destructive/5',
 } as const
 
 export const skeleton = {

@@ -15,5 +15,9 @@ Aturan lengkap: `.cursor/rules/feature-delivery.mdc`
 
 | File | Status | Isi |
 |------|--------|-----|
+| [`rent-contracts.md`](./rent-contracts.md) | `done` | Kontrak sewa kolam, jadwal cicilan, bayar → `RENT_PAYMENT` |
+| [`cash-accounts.md`](./cash-accounts.md) | `done` | CRUD akun kas workspace |
+| [`access-catalog.md`](./access-catalog.md) | `done` | Menu FE ↔ permission DB |
+| [`rbac.md`](./rbac.md) | `done` | RBAC fase 1–2 |
 | [`water-quality-config-advice.md`](./water-quality-config-advice.md) | `done` | Template ambang & saran untuk kolam baru |
 | [`pond-water-quality-config.md`](./pond-water-quality-config.md) | `done` | Salinan ambang & saran di tiap kolam |

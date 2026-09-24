@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
-import { Landmark, Plus, Receipt, ShoppingCart, Wallet } from 'lucide-react'
+import { FileText, Landmark, Plus, Receipt, ShoppingCart, Wallet } from 'lucide-react'
 
 import {
   getFinanceSummary,
@@ -31,6 +31,7 @@ export function FinancePage() {
   const { canViewPageId, canPageAction } = useCatalogAccess()
   const showCashAccounts = canViewPageId('page.finance.cash_accounts')
   const showPurchases = canPageAction('page.finance.purchases', 'create')
+  const showRent = canPageAction('page.finance.rent', 'read')
   const showExpenses = canPageAction('page.finance.expenses', 'create')
   const [summary, setSummary] = useState<FinanceSummary | null>(null)
   const [transactions, setTransactions] = useState<Transaction[]>([])
@@ -77,7 +78,7 @@ export function FinancePage() {
     load()
   }, [])
 
-  const showQuickActions = showCashAccounts || showExpenses || showPurchases
+  const showQuickActions = showCashAccounts || showExpenses || showPurchases || showRent
 
   return (
     <PageShell>
@@ -100,6 +101,14 @@ export function FinancePage() {
                   <Link to="/finance/expenses/new">
                     <Receipt className="size-4" />
                     Pengeluaran lain
+                  </Link>
+                </Button>
+              )}
+              {showRent && (
+                <Button asChild variant="outline">
+                  <Link to="/finance/rent">
+                    <FileText className="size-4" />
+                    Sewa kolam
                   </Link>
                 </Button>
               )}
@@ -133,6 +142,14 @@ export function FinancePage() {
                 <Link to="/finance/cash-accounts">
                   <Landmark className="size-4" />
                   Akun kas
+                </Link>
+              </Button>
+            )}
+            {showRent && (
+              <Button asChild variant="outline" className="h-11 w-full touch-target">
+                <Link to="/finance/rent">
+                  <FileText className="size-4" />
+                  Sewa kolam
                 </Link>
               </Button>
             )}

@@ -69,6 +69,9 @@ Override path backend (opsional): env `ACCESS_CATALOG_PATH`.
       "finance.read",
       "finance.purchase.create",
       "finance.expense.create",
+      "finance.rent.read",
+      "finance.rent.create",
+      "finance.rent.pay",
       "cash_account.read",
       "cash_account.create",
       "cash_account.update",
@@ -135,4 +138,14 @@ Role sistem:
 
 - `access.Load()`, `FlattenPermissions()`, `AllPermissionCodes()`, `OperatorPermissionCodes()`
 
-**Catatan:** Guard API untuk modul operasional (pembelian, kolam CRUD, dll.) belum seluruhnya memakai kode catalog — lihat tabel §7.5 di TECHNICAL_SPEC.
+**Catatan:** Guard API untuk modul operasional (pembelian, kolam CRUD, dll.) belum seluruhnya memakai kode catalog — lihat tabel §7.5 di TECHNICAL_SPEC. **Sewa kolam** (`finance.rent.*`) sudah full `RequirePermission` di `/rent-contracts*`.
+
+### Halaman keuangan — sewa (`page.finance.rent`)
+
+| Action | Permission | Route FE |
+|--------|------------|----------|
+| `read` | `finance.rent.read` | `/finance/rent`, `/finance/rent/:id` |
+| `create` | `finance.rent.create` | `/finance/rent/new` |
+| `pay` | `finance.rent.pay` | tombol bayar di detail (API `POST …/schedules/:id/pay`) |
+
+Spesifikasi: [rent-contracts.md](./rent-contracts.md).

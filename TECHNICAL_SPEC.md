@@ -621,14 +621,18 @@ Seed migrasi `000003_finance`: **Kas Utama** default (`is_default=1`).
 | PUT | `/feed-lots/:id/usage` | `{ startUseDate, estimatedEndDate? }` | `ConsumableLot` |
 | PUT | `/feed-lots/:id/deplete` | `{ actualEndDate }` | `ConsumableLot` |
 
-### 5.7 Rent Contract (Sewa)
+### 5.7 Rent Contract (Sewa) — ✅ live
 
-| Method | Endpoint | Body / Query | Response |
-|---|---|---|---|
-| GET | `/rent-contracts` | `?status=` | `[PeriodicContract]` with schedules |
-| GET | `/rent-contracts/:id` | — | contract + schedules + payments |
-| POST | `/rent-contracts` | `{ businessUnitId, startDate, durationMonths, totalAmount, paymentScheme, notes? }` | `{ contract, schedules[] }` |
-| POST | `/rent-contracts/schedules/:id/pay` | `{ paymentDate, cashAccountId }` | `{ payment, transaction }` |
+Kontrak: [docs/features/rent-contracts.md](./docs/features/rent-contracts.md). Migrasi: `000006_rent_contracts.up.sql`.
+
+| Method | Endpoint | Auth (permission) | Body / Query | Response `data` |
+|---|---|---|---|---|
+| GET | `/rent-contracts` | `finance.rent.read` | `?businessUnitId=` | `[PeriodicContract]` + `schedules[]`, field derived `timeStatus`, `paymentStatus`, `paidAmount`, `remainingAmount` |
+| GET | `/rent-contracts/:id` | `finance.rent.read` | — | `PeriodicContract` + jadwal |
+| POST | `/rent-contracts` | `finance.rent.create` | `{ businessUnitId, startDate, durationMonths, totalAmount, paymentScheme: LUMP_SUM\|INSTALLMENT, notes? }` | `{ contract, schedules[] }` |
+| POST | `/rent-contracts/schedules/:scheduleId/pay` | `finance.rent.pay` | `{ paymentDate, cashAccountId, notes? }` | `{ payment, transaction }` — `transaction_type` = `RENT_PAYMENT` |
+
+**Belum:** `GET /reports/rent`, edit/hapus kontrak, filter `?status=` di list.
 
 ### 5.8 Distribution (Bagi Hasil)
 
@@ -913,7 +917,8 @@ Permission operasional (catalog + seed; **guard API** sebagian masih JWT-only un
 
 | Modul | Permission (contoh) | FE menu/CTA | API middleware |
 |---|---|---|---|
-| Keuangan | `finance.read`, `finance.purchase.create`, `finance.expense.create` | ✅ catalog | ⚠️ belum semua endpoint |
+| Keuangan | `finance.read`, `finance.purchase.create`, `finance.expense.create` | ✅ catalog | ⚠️ pembelian/pengeluaran belum `RequirePermission` |
+| Sewa | `finance.rent.read`, `finance.rent.create`, `finance.rent.pay` | ✅ `page.finance.rent` | ✅ `/rent-contracts*` |
 | Kas | `cash_account.read` … `delete` | ✅ | ✅ |
 | Kolam | `pond.read`, `pond.create`, `pond.update`, `pond.delete` | ✅ menu/CTA | ⚠️ hanya `pond.delete` |
 | Kualitas air | `water_quality.read`, `create`, `update`, `delete`, `config.update` | ✅ | ⚠️ delete + config |
@@ -1106,7 +1111,7 @@ const router = createBrowserRouter([
 ]);
 ```
 
-Blok di atas adalah sketsa target. Route yang hidup ada di `frontend/src/App.tsx`: kualitas air di `/water-quality`, `/water-quality/report`, `/water-quality/new`, `/water-quality/:id/edit`; konfigurasi admin di `/settings/water-quality`; keuangan di `/finance`.
+Blok di atas adalah sketsa target. Route yang hidup ada di `frontend/src/App.tsx`: kualitas air di `/water-quality`, `/water-quality/report`, `/water-quality/new`, `/water-quality/:id/edit`; konfigurasi admin di `/settings/water-quality`; keuangan di `/finance`, pembelian/pengeluaran/kas, **sewa** di `/finance/rent`, `/finance/rent/new`, `/finance/rent/:id` (`PermissionRoute` + `page.finance.rent` di access catalog).
 
 ### TanStack Query Example
 
@@ -1393,13 +1398,13 @@ func main() {
 
 ### Sprint 1 — Master Data + Transaksi
 
-**Backend:** [ ] Workspace CRUD · [x] Pond CRUD · [x] Batch list (`GET /batches`) · [x] Purchase create/list · [x] Other expense create · [ ] Personal expense · [ ] Workspace middleware penuh · [ ] Histori harga
+**Backend:** [ ] Workspace CRUD · [x] Pond CRUD · [x] Batch list (`GET /batches`) · [x] Purchase create/list · [x] Other expense create · [x] **Rent** kontrak + bayar jadwal · [ ] Personal expense · [ ] Workspace middleware penuh · [ ] Histori harga
 
-**Frontend:** [ ] WorkspaceSwitcher · [x] Pond pages · [x] `/finance` + form pembelian & pengeluaran lain · [ ] Personal
+**Frontend:** [ ] WorkspaceSwitcher · [x] Pond pages · [x] `/finance` + form pembelian & pengeluaran lain · [x] `/finance/rent/*` · [ ] Personal
 
 ### Sprint 2 — Pakan + Sewa + Laporan 1
 
-**Backend / Frontend:** [ ] belum
+**Backend / Frontend:** [x] **Sewa** (MVP-04 core) · [ ] Pakan · [ ] Laporan RPT-01+
 
 ### Sprint 3 — Bagi Hasil + Laporan 2 + Polish
 
@@ -1448,13 +1453,14 @@ Ringkasan singkat — detail bisnis: [BRD §23](./BRD.md#23-status-implementasi-
 | Users | `/api/v1/users/*` + `PUT /users/:id/roles` | ✅ `RequirePermission` |
 | RBAC | roles, `GET /permissions`, `/auth/me` permissions, menu FE ↔ role DB (access catalog) | ✅ fase 1–2 (audit UI ❌; guard API operasional sebagian ⚠️) |
 | Kas | `/cash-accounts` CRUD + RBAC | ✅ [docs/features/cash-accounts.md](./docs/features/cash-accounts.md) |
+| Sewa kolam | `/rent-contracts` + FE `/finance/rent/*` | ✅ [docs/features/rent-contracts.md](./docs/features/rent-contracts.md) |
 | Kolam | `/ponds`, `/ponds/:id` | ✅ |
 | Batch | `GET /batches` | ✅ list only |
 | Kualitas air | `/water-quality-logs`, `/water-quality/config`, `/dashboard`, `/reports/water-quality` | ✅ |
 | FE | Operasional + Kelola Akses (`/users`, `/roles`, `/forbidden`) | ✅ |
 | Access catalog | `shared/access-catalog.json`, `make sync-access-catalog` | ✅ |
 | Workspace | `X-Workspace-ID` default UUID | ⚠️ satu workspace seed |
-| Transaksi MVP | Pembelian + pengeluaran lain | ⚠️ sewa, pakan, bagi hasil, histori harga ❌ |
+| Transaksi MVP | Pembelian + pengeluaran lain + **sewa** (kontrak & bayar jadwal) | ⚠️ pakan, bagi hasil, histori harga ❌ |
 | Redis | cache + logout blacklist | ❌ |
 
-**Backlog teknis berikutnya:** workspace CRUD + switcher → histori harga & sisa modul keuangan → RBAC fase 3 (audit + master permission UI) → Redis production hardening.
+**Backlog teknis berikutnya:** workspace CRUD + switcher → histori harga → pakan & bagi hasil → laporan RPT sewa/ringkasan dashboard → RBAC fase 3 (audit + master permission UI) → Redis production hardening.

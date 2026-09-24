@@ -2,10 +2,11 @@
 
 | Field | Value |
 |---|---|
-| Versi | 1.8 |
+| Versi | 1.9 |
 | Status | Living document — selaras dengan codebase `pencatatan-usaha` |
 | Produk | Aplikasi pencatatan operasional + pengeluaran usaha |
 | Codename | `pencatatan-usaha` |
+| Changelog v1.9 | **MVP-04 sewa kolam** live: kontrak, jadwal cicilan, bayar → `RENT_PAYMENT` — lihat §23 `IMP-RENT`, [docs/features/rent-contracts.md](./docs/features/rent-contracts.md) |
 | Changelog v1.8 | **Menu & aksi FE** mengikuti permission efektif **role di DB** (`/auth/me` → `canSeeCatalogMenu` / `canPageAction`); permission operasional (`finance.*`, `pond.*`, `water_quality.*`) di access catalog + seed operator |
 | Changelog v1.7 | **Katalog akses** [`shared/access-catalog.json`](./shared/access-catalog.json) — menu/halaman/aksi FE ↔ seed permission DB; RBAC fase 1–2 live; kas CRUD + permission granular |
 | Changelog v1.6 | Target **RBAC berbasis permission** + struktur menu **Kelola Akses** (Users/Roles/Permissions/Audit); map transisi dari peran `ADMIN`/`USER` repo — lihat §24 |
@@ -29,7 +30,7 @@
 
 **Bukan scope MVP (tetap):** akuntansi penuh, revenue otomatis, **pendaftaran mandiri (register)**, export, reminder push, offline.
 
-**Sudah diimplementasi di repo (slice awal, lihat §23):** login JWT, kelola pengguna (admin), master kolam, kualitas air (log, ambang & saran per kolam, dashboard), pembelian + pengeluaran lain (sebagian), UI web responsive. Sewa, pakan, bagi hasil, dan multi-workspace penuh **belum**.
+**Sudah diimplementasi di repo (slice awal, lihat §23):** login JWT, kelola pengguna (admin), master kolam, kualitas air (log, ambang & saran per kolam, dashboard), pembelian + pengeluaran lain + **kontrak sewa & bayar jadwal**, UI web responsive. Pakan, bagi hasil, dan multi-workspace penuh **belum**.
 
 ---
 
@@ -167,14 +168,14 @@ Workspace
 | MVP-01 | Multi-workspace (usaha + personal) | ❌ |
 | MVP-02 | Master kolam (BusinessUnit) | ✅ |
 | MVP-03 | Pembelian barang multi-item + histori harga | ⚠️ (create multi-item live; histori harga belum) |
-| MVP-04 | Kontrak sewa + jadwal cicilan auto-generate | ❌ |
+| MVP-04 | Kontrak sewa + jadwal cicilan auto-generate | ✅ (create + bayar jadwal; tanpa edit/hapus kontrak & RPT sewa) |
 | MVP-05 | Pakan (ConsumableLot): lifecycle + buat manual/direct | ❌ |
 | MVP-06 | Bagi hasil: skema 2 pihak + realisasi manual | ❌ |
 | MVP-07 | Dashboard dengan metrik terdefinisi | ⚠️ (hanya metrik kualitas air) |
 | MVP-08 | 6 laporan dengan spesifikasi kolom | ❌ |
 | MVP-09 | Batch opsional | ⚠️ (DB; belum di form WQ) |
 | MVP-10 | Login + kelola user (admin, tanpa register) | ✅ |
-| MVP-11 | Kas default per workspace | ❌ |
+| MVP-11 | Kas default per workspace | ✅ (CRUD akun kas — [docs/features/cash-accounts.md](./docs/features/cash-accounts.md)) |
 
 ### Out of Scope — MVP
 
@@ -737,8 +738,8 @@ Mengikuti pola **Access Management**; visibilitas **permission**, bukan hardcode
 - [x] CRUD kolam
 - [ ] Histori harga normalized (pembelian multi-item create sudah ada di `/finance`)
 - [ ] Consumable: from purchase + manual + lifecycle
-- [ ] Kontrak sewa lunas & cicilan + dual status
-- [ ] Bayar schedule → transaction, no double count
+- [x] Kontrak sewa lunas & cicilan + dual status (derived on-read)
+- [x] Bayar schedule → transaction `RENT_PAYMENT` (1 schedule = 1 transaksi)
 - [ ] Bagi hasil 2 pihak + formula validated
 - [ ] Dashboard metrics sesuai §13 (keuangan)
 - [x] Dashboard widget kualitas air + belum diukur hari ini (§13 T2)
@@ -753,7 +754,8 @@ Mengikuti pola **Access Management**; visibilitas **permission**, bukan hardcode
 
 - [raw idea.md](./raw%20idea.md) — ide awal modul lele
 - [jangka panjang.md](./jangka%20panjang.md) — visi multi-usaha + atomic
-- [TECHNICAL_SPEC.md](./TECHNICAL_SPEC.md) — spesifikasi teknis implementasi (v1.7, §7.5 RBAC + menu ↔ role DB)
+- [TECHNICAL_SPEC.md](./TECHNICAL_SPEC.md) — spesifikasi teknis implementasi (v1.9, §5.7 sewa + §7.5 RBAC)
+- [docs/features/rent-contracts.md](./docs/features/rent-contracts.md) — kontrak sewa MVP-04
 
 ### Tech Stack (implementasi aktual)
 
@@ -784,6 +786,7 @@ Mengikuti pola **Access Management**; visibilitas **permission**, bukan hardcode
 | IMP-DASH-WQ | Dashboard operasional air | Ringkasan per kolam, stat, alert belum diukur hari ini |
 | IMP-UI | Layout responsive | Bottom nav mobile, halaman kolam & kualitas air |
 | IMP-FIN | Pembelian, pengeluaran, **CRUD akun kas** | UI `/finance`, `/finance/cash-accounts/*` |
+| IMP-RENT | Kontrak sewa kolam (MVP-04) | `POST/GET /rent-contracts`, bayar jadwal; FE `/finance/rent/*`; permission `finance.rent.*` — [docs/features/rent-contracts.md](./docs/features/rent-contracts.md) |
 | IMP-OPS | Health + Docker | `GET /health`, compose MySQL + API + FE |
 
 ### ⚠️ Sebagian (gap ke BRD)
@@ -793,7 +796,7 @@ Mengikuti pola **Access Management**; visibilitas **permission**, bukan hardcode
 | PART-WQ | T2 / BR-F | CRUD, dashboard, filter, grafik tren UI, batch opsional di form log, ambang & saran per kolam | CRUD batch (hanya `GET /batches`) |
 | PART-POND | FR-04 | name, location, notes, status | Form UI untuk size, ownerName |
 | PART-WS | MVP-01 / FR-01 | Satu workspace seed `Usaha Lele` | CRUD workspace, switcher, personal workspace |
-| PART-FIN | MVP-03 / MVP-11 | Create pembelian multi-item, pengeluaran lain, list kas & transaksi | Histori harga, ubah/hapus pembelian, sewa, pakan, bagi hasil |
+| PART-FIN | MVP-03 / MVP-04 / MVP-11 | Pembelian multi-item, pengeluaran lain, kas CRUD, **sewa** (kontrak + bayar jadwal) | Histori harga, ubah/hapus pembelian, pakan, bagi hasil, laporan RPT sewa |
 | PART-DASH | MVP-07 / §13 | Kartu kualitas air; ringkasan keuangan di `/finance` | Kartu Total Belanja, Pakan, Sewa, Bagi Hasil di dashboard utama |
 | PART-AUTH | FR-02 spec | JWT 24h; RBAC fase 1–2 + access catalog | Redis blacklist; audit log UI; CRUD master `/permissions` |
 
@@ -801,18 +804,16 @@ Mengikuti pola **Access Management**; visibilitas **permission**, bukan hardcode
 
 | ID | Fitur BRD |
 |---|---|
-| MVP-04 | Kontrak sewa + jadwal cicilan |
 | MVP-05 | ConsumableLot / pakan |
 | MVP-06 | Bagi hasil 2 pihak |
 | MVP-08 | Laporan RPT-01 s/d RPT-06 + RPT-P |
 | MVP-09 | CRUD batch di UI (`GET /batches` + pilihan di form log sudah ada) |
-| MVP-11 | ~~Kas list only~~ | **Sudah:** CRUD kas + RBAC — lihat [docs/features/cash-accounts.md](./docs/features/cash-accounts.md) |
 | MVP-01 | Multi-workspace penuh + menu personal |
 
 ### Prioritas suggested (backlog BRD)
 
 1. **Sprint 0 sisa:** workspace switcher + seed personal (placeholder).
-2. **Sprint 1 sisa:** histori harga pembelian + CRUD batch. Create pembelian multi-item sudah live.
+2. **Sprint 1 sisa:** histori harga pembelian + CRUD batch. Pembelian multi-item & sewa kontrak sudah live.
 3. **Redis + logout blacklist** (sesuai TECHNICAL_SPEC) saat deploy production.
 4. **Sisa T2:** CRUD batch di UI; field size/ownerName di form kolam.
 5. **RBAC fase 3 (§24):** audit log + master permission UI (definisi permission tetap dari access catalog).

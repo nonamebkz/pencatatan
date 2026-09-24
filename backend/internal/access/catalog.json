@@ -72,6 +72,43 @@
               ]
             },
             {
+              "id": "page.finance.rent",
+              "label": "Sewa kolam",
+              "path": "/finance/rent",
+              "actions": [
+                {
+                  "id": "read",
+                  "label": "Lihat kontrak sewa",
+                  "permission": "finance.rent.read",
+                  "resource": "finance",
+                  "action": "rent_read",
+                  "description": "Daftar & detail kontrak sewa kolam",
+                  "routes": ["/finance/rent", "/finance/rent/:id"],
+                  "operatorDefault": true
+                },
+                {
+                  "id": "create",
+                  "label": "Buat kontrak sewa",
+                  "permission": "finance.rent.create",
+                  "resource": "finance",
+                  "action": "rent_create",
+                  "description": "Form kontrak sewa & jadwal cicilan",
+                  "routes": ["/finance/rent/new"],
+                  "operatorDefault": true
+                },
+                {
+                  "id": "pay",
+                  "label": "Bayar jadwal sewa",
+                  "permission": "finance.rent.pay",
+                  "resource": "finance",
+                  "action": "rent_pay",
+                  "description": "Catat pembayaran per jadwal → RENT_PAYMENT",
+                  "routes": ["/finance/rent/:id"],
+                  "operatorDefault": true
+                }
+              ]
+            },
+            {
               "id": "page.finance.cash_accounts",
               "label": "Akun kas",
               "path": "/finance/cash-accounts",
@@ -431,6 +468,9 @@
       "finance.read",
       "finance.purchase.create",
       "finance.expense.create",
+      "finance.rent.read",
+      "finance.rent.create",
+      "finance.rent.pay",
       "cash_account.read",
       "cash_account.create",
       "cash_account.update",

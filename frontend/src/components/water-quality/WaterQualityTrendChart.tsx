@@ -1,3 +1,6 @@
+import { cn } from '@/lib/utils'
+import { surface } from '@/lib/design'
+
 type TrendPoint = {
   measuredAt: string
   ammoniaPpm?: number
@@ -21,7 +24,12 @@ export function WaterQualityTrendChart({ points, metric, height = 160 }: Props) 
 
   if (sorted.length === 0) {
     return (
-      <div className="flex h-40 items-center justify-center rounded-2xl border border-dashed bg-muted/30 text-sm text-muted-foreground">
+      <div
+        className={cn(
+          surface.empty,
+          'flex h-40 items-center justify-center bg-muted/30 text-sm text-muted-foreground',
+        )}
+      >
         Belum ada data untuk grafik {metric === 'ammonia' ? 'ammonia' : 'pH'}.
       </div>
     )
@@ -44,7 +52,7 @@ export function WaterQualityTrendChart({ points, metric, height = 160 }: Props) 
   const polyline = coords.map(({ x, y }) => `${x},${y}`).join(' ')
 
   return (
-    <div className="overflow-x-auto rounded-2xl border bg-card p-3">
+    <div className={surface.chart}>
       <svg viewBox={`0 0 ${width} ${height}`} className="h-auto w-full min-w-[280px]" role="img" aria-label={`Grafik tren ${metric}`}>
         <polyline
           fill="none"

@@ -3,6 +3,7 @@ import { useState } from 'react'
 import { ChevronDown, Filter } from 'lucide-react'
 
 import { Button } from '@/components/ui/button'
+import { iconBadge, surface } from '@/lib/design'
 import { cn } from '@/lib/utils'
 
 type MobileFilterPanelProps = {
@@ -28,7 +29,7 @@ export function MobileFilterPanel({
   const [open, setOpen] = useState(false)
 
   return (
-    <section className={cn('rounded-2xl border bg-card/80 shadow-sm', className)}>
+    <section className={cn(surface.panel, className)}>
       <button
         type="button"
         className="flex w-full items-center justify-between gap-3 px-4 py-3 text-left md:hidden"
@@ -36,7 +37,7 @@ export function MobileFilterPanel({
         aria-expanded={open}
       >
         <div className="flex items-center gap-2">
-          <div className="rounded-xl bg-primary/10 p-2 text-primary">
+          <div className={iconBadge('default')}>
             <Filter className="size-4" />
           </div>
           <div>

@@ -150,6 +150,8 @@ export function transactionTypeLabel(type: TransactionType) {
       return 'Pembelian'
     case 'OTHER_EXPENSE':
       return 'Pengeluaran'
+    case 'RENT_PAYMENT':
+      return 'Bayar sewa'
     default:
       return type
   }

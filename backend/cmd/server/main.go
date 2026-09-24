@@ -49,6 +49,7 @@ func main() {
 	pondRepo := repository.NewPondRepository(db)
 	waterQualityRepo := repository.NewWaterQualityRepository(db)
 	financeRepo := repository.NewFinanceRepository(db)
+	rentRepo := repository.NewRentRepository(db)
 	settingsRepo := repository.NewSettingsRepository(db)
 
 	healthHandler := handler.NewHealthHandler(db)
@@ -60,6 +61,7 @@ func main() {
 	pondHandler := handler.NewPondHandler(pondRepo, settingsRepo)
 	waterQualityHandler := handler.NewWaterQualityHandler(waterQualityRepo, pondRepo, settingsRepo)
 	financeHandler := handler.NewFinanceHandler(financeRepo)
+	rentHandler := handler.NewRentHandler(rentRepo, financeRepo)
 
 	app := fiber.New(fiber.Config{
 		AppName:      "pencatatan-api",
@@ -139,6 +141,11 @@ func main() {
 	protected.Get("/purchases/:id", financeHandler.GetPurchase)
 	protected.Post("/purchases", financeHandler.CreatePurchase)
 	protected.Post("/transactions/other-expenses", financeHandler.CreateOtherExpense)
+
+	protected.Get("/rent-contracts", middleware.RequirePermission(model.PermFinanceRentRead), rentHandler.List)
+	protected.Get("/rent-contracts/:id", middleware.RequirePermission(model.PermFinanceRentRead), rentHandler.Get)
+	protected.Post("/rent-contracts", middleware.RequirePermission(model.PermFinanceRentCreate), rentHandler.Create)
+	protected.Post("/rent-contracts/schedules/:scheduleId/pay", middleware.RequirePermission(model.PermFinanceRentPay), rentHandler.PaySchedule)
 
 	log.Printf("server listening on :%s", cfg.Port)
 	if err := app.Listen(":" + cfg.Port); err != nil {

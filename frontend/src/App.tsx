@@ -26,6 +26,9 @@ import { WaterQualityDetailPage } from '@/pages/WaterQualityDetailPage'
 import { PurchaseFormPage } from '@/pages/PurchaseFormPage'
 import { CashAccountListPage } from '@/pages/CashAccountListPage'
 import { CashAccountFormPage } from '@/pages/CashAccountFormPage'
+import { RentDetailPage } from '@/pages/RentDetailPage'
+import { RentFormPage } from '@/pages/RentFormPage'
+import { RentListPage } from '@/pages/RentListPage'
 
 function App() {
   return (
@@ -53,6 +56,14 @@ function App() {
               <Route path="finance/purchases/:id" element={<PurchaseDetailPage />} />
               <Route path="finance/transactions/:id" element={<TransactionDetailPage />} />
               <Route path="finance/expenses/new" element={<OtherExpenseFormPage />} />
+
+              <Route element={<PermissionRoute permission="finance.rent.read" />}>
+                <Route path="finance/rent" element={<RentListPage />} />
+                <Route path="finance/rent/:id" element={<RentDetailPage />} />
+              </Route>
+              <Route element={<PermissionRoute permission="finance.rent.create" />}>
+                <Route path="finance/rent/new" element={<RentFormPage />} />
+              </Route>
 
               <Route element={<PermissionRoute permission={PermCashAccountRead} />}>
                 <Route path="finance/cash-accounts" element={<CashAccountListPage />} />

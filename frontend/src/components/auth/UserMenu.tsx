@@ -17,12 +17,17 @@ export function UserMenu({ layout = 'header' }: UserMenuProps) {
   const { canViewPageId } = useCatalogAccess()
   const [open, setOpen] = useState(false)
 
-  const links = useMemo(() => {
-    const access = visibleAccessNavFromCatalog(check).map((item) => ({
-      to: item.path,
-      icon: item.icon === 'Shield' ? Shield : UserCog,
-      label: item.label === 'Pengguna' ? 'Kelola Pengguna' : item.label,
-    }))
+  /** Desktop: Pengguna/Peran sudah di sidebar (Kelola Akses). Mobile: tampil di dropdown header. */
+  const menuLinks = useMemo(() => {
+    const access =
+      layout === 'header'
+        ? visibleAccessNavFromCatalog(check).map((item) => ({
+            to: item.path,
+            icon: item.icon === 'Shield' ? Shield : UserCog,
+            label: item.label === 'Pengguna' ? 'Kelola Pengguna' : item.label,
+          }))
+        : []
+
     if (canViewPageId('page.water_quality.config')) {
       access.push({
         to: '/settings/water-quality',
@@ -31,7 +36,7 @@ export function UserMenu({ layout = 'header' }: UserMenuProps) {
       })
     }
     return access
-  }, [check, canViewPageId])
+  }, [check, canViewPageId, layout])
 
   if (!user) return null
 
@@ -51,7 +56,7 @@ export function UserMenu({ layout = 'header' }: UserMenuProps) {
           </div>
         </div>
 
-        {links.map(({ to, icon: Icon, label }) => (
+        {menuLinks.map(({ to, icon: Icon, label }) => (
           <Link
             key={to}
             to={to}
@@ -75,7 +80,7 @@ export function UserMenu({ layout = 'header' }: UserMenuProps) {
         <button
           type="button"
           onClick={() => setOpen((value) => !value)}
-          className="touch-target inline-flex max-w-[11rem] items-center gap-2 rounded-xl border bg-card px-2 py-1.5 text-sm sm:max-w-none sm:px-3"
+          className="touch-target inline-flex max-w-[11rem] items-center gap-2 rounded-2xl border bg-card px-2 py-1.5 text-sm sm:max-w-none sm:px-3"
           aria-expanded={open}
           aria-haspopup="menu"
         >
@@ -98,7 +103,7 @@ export function UserMenu({ layout = 'header' }: UserMenuProps) {
                 <p className="truncate text-xs text-muted-foreground">{user.email}</p>
               </div>
               <div className="space-y-1 p-2">
-                {links.map(({ to, icon: Icon, label }) => (
+                {menuLinks.map(({ to, icon: Icon, label }) => (
                   <Link
                     key={to}
                     to={to}

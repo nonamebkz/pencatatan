@@ -2,6 +2,7 @@ import { useState } from 'react'
 import type { WaterQualityAdviceItem, WaterQualityStatus } from '@/api/water-quality'
 import { AlertTriangle, ChevronDown } from 'lucide-react'
 
+import { advicePanelSurface } from '@/lib/design'
 import { cn } from '@/lib/utils'
 
 type WaterQualityAdvicePanelProps = {
@@ -32,13 +33,16 @@ export function WaterQualityAdvicePanel({
     <div
       className={cn(
         'rounded-2xl border px-3 py-3 text-sm sm:px-4',
-        isDanger ? 'border-destructive/30 bg-destructive/5' : 'border-amber-500/30 bg-amber-500/5',
+        isDanger ? advicePanelSurface.danger : advicePanelSurface.warning,
         className,
       )}
     >
       <div className="flex items-start gap-2">
         <AlertTriangle
-          className={cn('mt-0.5 size-4 shrink-0', isDanger ? 'text-destructive' : 'text-amber-700')}
+          className={cn(
+            'mt-0.5 size-4 shrink-0',
+            isDanger ? 'text-destructive' : 'text-amber-700 dark:text-amber-300',
+          )}
         />
         <div className="min-w-0 flex-1 space-y-3">
           {variant === 'collapsible' ? (
@@ -49,7 +53,12 @@ export function WaterQualityAdvicePanel({
               aria-expanded={open}
             >
               <span className="min-w-0">
-                <span className={cn('block font-medium', isDanger ? 'text-destructive' : 'text-amber-900')}>
+                <span
+                  className={cn(
+                    'block font-medium',
+                    isDanger ? 'text-destructive' : 'text-amber-900 dark:text-amber-100',
+                  )}
+                >
                   Saran penanganan
                 </span>
                 {!open && <span className="mt-0.5 block text-muted-foreground">{summary}</span>}
@@ -59,7 +68,12 @@ export function WaterQualityAdvicePanel({
               />
             </button>
           ) : (
-            <p className={cn('font-medium', isDanger ? 'text-destructive' : 'text-amber-900')}>
+            <p
+              className={cn(
+                'font-medium',
+                isDanger ? 'text-destructive' : 'text-amber-900 dark:text-amber-100',
+              )}
+            >
               {variant === 'summary' ? summary : 'Saran penanganan'}
             </p>
           )}

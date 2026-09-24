@@ -1,6 +1,6 @@
-import { Link, NavLink, Outlet, useLocation } from 'react-router-dom'
+import { NavLink, Outlet, useLocation } from 'react-router-dom'
 import { useMemo } from 'react'
-import { Droplets, Fish, LayoutDashboard, Plus, Shield, UserCog, Wallet, Waves, type LucideIcon } from 'lucide-react'
+import { Droplets, Fish, LayoutDashboard, Shield, UserCog, Wallet, Waves, type LucideIcon } from 'lucide-react'
 
 import { UserMenu } from '@/components/auth/UserMenu'
 import { MobileBottomNav } from '@/components/mobile/MobileBottomNav'
@@ -37,6 +37,9 @@ function pageTitle(pathname: string, navLabels: { path: string; label: string; e
   if (pathname.startsWith('/finance/purchases/new')) return 'Catat Pembelian'
   if (pathname.startsWith('/finance/purchases/')) return 'Detail Pembelian'
   if (pathname.startsWith('/finance/expenses/new')) return 'Pengeluaran Lain'
+  if (pathname === '/finance/rent/new') return 'Kontrak Sewa'
+  if (pathname.startsWith('/finance/rent/')) return 'Detail Sewa'
+  if (pathname.startsWith('/finance/rent')) return 'Sewa Kolam'
   if (pathname.startsWith('/finance')) return 'Keuangan'
   if (pathname === '/ponds/new') return 'Tambah Kolam'
   if (/^\/ponds\/[^/]+\/edit$/.test(pathname)) return 'Ubah Kolam'
@@ -170,16 +173,7 @@ export function AppLayout() {
             )}
           </nav>
 
-          <div className="mt-auto space-y-4 pt-8">
-            {!showQuickRecord ? null : (
-              <Link
-                to="/water-quality/new"
-                className="flex items-center justify-center gap-2 rounded-2xl bg-primary px-4 py-3 text-sm font-medium text-primary-foreground shadow-sm transition hover:bg-primary/90"
-              >
-                <Plus className="size-4" />
-                Catat Cepat
-              </Link>
-            )}
+          <div className="mt-auto pt-8">
             <UserMenu layout="sidebar" />
           </div>
         </aside>

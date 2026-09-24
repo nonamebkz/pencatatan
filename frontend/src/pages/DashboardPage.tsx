@@ -19,6 +19,9 @@ import { ErrorAlert } from '@/components/shared/ErrorAlert'
 import { PageShell } from '@/components/shared/PageShell'
 import { Button } from '@/components/ui/button'
 import { Skeleton } from '@/components/ui/skeleton'
+import { useCatalogAccess } from '@/hooks/useCatalogAccess'
+import { alertInline, skeleton } from '@/lib/design'
+import { cn } from '@/lib/utils'
 import heroImage from '@/assets/hero.png'
 
 function greetingForHour(hour: number) {
@@ -29,6 +32,9 @@ function greetingForHour(hour: number) {
 }
 
 export function DashboardPage() {
+  const { canPageAction, canViewPageId } = useCatalogAccess()
+  const canManagePonds = canViewPageId('page.ponds.list')
+  const canRecordWQ = canPageAction('page.water_quality.form', 'create')
   const [summaries, setSummaries] = useState<WaterQualitySummary[]>([])
   const [loading, setLoading] = useState(true)
   const [refreshing, setRefreshing] = useState(false)
@@ -128,7 +134,9 @@ export function DashboardPage() {
 
       <section className="grid grid-cols-2 gap-3 md:gap-4 xl:grid-cols-4">
         {loading ? (
-          Array.from({ length: 4 }).map((_, index) => <Skeleton key={index} className="h-32 rounded-2xl" />)
+          Array.from({ length: 4 }).map((_, index) => (
+            <Skeleton key={index} className={cn(skeleton.block, 'h-32')} />
+          ))
         ) : (
           <>
             <StatCard label="Kolam aktif" value={stats.total} icon={Fish} />
@@ -156,11 +164,8 @@ export function DashboardPage() {
         )}
       </section>
 
-      {!loading && stats.pendingToday > 0 && (
-        <Link
-          to="/water-quality/new"
-          className="flex items-center justify-between gap-3 rounded-2xl border border-amber-200/80 bg-amber-50 px-4 py-4 text-sm text-amber-900 transition active:scale-[0.99] dark:border-amber-900/40 dark:bg-amber-950/30 dark:text-amber-100"
-        >
+      {!loading && stats.pendingToday > 0 && canRecordWQ && (
+        <Link to="/water-quality/new" className={alertInline.warningLink}>
           <div className="flex items-start gap-3">
             <AlertTriangle className="mt-0.5 size-5 shrink-0" />
             <div>
@@ -185,7 +190,7 @@ export function DashboardPage() {
         {loading ? (
           <div className="space-y-3 md:grid md:grid-cols-2 md:gap-4 md:space-y-0">
             {Array.from({ length: 2 }).map((_, index) => (
-              <Skeleton key={index} className="h-40 rounded-2xl md:h-64" />
+              <Skeleton key={index} className={cn(skeleton.block, 'h-40 md:h-64')} />
             ))}
           </div>
         ) : summaries.length === 0 && !error ? (
@@ -194,14 +199,20 @@ export function DashboardPage() {
             title="Belum ada kolam aktif"
             description="Tambah kolam terlebih dulu, lalu mulai catat ammonia, pH, dan observasi harian."
             action={
-              <div className="flex w-full flex-col gap-2 sm:w-auto sm:flex-row">
-                <Button asChild className="w-full sm:w-auto">
-                  <Link to="/ponds">Kelola Kolam</Link>
-                </Button>
-                <Button asChild variant="outline" className="w-full sm:w-auto">
-                  <Link to="/water-quality/new">Catat Kualitas Air</Link>
-                </Button>
-              </div>
+              canManagePonds || canRecordWQ ? (
+                <div className="flex w-full flex-col gap-2 sm:w-auto sm:flex-row">
+                  {canManagePonds && (
+                    <Button asChild className="w-full sm:w-auto">
+                      <Link to="/ponds">Kelola Kolam</Link>
+                    </Button>
+                  )}
+                  {canRecordWQ && (
+                    <Button asChild variant="outline" className="w-full sm:w-auto">
+                      <Link to="/water-quality/new">Catat Kualitas Air</Link>
+                    </Button>
+                  )}
+                </div>
+              ) : undefined
             }
           />
         ) : (
