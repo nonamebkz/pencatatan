@@ -1,10 +1,9 @@
 import { useEffect, useState } from 'react'
-import { Link } from 'react-router-dom'
 import { FileSearch } from 'lucide-react'
 
 import { getRentReport } from '@/api/reports'
-import { paymentStatusLabel, timeStatusLabel, type PeriodicContract } from '@/api/rent'
-import { ReportDataList, ReportDataListItem } from '@/components/reports/ReportDataList'
+import type { PeriodicContract } from '@/api/rent'
+import { RentContractCard } from '@/components/finance/RentContractCard'
 import { ReportPageIntro } from '@/components/reports/ReportPageIntro'
 import { ReportSummaryFooter } from '@/components/reports/ReportSummaryFooter'
 import { MobileFilterPanel } from '@/components/mobile/MobileFilterPanel'
@@ -12,7 +11,6 @@ import { EmptyState } from '@/components/shared/EmptyState'
 import { ErrorAlert } from '@/components/shared/ErrorAlert'
 import { PageShell } from '@/components/shared/PageShell'
 import { SelectField } from '@/components/shared/Field'
-import { Badge } from '@/components/ui/badge'
 import { Skeleton } from '@/components/ui/skeleton'
 import { formatIDR } from '@/lib/format'
 import { skeleton } from '@/lib/design'
@@ -74,26 +72,11 @@ export function RentReportPage() {
         <EmptyState icon={FileSearch} title="Tidak ada kontrak" description="Ubah filter atau buat kontrak sewa baru." />
       ) : (
         <>
-          <ReportDataList>
+          <div className="space-y-3">
             {contracts.map((c) => (
-              <ReportDataListItem key={c.id}>
-                <div className="flex flex-wrap items-center gap-2">
-                  <Link to={`/finance/rent/${c.id}`} className="font-medium text-primary hover:underline">
-                    {c.businessUnitName}
-                  </Link>
-                  <Badge variant="secondary">{timeStatusLabel[c.timeStatus]}</Badge>
-                  <Badge variant="outline">{paymentStatusLabel[c.paymentStatus]}</Badge>
-                </div>
-                <p className="mt-1 text-muted-foreground">
-                  {c.startDate} – {c.endDate}
-                </p>
-                <p className="mt-1">
-                  Total {formatIDR(c.totalAmount)} · Dibayar {formatIDR(c.paidAmount)} · Sisa{' '}
-                  <span className="font-medium">{formatIDR(c.remainingAmount)}</span>
-                </p>
-              </ReportDataListItem>
+              <RentContractCard key={c.id} contract={c} />
             ))}
-          </ReportDataList>
+          </div>
           {footer && (
             <ReportSummaryFooter>
               Kontrak aktif/akan habis: {footer.activeContractCount} · Total sisa tunggakan{' '}

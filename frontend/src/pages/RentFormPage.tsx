@@ -70,7 +70,7 @@ export function RentFormPage() {
 
   return (
     <PageShell className={pageLayout.formLg}>
-      <BackLink to="/finance/rent" label="Kembali ke daftar sewa" />
+      <BackLink to="/finance/rent" label="Daftar sewa" shortLabel="Sewa" />
 
       <PageHeader
         title="Kontrak sewa baru"
