@@ -1,11 +1,12 @@
-# BRD v1.7 — Pencatatan Operasional Usaha
+# BRD v1.8 — Pencatatan Operasional Usaha
 
 | Field | Value |
 |---|---|
-| Versi | 1.7 |
+| Versi | 1.8 |
 | Status | Living document — selaras dengan codebase `pencatatan-usaha` |
 | Produk | Aplikasi pencatatan operasional + pengeluaran usaha |
 | Codename | `pencatatan-usaha` |
+| Changelog v1.8 | **Menu & aksi FE** mengikuti permission efektif **role di DB** (`/auth/me` → `canSeeCatalogMenu` / `canPageAction`); permission operasional (`finance.*`, `pond.*`, `water_quality.*`) di access catalog + seed operator |
 | Changelog v1.7 | **Katalog akses** [`shared/access-catalog.json`](./shared/access-catalog.json) — menu/halaman/aksi FE ↔ seed permission DB; RBAC fase 1–2 live; kas CRUD + permission granular |
 | Changelog v1.6 | Target **RBAC berbasis permission** + struktur menu **Kelola Akses** (Users/Roles/Permissions/Audit); map transisi dari peran `ADMIN`/`USER` repo — lihat §24 |
 | Changelog v1.5 | Ambang & saran kualitas air disimpan **per kolam** (salin sekali dari template workspace); form kolam `/ponds/new` dan `/ponds/:id/edit` |
@@ -609,15 +610,17 @@ Status waktu dan pembayaran dihitung on-read, bukan disimpan sebagai single enum
 
 ### 16.1 Menu operasional (workspace business — template lele)
 
-| Menu | Route | Siapa melihat (target permission) | Repo saat ini |
+| Menu | Route | Permission (minimal di catalog / role DB) | Repo |
 |---|---|---|---|
-| Beranda | `/` | Semua user login | ✅ |
-| Keuangan | `/finance` | `finance.read` *(alias: semua USER+)* | ✅ |
-| Kolam | `/ponds` | `pond.read` | ✅ |
-| Kualitas Air | `/water-quality` | `water_quality.read` | ✅ |
-| Konfigurasi kualitas air | `/settings/water-quality` | `water_quality.config.update` | ✅ `PermissionRoute` |
+| Beranda | `/` | — (semua login) | ✅ |
+| Keuangan | `/finance` | Salah satu: `finance.read`, `finance.purchase.create`, `finance.expense.create`, `cash_account.*` | ✅ filtered |
+| Kolam | `/ponds` | Salah satu: `pond.read`, `pond.create`, `pond.update`, `pond.delete` | ✅ filtered |
+| Kualitas Air | `/water-quality` | Salah satu: `water_quality.read`, `create`, `update`, `delete` | ✅ filtered |
+| Konfigurasi kualitas air | `/settings/water-quality` | `water_quality.config.update` | ✅ |
 | Akun kas | `/finance/cash-accounts` | `cash_account.read` (+ create/update/delete) | ✅ |
 | Laporan kualitas air | `/water-quality/report` | `water_quality.read` | ✅ |
+
+Visibilitas menu: **permission efektif user** dari assignment role di DB (bukan label `ADMIN`/`USER` saja). Lihat [access-catalog.md](./docs/features/access-catalog.md).
 
 **Personal workspace (belum penuh):** hanya Beranda + Transaksi — lihat §8.
 
@@ -750,7 +753,7 @@ Mengikuti pola **Access Management**; visibilitas **permission**, bukan hardcode
 
 - [raw idea.md](./raw%20idea.md) — ide awal modul lele
 - [jangka panjang.md](./jangka%20panjang.md) — visi multi-usaha + atomic
-- [TECHNICAL_SPEC.md](./TECHNICAL_SPEC.md) — spesifikasi teknis implementasi (v1.6, §7.5 RBAC + access catalog)
+- [TECHNICAL_SPEC.md](./TECHNICAL_SPEC.md) — spesifikasi teknis implementasi (v1.7, §7.5 RBAC + menu ↔ role DB)
 
 ### Tech Stack (implementasi aktual)
 
@@ -837,6 +840,7 @@ File: [`shared/access-catalog.json`](./shared/access-catalog.json)
 - Menyusun **menu**, **halaman**, dan **aksi UI** yang punya kode permission
 - Backend **upsert** baris `permissions` saat startup (`make sync-access-catalog` → embed Go)
 - Form **Peran** menampilkan checkbox per halaman/aksi (bukan hanya grouping DB `resource`)
+- **Menu sidebar / bottom nav / CTA** memfilter via `permissions[]` login/me ↔ kode di catalog (`canSeeCatalogMenu`, `canPageAction`)
 
 Dokumen teknis: [docs/features/access-catalog.md](./docs/features/access-catalog.md), [TECHNICAL_SPEC §7.5](./TECHNICAL_SPEC.md).
 
@@ -863,8 +867,7 @@ Dokumen teknis: [docs/features/access-catalog.md](./docs/features/access-catalog
 | Audit | `audit.read` |
 | Kolam | `pond.read`, `pond.create`, `pond.update`, `pond.delete` |
 | Kualitas air | `water_quality.read`, `water_quality.create`, `water_quality.update`, `water_quality.delete`, `water_quality.config.read`, `water_quality.config.update` |
-| Keuangan / kas | `cash_account.read`, `cash_account.create`, `cash_account.update`, `cash_account.delete` | ✅ kas live; pembelian/pengeluaran belum di-guard per permission |
-| Keuangan (rencana) | `finance.read`, `finance.purchase.create`, `finance.expense.create` | ❌ belum di catalog |
+| Keuangan | `finance.read`, `finance.purchase.create`, `finance.expense.create`, `cash_account.read`, `cash_account.create`, `cash_account.update`, `cash_account.delete` *(catalog + menu FE; guard API pembelian/pengeluaran sebagian)* |
 
 **Default policy:** deny. Endpoint protected wajib cek permission di middleware (bukan hanya cek string `ADMIN` di JWT).
 
@@ -884,7 +887,7 @@ Dokumen teknis: [docs/features/access-catalog.md](./docs/features/access-catalog
 | Fase | Backend | Frontend | Status |
 |---|---|---|---|
 | **0** | JWT claim `role`; `RequireAdmin` | Menu Pengguna jika `isAdmin` | ✅ digantikan |
-| **1** | RBAC + access catalog seed; `/auth/me` permissions | `can()`; Kelola Akses | ✅ |
+| **1** | RBAC + access catalog seed; `/auth/me` permissions | `can()`; menu/CTA ↔ role DB; Kelola Akses | ✅ |
 | **2** | CRUD role; assignment | `/roles`, form peran + catalog | ✅ |
 | **3** | Permission CRUD platform; audit | `/permissions`, `/audit-logs` | ❌ |
 

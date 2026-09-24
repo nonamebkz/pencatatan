@@ -2,11 +2,11 @@
 
 **Status:** `done`
 
-**Katalog akses:** entri halaman `page.finance.cash_accounts` di [`shared/access-catalog.json`](../../shared/access-catalog.json) — selaras checkbox form Peran & seed DB.
+**Katalog akses:** entri halaman `page.finance.cash_accounts` di [`shared/access-catalog.json`](../../shared/access-catalog.json) — selaras checkbox form Peran, seed DB, dan visibilitas menu Keuangan / link Akun kas (`canSeeCatalogMenu`, `canPageAction`).
 
 ## Business flow
 
-- User login membuka **Keuangan → Akun kas** untuk melihat daftar sumber dana.
+- User dengan permission kas (mis. `cash_account.read` atau sibling di subtree menu Keuangan) melihat **Keuangan** di nav dan membuka **Akun kas**.
 - Tambah/ubah nama dan tandai **default** (satu per workspace).
 - Form pembelian & pengeluaran memuat daftar kas; default otomatis terpilih.
 - **Hapus** membutuhkan permission `cash_account.delete` (biasanya admin); akun bukan default, belum punya transaksi; minimal satu akun tetap ada.

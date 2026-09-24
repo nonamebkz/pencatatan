@@ -152,3 +152,101 @@ export function accessNavFromCatalog(catalog: AccessCatalog = accessCatalog): Ca
 export function operatorDefaultPermissionCodes(catalog: AccessCatalog = accessCatalog): string[] {
   return [...(catalog.roleDefaults?.operatorPermissionCodes ?? [])]
 }
+
+export type CanFn = (code: string) => boolean
+
+export function findCatalogMenuById(menuId: string, catalog: AccessCatalog = accessCatalog): AccessCatalogMenuItem | undefined {
+  for (const section of catalog.sections) {
+    for (const menu of section.menu ?? []) {
+      if (menu.id === menuId) return menu
+    }
+  }
+  return undefined
+}
+
+export function findCatalogPageById(pageId: string, catalog: AccessCatalog = accessCatalog): AccessCatalogPage | undefined {
+  for (const section of catalog.sections) {
+    for (const menu of section.menu ?? []) {
+      for (const page of menu.pages ?? []) {
+        if (page.id === pageId) return page
+      }
+    }
+  }
+  return undefined
+}
+
+export function findCatalogMenuForPage(pageId: string, catalog: AccessCatalog = accessCatalog): AccessCatalogMenuItem | undefined {
+  for (const section of catalog.sections) {
+    for (const menu of section.menu ?? []) {
+      if (menu.pages?.some((page) => page.id === pageId)) return menu
+    }
+  }
+  return undefined
+}
+
+/** Semua kode permission yang didefinisikan di menu (untuk cocokkan dengan role di DB). */
+export function collectMenuPermissionCodes(menu: AccessCatalogMenuItem): string[] {
+  const codes = new Set<string>()
+  if (menu.menuPermission) codes.add(menu.menuPermission)
+  for (const page of menu.pages ?? []) {
+    for (const action of page.actions) {
+      if (action.permission) codes.add(action.permission)
+    }
+  }
+  return [...codes]
+}
+
+/** Tampilkan menu hanya jika user punya minimal satu permission yang tercatat untuk menu ini (dari role DB). */
+export function canSeeCatalogMenu(can: CanFn, menu: AccessCatalogMenuItem): boolean {
+  const codes = collectMenuPermissionCodes(menu)
+  if (codes.length === 0) return true
+  return codes.some((code) => can(code))
+}
+
+/** Izin lihat halaman / aksi — selaras permission efektif user (role DB). */
+export function canViewCatalogPage(can: CanFn, page: AccessCatalogPage, catalog: AccessCatalog = accessCatalog): boolean {
+  const readAction = page.actions.find((a) => a.id === 'read')
+  if (readAction) return can(readAction.permission)
+
+  if (page.path) {
+    const routeActions = page.actions.filter((a) => a.routes?.includes(page.path!))
+    if (routeActions.length > 0) {
+      return routeActions.some((a) => can(a.permission))
+    }
+  }
+
+  if (page.actions.length === 0) {
+    const menu = findCatalogMenuForPage(page.id, catalog)
+    return menu ? canSeeCatalogMenu(can, menu) : true
+  }
+
+  const nonDelete = page.actions.filter((a) => a.id !== 'delete')
+  if (nonDelete.length === 0) {
+    const menu = findCatalogMenuForPage(page.id, catalog)
+    return menu ? canSeeCatalogMenu(can, menu) : true
+  }
+
+  return nonDelete.some((a) => can(a.permission))
+}
+
+export function canCatalogPageAction(can: CanFn, pageId: string, actionId: string, catalog: AccessCatalog = accessCatalog): boolean {
+  const page = findCatalogPageById(pageId, catalog)
+  const action = page?.actions.find((a) => a.id === actionId)
+  if (!action) return true
+  return can(action.permission)
+}
+
+export function visibleMainNavFromCatalog(can: CanFn, catalog: AccessCatalog = accessCatalog): CatalogMenuItem[] {
+  return mainNavFromCatalog(catalog).filter((item) => {
+    const menu = findCatalogMenuById(item.id, catalog)
+    return menu ? canSeeCatalogMenu(can, menu) : true
+  })
+}
+
+export function visibleAccessNavFromCatalog(can: CanFn, catalog: AccessCatalog = accessCatalog): CatalogMenuItem[] {
+  return accessNavFromCatalog(catalog).filter((item) => {
+    const menu = findCatalogMenuById(item.id, catalog)
+    if (menu) return canSeeCatalogMenu(can, menu)
+    return !item.menuPermission || can(item.menuPermission)
+  })
+}

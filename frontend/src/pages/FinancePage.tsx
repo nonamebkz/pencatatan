@@ -21,10 +21,15 @@ import { Button } from '@/components/ui/button'
 import { SelectField, TextField } from '@/components/shared/Field'
 import { Skeleton } from '@/components/ui/skeleton'
 import { formatIDR } from '@/lib/format'
+import { useCatalogAccess } from '@/hooks/useCatalogAccess'
 import { RECORD_LIST_LIMIT } from '@/lib/listing'
 import { skeleton } from '@/lib/design'
 
 export function FinancePage() {
+  const { canViewPageId, canPageAction } = useCatalogAccess()
+  const showCashAccounts = canViewPageId('page.finance.cash_accounts')
+  const showPurchases = canPageAction('page.finance.purchases', 'create')
+  const showExpenses = canPageAction('page.finance.expenses', 'create')
   const [summary, setSummary] = useState<FinanceSummary | null>(null)
   const [transactions, setTransactions] = useState<Transaction[]>([])
   const [transactionType, setTransactionType] = useState('')
@@ -77,24 +82,30 @@ export function FinancePage() {
         description="Catat pembelian barang dan pengeluaran operasional."
         actions={
           <div className="flex w-full flex-col gap-2 sm:w-auto sm:flex-row">
-            <Button asChild variant="outline" className="w-full sm:w-auto">
-              <Link to="/finance/cash-accounts">
-                <Landmark className="size-4" />
-                Akun kas
-              </Link>
-            </Button>
-            <Button asChild variant="outline" className="w-full sm:w-auto">
-              <Link to="/finance/expenses/new">
-                <Receipt className="size-4" />
-                Pengeluaran lain
-              </Link>
-            </Button>
-            <Button asChild size="lg" className="w-full sm:w-auto">
-              <Link to="/finance/purchases/new">
-                <ShoppingCart className="size-4" />
-                Catat pembelian
-              </Link>
-            </Button>
+            {showCashAccounts && (
+              <Button asChild variant="outline" className="w-full sm:w-auto">
+                <Link to="/finance/cash-accounts">
+                  <Landmark className="size-4" />
+                  Akun kas
+                </Link>
+              </Button>
+            )}
+            {showExpenses && (
+              <Button asChild variant="outline" className="w-full sm:w-auto">
+                <Link to="/finance/expenses/new">
+                  <Receipt className="size-4" />
+                  Pengeluaran lain
+                </Link>
+              </Button>
+            )}
+            {showPurchases && (
+              <Button asChild size="lg" className="w-full sm:w-auto">
+                <Link to="/finance/purchases/new">
+                  <ShoppingCart className="size-4" />
+                  Catat pembelian
+                </Link>
+              </Button>
+            )}
           </div>
         }
       />
@@ -165,12 +176,14 @@ export function FinancePage() {
             title="Belum ada transaksi"
             description="Mulai dengan mencatat pembelian pakan, obat, atau pengeluaran operasional."
             action={
-              <Button asChild>
-                <Link to="/finance/purchases/new">
-                  <Plus className="size-4" />
-                  Catat pembelian
-                </Link>
-              </Button>
+              showPurchases ? (
+                <Button asChild>
+                  <Link to="/finance/purchases/new">
+                    <Plus className="size-4" />
+                    Catat pembelian
+                  </Link>
+                </Button>
+              ) : undefined
             }
           />
         ) : (

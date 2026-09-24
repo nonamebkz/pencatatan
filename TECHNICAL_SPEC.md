@@ -2,9 +2,9 @@
 
 | Field | Value |
 |---|---|
-| Versi | 1.6 |
-| Status | Living document — selaras BRD v1.7 & codebase |
-| BRD Reference | [BRD.md](./BRD.md) v1.7 |
+| Versi | 1.7 |
+| Status | Living document — selaras BRD v1.8 & codebase |
+| BRD Reference | [BRD.md](./BRD.md) v1.8 |
 | Arsitektur | React SPA + Go REST API + MySQL 8 (Redis rencana) |
 
 ---
@@ -898,7 +898,7 @@ Selaras [BRD §24](./BRD.md). Prinsip: **deny by default**, enforcement di backe
 | Seed | `EnsureRBAC` + `access.Load()` — upsert permission dari JSON; role sistem `workspace_admin` (semua kode catalog), `operator` (`roleDefaults.operatorPermissionCodes`) |
 | Legacy | Kolom `users.role` `ADMIN`/`USER` + JWT claim; disinkron ke `user_roles` |
 | Middleware | `LoadPermissions` + `RequirePermission` / `RequireAnyPermission` (`internal/middleware/permission.go`) |
-| Frontend | `AuthContext.can()`, `PermissionRoute`, sidebar dari catalog (`access-catalog.ts`), form peran per halaman/aksi |
+| Frontend | `AuthContext.can()` memakai `permissions[]` dari `/auth/me` (union role DB); refresh saat fokus tab; `useCatalogAccess`, `visibleMainNavFromCatalog`, `PermissionRoute` |
 
 #### Skema (ringkas)
 
@@ -909,13 +909,28 @@ Selaras [BRD §24](./BRD.md). Prinsip: **deny by default**, enforcement di backe
 
 Role seed live: **`workspace_admin`**, **`operator`** (role BRD lain seperti `auditor` belum).
 
-Permission operasional live (selain `user.*`, `role.*`, `permission.read`, `audit.read`):
+Permission operasional (catalog + seed; **guard API** sebagian masih JWT-only untuk CRUD kolam/WQ/pembelian):
 
-- `pond.delete`
-- `water_quality.delete`, `water_quality.config.update`
-- `cash_account.read|create|update|delete`
+| Modul | Permission (contoh) | FE menu/CTA | API middleware |
+|---|---|---|---|
+| Keuangan | `finance.read`, `finance.purchase.create`, `finance.expense.create` | ✅ catalog | ⚠️ belum semua endpoint |
+| Kas | `cash_account.read` … `delete` | ✅ | ✅ |
+| Kolam | `pond.read`, `pond.create`, `pond.update`, `pond.delete` | ✅ menu/CTA | ⚠️ hanya `pond.delete` |
+| Kualitas air | `water_quality.read`, `create`, `update`, `delete`, `config.update` | ✅ | ⚠️ delete + config |
+| Kelola akses | `user.*`, `role.*` | ✅ | ✅ |
 
-Modul keuangan/pembelian/kolam/WQ **read/create/update** di UI masih terbuka untuk user login; tambah entri `actions` di access catalog + `RequirePermission` saat perlu deny default.
+#### Menu frontend (selaras role DB)
+
+1. Login/me → `permissions[]` = union kode dari **`user_roles` → `role_permissions`** (bukan daftar hardcoded di FE).
+2. **`canSeeCatalogMenu`:** item menu tampil jika user punya **minimal satu** permission yang didefinisikan di subtree menu (`collectMenuPermissionCodes` ↔ `shared/access-catalog.json`).
+3. **`canPageAction` / `canViewPageId`:** tombol & sub-link (Akun kas, FAB catat, dll.) mengikuti action di catalog + `permissions[]` yang sama.
+4. **Beranda** (`nav.dashboard`): tidak punya permission di catalog → semua user login.
+5. Setelah admin ubah role user: user tersebut **fokus ulang tab** atau refresh → `GET /auth/me` memuat permission baru.
+
+- **Operasional:** `visibleMainNavFromCatalog(can)` — Beranda, Keuangan, Kolam, Kualitas Air (filtered)
+- **Kelola Akses:** `visibleAccessNavFromCatalog(can)` — Pengguna, Peran
+- **User menu:** link access nav + config WQ jika `canViewPageId('page.water_quality.config')`
+- **Guard route:** `PermissionRoute` + entri `routes` di catalog (`App.tsx`)
 
 #### Middleware
 
@@ -925,12 +940,6 @@ func RequireAnyPermission(codes ...string) fiber.Handler
 ```
 
 Permission efektif di-resolve per request dari DB (`EffectivePermissionCodes`).
-
-#### Menu frontend
-
-- **Operasional:** struktur menu dari `mainNavFromCatalog()` — Beranda, Keuangan, Kolam, Kualitas Air
-- **Kelola Akses:** `accessNavFromCatalog()` — Pengguna (`user.read`), Peran (`role.read`); halaman master `/permissions` & `/audit-logs` **belum**
-- **Guard route:** `PermissionRoute` + entri `routes` di catalog (implementasi di `App.tsx`)
 
 #### Fase teknis
 
@@ -1144,7 +1153,7 @@ export const leleTemplate = {
 };
 ```
 
-**Repo:** menu operasional + link `/users` hardcoded untuk ADMIN di `AppLayout.tsx`; blok `accessManagement` / `permission` **belum** dipakai.
+**Repo:** menu operasional + Kelola Akses di **`shared/access-catalog.json`**; FE **`visibleMainNavFromCatalog`** + **`useCatalogAccess`** (`AppLayout`, `UserMenu`). Blok `accessManagement` di snippet di atas = referensi desain template (bukan file runtime).
 
 ---
 
@@ -1420,7 +1429,7 @@ func main() {
 
 ## 19. Referensi
 
-- [BRD.md](./BRD.md) — business requirements (v1.7 + §23–§24 RBAC)
+- [BRD.md](./BRD.md) — business requirements (v1.8 + §23–§24 RBAC)
 - [docs/features/access-catalog.md](./docs/features/access-catalog.md) — menu FE ↔ permission DB (`shared/access-catalog.json`)
 - [docs/features/rbac.md](./docs/features/rbac.md) — kontrak RBAC implementasi
 - [raw idea.md](./raw%20idea.md) — ide awal
@@ -1437,7 +1446,7 @@ Ringkasan singkat — detail bisnis: [BRD §23](./BRD.md#23-status-implementasi-
 | Health | `GET /health` | ✅ |
 | Auth | `/api/v1/auth/*` | ✅ |
 | Users | `/api/v1/users/*` + `PUT /users/:id/roles` | ✅ `RequirePermission` |
-| RBAC | roles, `GET /permissions`, `/auth/me` permissions, access catalog seed | ✅ fase 1–2 (audit UI ❌; master permission CRUD ❌) |
+| RBAC | roles, `GET /permissions`, `/auth/me` permissions, menu FE ↔ role DB (access catalog) | ✅ fase 1–2 (audit UI ❌; guard API operasional sebagian ⚠️) |
 | Kas | `/cash-accounts` CRUD + RBAC | ✅ [docs/features/cash-accounts.md](./docs/features/cash-accounts.md) |
 | Kolam | `/ponds`, `/ponds/:id` | ✅ |
 | Batch | `GET /batches` | ✅ list only |

@@ -12,11 +12,13 @@ import { PageShell } from '@/components/shared/PageShell'
 import { PanelCard } from '@/components/shared/PanelCard'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
-import { PermRoleCreate, PermRoleRead } from '@/lib/permissions'
+import { useCatalogAccess } from '@/hooks/useCatalogAccess'
+import { PermRoleRead } from '@/lib/permissions'
 
 export function RoleListPage() {
   const { can: check } = useAuth()
-  const canCreate = check(PermRoleCreate)
+  const { canPageAction } = useCatalogAccess()
+  const canCreate = canPageAction('page.roles.list', 'create')
   const [roles, setRoles] = useState<Role[]>([])
   const [error, setError] = useState<string | null>(null)
   const [loading, setLoading] = useState(true)

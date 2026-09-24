@@ -30,11 +30,17 @@ var AllPermissionCodes = []string{
 	PermPermissionRead, PermAuditRead,
 	PermPondDelete, PermWaterQualityDelete, PermWaterQualityCfgUp,
 	PermCashAccountRead, PermCashAccountCreate, PermCashAccountUpdate, PermCashAccountDelete,
+	"finance.read", "finance.purchase.create", "finance.expense.create",
+	"pond.read", "pond.create", "pond.update",
+	"water_quality.read", "water_quality.create", "water_quality.update",
 }
 
-// OperatorPermissionCodes subset untuk peran operator (legacy USER) — tanpa Kelola Akses.
+// OperatorPermissionCodes subset untuk peran operator — sinkron roleDefaults di access-catalog.json.
 var OperatorPermissionCodes = []string{
-	PermCashAccountRead, PermCashAccountCreate, PermCashAccountUpdate,
+	"finance.read", "finance.purchase.create", "finance.expense.create",
+	"pond.read", "pond.create", "pond.update",
+	"water_quality.read", "water_quality.create", "water_quality.update",
+	"cash_account.read", "cash_account.create", "cash_account.update",
 }
 
 type Permission struct {

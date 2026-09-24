@@ -14,10 +14,21 @@ Out of scope MVP slice: audit log UI, CRUD master permission (definisi permissio
 
 ## Business flow
 
-1. Admin login → API mengembalikan `permissions[]`.
-2. Sidebar menampilkan submenu Kelola Akses jika `user.read` / `role.read`.
-3. Request API dicek `RequirePermission` di backend (deny default).
-4. Admin ubah permission pada role di `/roles/:id/edit` → user dengan role itu mendapat permission efektif baru setelah login/me refresh.
+1. Admin login → API mengembalikan `permissions[]` (union role di DB).
+2. Sidebar & bottom nav: item operasional + **Kelola Akses** difilter via access catalog + `can()` — lihat `canSeeCatalogMenu`, `visibleMainNavFromCatalog`, `visibleAccessNavFromCatalog` ([access-catalog.md](./access-catalog.md)).
+3. Request API dicek `RequirePermission` di backend untuk endpoint yang sudah di-guard (deny default); modul operasional sebagian masih JWT-only — lihat TECH §7.5.
+4. Admin ubah permission pada role di `/roles/:id/edit` → user dengan role itu mendapat permission efektif baru setelah **`/auth/me` refresh** (fokus tab atau reload; tidak wajib logout).
+
+### Visibilitas menu (FE)
+
+| Sumber | Isi |
+|--------|-----|
+| DB | `user_roles` → `role_permissions` → kode permission |
+| API | `GET /auth/me` → `permissions: string[]` |
+| FE | `AuthContext.can(code)`; menu = minimal satu kode di subtree catalog (`collectMenuPermissionCodes`) |
+| Bukan | Label JWT `users.role` (`ADMIN`/`USER`) sebagai gate menu utama |
+
+Beranda (`nav.dashboard`) tidak punya permission di catalog → semua user login.
 
 ### Aturan bisnis
 
@@ -26,7 +37,8 @@ Out of scope MVP slice: audit log UI, CRUD master permission (definisi permissio
 | BR-R1 | Tanpa permission → 403 | `FORBIDDEN` |
 | BR-R2 | Role sistem (`workspace_admin`, `operator`) tidak boleh dihapus | `VALIDATION_ERROR` |
 | BR-R3 | User legacy `ADMIN`/`USER` disinkron ke role paket saat create/update user | — |
-| BR-R4 | FE `can()` hanya UX; backend tetap enforcement | — |
+| BR-R4 | FE `can()` untuk menu/CTA; backend tetap enforcement di route yang di-guard | — |
+| BR-R5 | Menu operasional/Kelola Akses mengikuti permission efektif role (catalog + `/auth/me`) | Item disembunyikan, bukan hanya disabled |
 
 ## API contract
 
@@ -96,6 +108,10 @@ Kanonik menu/halaman/aksi: **`shared/access-catalog.json`** (lihat `docs/feature
 | `/forbidden` | `ForbiddenPage` | — |
 
 Form peran: checkbox permission dikelompokkan per **menu/halaman** dari access catalog (bukan hanya `resource` DB).
+
+Halaman operasional: tombol create/edit/delete & sub-nav (mis. Akun kas, FAB catat kualitas air) memakai `canPageAction` / `useCatalogAccess`.
+
+`AuthContext`: refresh profil saat window `focus` dan `visibilitychange` agar perubahan role admin cepat terlihat.
 
 ### UI / design
 

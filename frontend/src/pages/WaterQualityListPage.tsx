@@ -13,11 +13,12 @@ import { PageShell } from '@/components/shared/PageShell'
 import { SelectField, TextField } from '@/components/shared/Field'
 import { WaterQualityLogRow } from '@/components/water-quality/WaterQualityLogRow'
 import { Button } from '@/components/ui/button'
-import { useAuth } from '@/contexts/AuthContext'
+import { useCatalogAccess } from '@/hooks/useCatalogAccess'
 import { RECORD_LIST_LIMIT } from '@/lib/listing'
 
 export function WaterQualityListPage() {
-  const { canDelete } = useAuth()
+  const { canPageAction } = useCatalogAccess()
+  const canDeleteLog = canPageAction('page.water_quality.form', 'delete')
   const [ponds, setPonds] = useState<Pond[]>([])
   const [logs, setLogs] = useState<WaterQualityLog[]>([])
   const [businessUnitId, setBusinessUnitId] = useState('')
@@ -146,7 +147,7 @@ export function WaterQualityListPage() {
               <WaterQualityLogRow
                 key={log.id}
                 log={log}
-                canDelete={canDelete}
+                canDelete={canDeleteLog}
                 deleting={deletingLogId === log.id}
                 onDelete={handleDeleteLog}
               />

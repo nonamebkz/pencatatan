@@ -24,19 +24,52 @@
               "id": "page.finance.home",
               "label": "Ringkasan keuangan",
               "path": "/finance",
-              "actions": []
+              "actions": [
+                {
+                  "id": "read",
+                  "label": "Akses menu keuangan",
+                  "permission": "finance.read",
+                  "resource": "finance",
+                  "action": "read",
+                  "description": "Lihat ringkasan & daftar transaksi",
+                  "routes": ["/finance"],
+                  "operatorDefault": true
+                }
+              ]
             },
             {
               "id": "page.finance.purchases",
               "label": "Pembelian",
               "path": "/finance/purchases",
-              "actions": []
+              "actions": [
+                {
+                  "id": "create",
+                  "label": "Catat pembelian",
+                  "permission": "finance.purchase.create",
+                  "resource": "finance",
+                  "action": "purchase",
+                  "description": "Form pembelian multi-item",
+                  "routes": ["/finance/purchases/new"],
+                  "operatorDefault": true
+                }
+              ]
             },
             {
               "id": "page.finance.expenses",
               "label": "Pengeluaran lain",
               "path": "/finance/expenses",
-              "actions": []
+              "actions": [
+                {
+                  "id": "create",
+                  "label": "Catat pengeluaran lain",
+                  "permission": "finance.expense.create",
+                  "resource": "finance",
+                  "action": "expense",
+                  "description": "Form pengeluaran operasional",
+                  "routes": ["/finance/expenses/new"],
+                  "operatorDefault": true
+                }
+              ]
             },
             {
               "id": "page.finance.cash_accounts",
@@ -96,13 +129,45 @@
               "id": "page.ponds.list",
               "label": "Daftar kolam",
               "path": "/ponds",
-              "actions": []
+              "actions": [
+                {
+                  "id": "read",
+                  "label": "Lihat daftar kolam",
+                  "permission": "pond.read",
+                  "resource": "pond",
+                  "action": "read",
+                  "description": "Menu kolam & daftar master",
+                  "routes": ["/ponds"],
+                  "operatorDefault": true
+                }
+              ]
             },
             {
               "id": "page.ponds.form",
               "label": "Tambah / ubah kolam",
               "path": "/ponds",
-              "actions": []
+              "actions": [
+                {
+                  "id": "create",
+                  "label": "Tambah kolam",
+                  "permission": "pond.create",
+                  "resource": "pond",
+                  "action": "create",
+                  "description": "Form tambah kolam",
+                  "routes": ["/ponds/new"],
+                  "operatorDefault": true
+                },
+                {
+                  "id": "update",
+                  "label": "Ubah kolam",
+                  "permission": "pond.update",
+                  "resource": "pond",
+                  "action": "update",
+                  "description": "Form edit kolam",
+                  "routes": ["/ponds/:id/edit"],
+                  "operatorDefault": true
+                }
+              ]
             },
             {
               "id": "page.ponds.detail",
@@ -132,19 +197,61 @@
               "id": "page.water_quality.list",
               "label": "Daftar catatan",
               "path": "/water-quality",
-              "actions": []
+              "actions": [
+                {
+                  "id": "read",
+                  "label": "Lihat catatan kualitas air",
+                  "permission": "water_quality.read",
+                  "resource": "water_quality",
+                  "action": "read",
+                  "description": "Menu & daftar observasi",
+                  "routes": ["/water-quality"],
+                  "operatorDefault": true
+                }
+              ]
             },
             {
               "id": "page.water_quality.report",
               "label": "Laporan",
               "path": "/water-quality/report",
-              "actions": []
+              "actions": [
+                {
+                  "id": "read",
+                  "label": "Laporan tren",
+                  "permission": "water_quality.read",
+                  "resource": "water_quality",
+                  "action": "read",
+                  "description": "Halaman laporan grafik",
+                  "routes": ["/water-quality/report"],
+                  "operatorDefault": true
+                }
+              ]
             },
             {
               "id": "page.water_quality.form",
               "label": "Catat / ubah observasi",
               "path": "/water-quality",
               "actions": [
+                {
+                  "id": "create",
+                  "label": "Catat observasi",
+                  "permission": "water_quality.create",
+                  "resource": "water_quality",
+                  "action": "create",
+                  "description": "Form catat & FAB catat cepat",
+                  "routes": ["/water-quality/new"],
+                  "operatorDefault": true
+                },
+                {
+                  "id": "update",
+                  "label": "Ubah observasi",
+                  "permission": "water_quality.update",
+                  "resource": "water_quality",
+                  "action": "update",
+                  "description": "Form edit catatan",
+                  "routes": ["/water-quality/:id/edit"],
+                  "operatorDefault": true
+                },
                 {
                   "id": "delete",
                   "label": "Hapus catatan",
@@ -321,9 +428,18 @@
   "roleDefaults": {
     "workspaceAdmin": "all",
     "operatorPermissionCodes": [
+      "finance.read",
+      "finance.purchase.create",
+      "finance.expense.create",
       "cash_account.read",
       "cash_account.create",
-      "cash_account.update"
+      "cash_account.update",
+      "pond.read",
+      "pond.create",
+      "pond.update",
+      "water_quality.read",
+      "water_quality.create",
+      "water_quality.update"
     ]
   }
 }

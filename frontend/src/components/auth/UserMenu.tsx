@@ -1,10 +1,11 @@
-import { useState } from 'react'
+import { useMemo, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { ChevronDown, Settings2, Shield, UserCog, UserRound } from 'lucide-react'
 
 import { LogoutButton } from '@/components/auth/LogoutButton'
 import { useAuth } from '@/contexts/AuthContext'
-import { PermRoleRead, PermUserRead, PermWaterQualityCfgUp } from '@/lib/permissions'
+import { useCatalogAccess } from '@/hooks/useCatalogAccess'
+import { visibleAccessNavFromCatalog } from '@/lib/access-catalog'
 import { cn } from '@/lib/utils'
 
 type UserMenuProps = {
@@ -13,17 +14,28 @@ type UserMenuProps = {
 
 export function UserMenu({ layout = 'header' }: UserMenuProps) {
   const { user, can: check, roles } = useAuth()
+  const { canViewPageId } = useCatalogAccess()
   const [open, setOpen] = useState(false)
+
+  const links = useMemo(() => {
+    const access = visibleAccessNavFromCatalog(check).map((item) => ({
+      to: item.path,
+      icon: item.icon === 'Shield' ? Shield : UserCog,
+      label: item.label === 'Pengguna' ? 'Kelola Pengguna' : item.label,
+    }))
+    if (canViewPageId('page.water_quality.config')) {
+      access.push({
+        to: '/settings/water-quality',
+        icon: Settings2,
+        label: 'Konfigurasi Kualitas Air',
+      })
+    }
+    return access
+  }, [check, canViewPageId])
 
   if (!user) return null
 
   const roleLabel = roles[0]?.name ?? (user.role === 'ADMIN' ? 'Administrator' : 'Pengguna')
-
-  const links = [
-    { show: check(PermUserRead), to: '/users', icon: UserCog, label: 'Kelola Pengguna' },
-    { show: check(PermRoleRead), to: '/roles', icon: Shield, label: 'Peran' },
-    { show: check(PermWaterQualityCfgUp), to: '/settings/water-quality', icon: Settings2, label: 'Konfigurasi Kualitas Air' },
-  ].filter((item) => item.show)
 
   if (layout === 'sidebar') {
     return (

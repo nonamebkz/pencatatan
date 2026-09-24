@@ -2,8 +2,8 @@ import { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { Plus, Users } from 'lucide-react'
 
-import { useAuth } from '@/contexts/AuthContext'
-import { PermUserCreate } from '@/lib/permissions'
+
+import { useCatalogAccess } from '@/hooks/useCatalogAccess'
 import type { UserRecord } from '@/api/users'
 import { listUsers } from '@/api/users'
 import { UserCard } from '@/components/users/UserCard'
@@ -16,8 +16,8 @@ import { PageShell } from '@/components/shared/PageShell'
 import { Button } from '@/components/ui/button'
 
 export function UserListPage() {
-  const { can: check } = useAuth()
-  const canCreate = check(PermUserCreate)
+  const { canPageAction } = useCatalogAccess()
+  const canCreate = canPageAction('page.users.list', 'create')
   const [users, setUsers] = useState<UserRecord[]>([])
   const [error, setError] = useState<string | null>(null)
   const [loading, setLoading] = useState(true)

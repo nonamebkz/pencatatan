@@ -1,10 +1,17 @@
 import { Link, NavLink, Outlet, useLocation } from 'react-router-dom'
+import { useMemo } from 'react'
 import { Droplets, Fish, LayoutDashboard, Plus, Shield, UserCog, Wallet, Waves, type LucideIcon } from 'lucide-react'
 
 import { UserMenu } from '@/components/auth/UserMenu'
 import { MobileBottomNav } from '@/components/mobile/MobileBottomNav'
 import { useAuth } from '@/contexts/AuthContext'
-import { accessNavFromCatalog, mainNavFromCatalog } from '@/lib/access-catalog'
+import { useCatalogAccess } from '@/hooks/useCatalogAccess'
+import {
+  canSeeCatalogMenu,
+  findCatalogMenuById,
+  visibleAccessNavFromCatalog,
+  visibleMainNavFromCatalog,
+} from '@/lib/access-catalog'
 import { cn } from '@/lib/utils'
 
 const NAV_ICONS: Record<string, LucideIcon> = {
@@ -16,15 +23,7 @@ const NAV_ICONS: Record<string, LucideIcon> = {
   Shield,
 }
 
-const navItems = mainNavFromCatalog().map((item) => ({
-  to: item.path,
-  label: item.label,
-  description: item.description,
-  end: item.end,
-  icon: NAV_ICONS[item.icon ?? ''] ?? LayoutDashboard,
-}))
-
-function pageTitle(pathname: string) {
+function pageTitle(pathname: string, navLabels: { path: string; label: string; end?: boolean }[]) {
   if (pathname.startsWith('/users/new')) return 'Tambah Pengguna'
   if (pathname.startsWith('/users/') && pathname.endsWith('/edit')) return 'Edit Pengguna'
   if (pathname.startsWith('/users')) return 'Pengguna'
@@ -49,14 +48,32 @@ function pageTitle(pathname: string) {
   if (/^\/water-quality\/[^/]+$/.test(pathname)) return 'Detail Catatan'
   if (pathname.startsWith('/finance/transactions/')) return 'Detail Transaksi'
   if (pathname.startsWith('/settings/water-quality')) return 'Konfigurasi Kualitas Air'
-  const item = navItems.find((nav) => (nav.end ? pathname === nav.to : pathname.startsWith(nav.to)))
+  const item = navLabels.find((nav) => (nav.end ? pathname === nav.path : pathname.startsWith(nav.path)))
   return item?.label ?? 'Budidaya Lele'
 }
 
 export function AppLayout() {
   const location = useLocation()
   const { can: check } = useAuth()
-  const title = pageTitle(location.pathname)
+  const { canPageAction } = useCatalogAccess()
+
+  const visibleMain = useMemo(() => visibleMainNavFromCatalog(check), [check])
+  const navItems = useMemo(
+    () =>
+      visibleMain.map((item) => ({
+        to: item.path,
+        label: item.label,
+        description: item.description,
+        end: item.end,
+        icon: NAV_ICONS[item.icon ?? ''] ?? LayoutDashboard,
+      })),
+    [visibleMain],
+  )
+
+  const title = pageTitle(
+    location.pathname,
+    navItems.map(({ to, label, end }) => ({ path: to, label, end })),
+  )
   const onPondDetail = /^\/ponds\/[^/]+$/.test(location.pathname)
   const hideQuickRecord =
     location.pathname === '/water-quality' ||
@@ -72,14 +89,21 @@ export function AppLayout() {
     location.pathname === '/roles/new' ||
     location.pathname.startsWith('/roles')
 
-  const accessItems = accessNavFromCatalog()
-    .filter((item) => !item.menuPermission || check(item.menuPermission))
-    .map((item) => ({
-      to: item.path,
-      label: item.label,
-      description: item.description,
-      icon: NAV_ICONS[item.icon ?? ''] ?? Shield,
-    }))
+  const accessItems = useMemo(
+    () =>
+      visibleAccessNavFromCatalog(check).map((item) => ({
+        to: item.path,
+        label: item.label,
+        description: item.description,
+        icon: NAV_ICONS[item.icon ?? ''] ?? Shield,
+      })),
+    [check],
+  )
+
+  const waterQualityMenu = findCatalogMenuById('nav.water_quality')
+  const showWaterQualityNav = waterQualityMenu ? canSeeCatalogMenu(check, waterQualityMenu) : true
+  const showQuickRecord =
+    showWaterQualityNav && !hideQuickRecord && canPageAction('page.water_quality.form', 'create')
 
   return (
     <div className="min-h-screen bg-background md:bg-[radial-gradient(circle_at_top,_oklch(0.96_0.02_155)_0%,_var(--background)_45%)]">
@@ -147,7 +171,7 @@ export function AppLayout() {
           </nav>
 
           <div className="mt-auto space-y-4 pt-8">
-            {!hideQuickRecord && (
+            {!showQuickRecord ? null : (
               <Link
                 to="/water-quality/new"
                 className="flex items-center justify-center gap-2 rounded-2xl bg-primary px-4 py-3 text-sm font-medium text-primary-foreground shadow-sm transition hover:bg-primary/90"
@@ -180,7 +204,15 @@ export function AppLayout() {
             <Outlet />
           </main>
 
-          <MobileBottomNav hidePrimaryAction={hidePrimaryAction} />
+          <MobileBottomNav
+            hidePrimaryAction={hidePrimaryAction || !showWaterQualityNav}
+            navItems={navItems.map(({ to, label, icon, end }) => ({
+              to,
+              label: to === '/water-quality' ? 'Catatan' : label,
+              icon,
+              end,
+            }))}
+          />
         </div>
       </div>
     </div>

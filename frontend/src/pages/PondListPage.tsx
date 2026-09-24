@@ -11,10 +11,11 @@ import { PageHeader } from '@/components/shared/PageHeader'
 import { PageShell } from '@/components/shared/PageShell'
 import { Button } from '@/components/ui/button'
 import { Skeleton } from '@/components/ui/skeleton'
-import { useAuth } from '@/contexts/AuthContext'
+import { useCatalogAccess } from '@/hooks/useCatalogAccess'
 
 export function PondListPage() {
-  const { canDelete } = useAuth()
+  const { canPageAction } = useCatalogAccess()
+  const canDeletePond = canPageAction('page.ponds.detail', 'delete')
   const [ponds, setPonds] = useState<Pond[]>([])
   const [error, setError] = useState<string | null>(null)
   const [loading, setLoading] = useState(true)
@@ -85,7 +86,7 @@ export function PondListPage() {
             <PondCard
               key={pond.id}
               pond={pond}
-              canDelete={canDelete}
+              canDelete={canDeletePond}
               deleting={deletingId === pond.id}
               onDelete={handleDeletePond}
             />

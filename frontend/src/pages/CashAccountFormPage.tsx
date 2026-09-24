@@ -16,13 +16,14 @@ import { PanelCard } from '@/components/shared/PanelCard'
 import { PageHeader } from '@/components/shared/PageHeader'
 import { Button } from '@/components/ui/button'
 import { Skeleton } from '@/components/ui/skeleton'
-import { useAuth } from '@/contexts/AuthContext'
+import { useCatalogAccess } from '@/hooks/useCatalogAccess'
 import { cn } from '@/lib/utils'
 
 export function CashAccountFormPage() {
   const navigate = useNavigate()
   const { id } = useParams()
-  const { canDelete } = useAuth()
+  const { canPageAction } = useCatalogAccess()
+  const canDeleteCash = canPageAction('page.finance.cash_accounts', 'delete')
   const isEdit = Boolean(id)
 
   const [name, setName] = useState('')
@@ -126,7 +127,7 @@ export function CashAccountFormPage() {
               <Save className="size-4" />
               Simpan
             </Button>
-            {isEdit && canDelete && (
+            {isEdit && canDeleteCash && (
               <Button type="button" variant="outline" disabled={submitting} onClick={() => void handleDelete()}>
                 <Trash2 className="size-4" />
                 Hapus
@@ -137,7 +138,7 @@ export function CashAccountFormPage() {
       </PanelCard>
 
       <MobileFormFooter maxWidthClassName="max-w-2xl">
-        {isEdit && canDelete && (
+        {isEdit && canDeleteCash && (
           <Button
             type="button"
             variant="outline"

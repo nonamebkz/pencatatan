@@ -14,13 +14,14 @@ import { PageHeader } from '@/components/shared/PageHeader'
 import { Button } from '@/components/ui/button'
 import { Skeleton } from '@/components/ui/skeleton'
 import { useAuth } from '@/contexts/AuthContext'
-import { PermUserDelete } from '@/lib/permissions'
+import { useCatalogAccess } from '@/hooks/useCatalogAccess'
 
 export function UserFormPage() {
   const navigate = useNavigate()
   const { id } = useParams()
-  const { user: currentUser, can: check } = useAuth()
-  const canDeleteUser = check(PermUserDelete)
+  const { user: currentUser } = useAuth()
+  const { canPageAction } = useCatalogAccess()
+  const canDeleteUser = canPageAction('page.users.list', 'delete')
   const isEdit = Boolean(id)
 
   const [name, setName] = useState('')

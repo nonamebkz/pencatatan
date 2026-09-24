@@ -66,6 +66,22 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       .finally(() => setLoading(false))
   }, [refreshUser])
 
+  useEffect(() => {
+    const syncFromServer = () => {
+      if (!getStoredToken()) return
+      void refreshUser().catch(() => {
+        /* tetap pakai session lokal jika offline */
+      })
+    }
+    window.addEventListener('focus', syncFromServer)
+    document.addEventListener('visibilitychange', () => {
+      if (document.visibilityState === 'visible') syncFromServer()
+    })
+    return () => {
+      window.removeEventListener('focus', syncFromServer)
+    }
+  }, [refreshUser])
+
   const login = useCallback(async (email: string, password: string) => {
     const response = await loginRequest(email, password)
     setStoredToken(response.data.token)

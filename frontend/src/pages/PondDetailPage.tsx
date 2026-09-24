@@ -19,14 +19,15 @@ import { PageShell } from '@/components/shared/PageShell'
 import { WaterQualityLogRow } from '@/components/water-quality/WaterQualityLogRow'
 import { Button } from '@/components/ui/button'
 import { Skeleton } from '@/components/ui/skeleton'
-import { useAuth } from '@/contexts/AuthContext'
+import { useCatalogAccess } from '@/hooks/useCatalogAccess'
 import { RECORD_LIST_LIMIT } from '@/lib/listing'
 import { cn } from '@/lib/utils'
 
 export function PondDetailPage() {
   const navigate = useNavigate()
   const { id = '' } = useParams()
-  const { canDelete } = useAuth()
+  const { canPageAction } = useCatalogAccess()
+  const canDelete = canPageAction('page.ponds.detail', 'delete')
   const [pond, setPond] = useState<Pond | null>(null)
   const [logs, setLogs] = useState<WaterQualityLog[]>([])
   const [error, setError] = useState<string | null>(null)

@@ -26,7 +26,7 @@ import { WaterQualityAdvicePanel } from '@/components/water-quality/WaterQuality
 import { WaterQualityStatusBadge } from '@/components/water-quality/WaterQualityStatusBadge'
 import { Button } from '@/components/ui/button'
 import { Skeleton } from '@/components/ui/skeleton'
-import { useAuth } from '@/contexts/AuthContext'
+import { useCatalogAccess } from '@/hooks/useCatalogAccess'
 
 function toLocalInputValue(date: Date) {
   const offset = date.getTimezoneOffset()
@@ -37,7 +37,8 @@ function toLocalInputValue(date: Date) {
 export function WaterQualityFormPage() {
   const navigate = useNavigate()
   const { id } = useParams()
-  const { canDelete } = useAuth()
+  const { canPageAction } = useCatalogAccess()
+  const canDelete = canPageAction('page.water_quality.form', 'delete')
   const [searchParams] = useSearchParams()
   const isEdit = Boolean(id)
 

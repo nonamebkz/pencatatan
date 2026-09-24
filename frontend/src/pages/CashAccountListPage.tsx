@@ -12,12 +12,11 @@ import { ListSkeleton } from '@/components/shared/ListSkeleton'
 import { PageHeader } from '@/components/shared/PageHeader'
 import { PageShell } from '@/components/shared/PageShell'
 import { Button } from '@/components/ui/button'
-import { useAuth } from '@/contexts/AuthContext'
-import { PermCashAccountCreate } from '@/lib/permissions'
+import { useCatalogAccess } from '@/hooks/useCatalogAccess'
 
 export function CashAccountListPage() {
-  const { can: check } = useAuth()
-  const canCreate = check(PermCashAccountCreate)
+  const { canPageAction } = useCatalogAccess()
+  const canCreate = canPageAction('page.finance.cash_accounts', 'create')
   const [accounts, setAccounts] = useState<CashAccount[]>([])
   const [error, setError] = useState<string | null>(null)
   const [loading, setLoading] = useState(true)
