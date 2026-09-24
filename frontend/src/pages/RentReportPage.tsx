@@ -1,16 +1,18 @@
 import { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { FileSearch } from 'lucide-react'
+
 import { getRentReport } from '@/api/reports'
 import { paymentStatusLabel, timeStatusLabel, type PeriodicContract } from '@/api/rent'
+import { ReportDataList, ReportDataListItem } from '@/components/reports/ReportDataList'
+import { ReportPageIntro } from '@/components/reports/ReportPageIntro'
+import { ReportSummaryFooter } from '@/components/reports/ReportSummaryFooter'
 import { MobileFilterPanel } from '@/components/mobile/MobileFilterPanel'
 import { EmptyState } from '@/components/shared/EmptyState'
 import { ErrorAlert } from '@/components/shared/ErrorAlert'
-import { PageHeader } from '@/components/shared/PageHeader'
 import { PageShell } from '@/components/shared/PageShell'
 import { SelectField } from '@/components/shared/Field'
 import { Badge } from '@/components/ui/badge'
-import { Button } from '@/components/ui/button'
 import { Skeleton } from '@/components/ui/skeleton'
 import { formatIDR } from '@/lib/format'
 import { skeleton } from '@/lib/design'
@@ -44,14 +46,9 @@ export function RentReportPage() {
 
   return (
     <PageShell>
-      <PageHeader
+      <ReportPageIntro
         title="Laporan sewa kolam"
-        description="RPT-03 — kontrak, pembayaran, dan sisa tunggakan."
-        actions={
-          <Button asChild variant="outline" className="hidden md:inline-flex">
-            <Link to="/finance/reports">Semua laporan</Link>
-          </Button>
-        }
+        description="Kontrak aktif, pembayaran, dan sisa tunggakan."
       />
 
       <MobileFilterPanel title="Filter" onApply={load}>
@@ -77,9 +74,9 @@ export function RentReportPage() {
         <EmptyState icon={FileSearch} title="Tidak ada kontrak" description="Ubah filter atau buat kontrak sewa baru." />
       ) : (
         <>
-          <ul className="divide-y rounded-xl border bg-card">
+          <ReportDataList>
             {contracts.map((c) => (
-              <li key={c.id} className="space-y-2 p-4 text-sm">
+              <ReportDataListItem key={c.id}>
                 <div className="flex flex-wrap items-center gap-2">
                   <Link to={`/finance/rent/${c.id}`} className="font-medium text-primary hover:underline">
                     {c.businessUnitName}
@@ -87,21 +84,21 @@ export function RentReportPage() {
                   <Badge variant="secondary">{timeStatusLabel[c.timeStatus]}</Badge>
                   <Badge variant="outline">{paymentStatusLabel[c.paymentStatus]}</Badge>
                 </div>
-                <p className="text-muted-foreground">
+                <p className="mt-1 text-muted-foreground">
                   {c.startDate} – {c.endDate}
                 </p>
-                <p>
+                <p className="mt-1">
                   Total {formatIDR(c.totalAmount)} · Dibayar {formatIDR(c.paidAmount)} · Sisa{' '}
                   <span className="font-medium">{formatIDR(c.remainingAmount)}</span>
                 </p>
-              </li>
+              </ReportDataListItem>
             ))}
-          </ul>
+          </ReportDataList>
           {footer && (
-            <footer className="rounded-xl border bg-muted/40 p-4 text-sm">
+            <ReportSummaryFooter>
               Kontrak aktif/akan habis: {footer.activeContractCount} · Total sisa tunggakan{' '}
               {formatIDR(footer.totalRemaining)}
-            </footer>
+            </ReportSummaryFooter>
           )}
         </>
       )}

@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
-import { BarChart3, FileText, Landmark, Plus, Receipt, ShoppingCart, Wallet } from 'lucide-react'
+import { Plus, Receipt, ShoppingCart, Wallet } from 'lucide-react'
 
 import {
   getFinanceSummary,
@@ -8,9 +8,9 @@ import {
   type FinanceSummary,
   type Transaction,
 } from '@/api/finance'
+import { FinanceShortcutGrid } from '@/components/finance/FinanceShortcutGrid'
 import { TransactionRow } from '@/components/finance/TransactionRow'
 import { MobileFilterPanel } from '@/components/mobile/MobileFilterPanel'
-import { MobileSectionHeader } from '@/components/mobile/MobileSectionHeader'
 import { CountBadge } from '@/components/shared/CountBadge'
 import { EmptyState } from '@/components/shared/EmptyState'
 import { ErrorAlert } from '@/components/shared/ErrorAlert'
@@ -28,11 +28,8 @@ import { RECORD_LIST_LIMIT } from '@/lib/listing'
 import { skeleton } from '@/lib/design'
 
 export function FinancePage() {
-  const { canViewPageId, canPageAction } = useCatalogAccess()
-  const showCashAccounts = canViewPageId('page.finance.cash_accounts')
+  const { canPageAction } = useCatalogAccess()
   const showPurchases = canPageAction('page.finance.purchases', 'create')
-  const showRent = canPageAction('page.finance.rent', 'read')
-  const showExpenses = canPageAction('page.finance.expenses', 'create')
   const [summary, setSummary] = useState<FinanceSummary | null>(null)
   const [transactions, setTransactions] = useState<Transaction[]>([])
   const [transactionType, setTransactionType] = useState('')
@@ -78,101 +75,22 @@ export function FinancePage() {
     load()
   }, [])
 
-  const showReports = canPageAction('page.finance.reports', 'read')
-  const showQuickActions = showCashAccounts || showExpenses || showPurchases || showRent || showReports
-
   return (
     <PageShell>
       <PageHeader
         title="Keuangan"
-        description="Catat pembelian barang dan pengeluaran operasional."
+        description="Ringkasan bulan ini, arsip transaksi, dan menu terkait."
         actions={
-          showQuickActions ? (
-            <div className="hidden flex-col gap-2 md:flex md:flex-row">
-              {showCashAccounts && (
-                <Button asChild variant="outline">
-                  <Link to="/finance/cash-accounts">
-                    <Landmark className="size-4" />
-                    Akun kas
-                  </Link>
-                </Button>
-              )}
-              {showExpenses && (
-                <Button asChild variant="outline">
-                  <Link to="/finance/expenses/new">
-                    <Receipt className="size-4" />
-                    Pengeluaran lain
-                  </Link>
-                </Button>
-              )}
-              {showRent && (
-                <Button asChild variant="outline">
-                  <Link to="/finance/rent">
-                    <FileText className="size-4" />
-                    Sewa kolam
-                  </Link>
-                </Button>
-              )}
-              {showReports && (
-                <Button asChild variant="outline">
-                  <Link to="/finance/reports">
-                    <BarChart3 className="size-4" />
-                    Laporan
-                  </Link>
-                </Button>
-              )}
-              {showPurchases && (
-                <Button asChild size="lg">
-                  <Link to="/finance/purchases/new">
-                    <ShoppingCart className="size-4" />
-                    Catat pembelian
-                  </Link>
-                </Button>
-              )}
-            </div>
+          showPurchases ? (
+            <Button asChild size="lg" className="hidden md:inline-flex">
+              <Link to="/finance/purchases/new">
+                <ShoppingCart className="size-4" />
+                Catat pembelian
+              </Link>
+            </Button>
           ) : undefined
         }
       />
-
-      {showQuickActions && (
-        <section className="space-y-3 md:hidden">
-          <MobileSectionHeader title="Aksi cepat" />
-          <div className="grid gap-2">
-            {showExpenses && (
-              <Button asChild variant="outline" className="h-11 w-full touch-target">
-                <Link to="/finance/expenses/new">
-                  <Receipt className="size-4" />
-                  Pengeluaran lain
-                </Link>
-              </Button>
-            )}
-            {showCashAccounts && (
-              <Button asChild variant="outline" className="h-11 w-full touch-target">
-                <Link to="/finance/cash-accounts">
-                  <Landmark className="size-4" />
-                  Akun kas
-                </Link>
-              </Button>
-            )}
-            {showRent && (
-              <Button asChild variant="outline" className="h-11 w-full touch-target">
-                <Link to="/finance/rent">
-                  <FileText className="size-4" />
-                  Sewa kolam
-                </Link>
-              </Button>
-            )}
-            {showReports && (
-              <Button asChild variant="outline" className="h-11 w-full touch-target">
-                <Link to="/finance/reports">
-                  <BarChart3 className="size-4" />
-                  Laporan
-                </Link>
-              </Button>
-            )}
-          </div>
-        </section>
-      )}
 
       {error && <ErrorAlert>{error}</ErrorAlert>}
 
@@ -207,7 +125,9 @@ export function FinancePage() {
         )}
       </div>
 
-      <MobileFilterPanel title="Filter" onApply={() => load({ page: 1 })}>
+      <FinanceShortcutGrid />
+
+      <MobileFilterPanel title="Filter transaksi" onApply={() => load({ page: 1 })}>
         <div className="grid gap-4 md:grid-cols-3">
           <SelectField
             label="Jenis"
@@ -218,6 +138,7 @@ export function FinancePage() {
             <option value="">Semua</option>
             <option value="PURCHASE">Pembelian</option>
             <option value="OTHER_EXPENSE">Pengeluaran lain</option>
+            <option value="RENT_PAYMENT">Bayar sewa</option>
           </SelectField>
           <TextField label="Dari" id="filter-from" type="date" value={from} onChange={(e) => setFrom(e.target.value)} />
           <TextField label="Sampai" id="filter-to" type="date" value={to} onChange={(e) => setTo(e.target.value)} />
@@ -259,7 +180,7 @@ export function FinancePage() {
               <Button
                 type="button"
                 variant="outline"
-                className="w-full"
+                className="w-full touch-target"
                 disabled={loadingMore}
                 onClick={() => load({ page: page + 1, append: true })}
               >

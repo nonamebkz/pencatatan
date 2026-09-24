@@ -1,17 +1,19 @@
 import { useEffect, useState } from 'react'
-import { Link } from 'react-router-dom'
 import { FileSearch } from 'lucide-react'
 
 import { getPriceHistoryReport, searchPriceHistoryItems, type PriceHistoryEntry } from '@/api/reports'
+import { ReportDataList, ReportDataListItem } from '@/components/reports/ReportDataList'
+import { ReportPageIntro } from '@/components/reports/ReportPageIntro'
+import { ReportSummaryFooter } from '@/components/reports/ReportSummaryFooter'
 import { EmptyState } from '@/components/shared/EmptyState'
 import { ErrorAlert } from '@/components/shared/ErrorAlert'
-import { PageHeader } from '@/components/shared/PageHeader'
 import { PageShell } from '@/components/shared/PageShell'
 import { TextField } from '@/components/shared/Field'
 import { Button } from '@/components/ui/button'
 import { Skeleton } from '@/components/ui/skeleton'
 import { formatIDR } from '@/lib/format'
-import { skeleton } from '@/lib/design'
+import { skeleton, surface } from '@/lib/design'
+import { cn } from '@/lib/utils'
 
 export function PriceHistoryReportPage() {
   const [itemName, setItemName] = useState('')
@@ -54,17 +56,9 @@ export function PriceHistoryReportPage() {
 
   return (
     <PageShell>
-      <PageHeader
-        title="Histori harga"
-        description="RPT-02 — perubahan harga satuan per pembelian."
-        actions={
-          <Button asChild variant="outline" className="hidden md:inline-flex">
-            <Link to="/finance/reports">Semua laporan</Link>
-          </Button>
-        }
-      />
+      <ReportPageIntro title="Histori harga" description="Perubahan harga satuan dari setiap pembelian." />
 
-      <div className="space-y-3 rounded-xl border bg-card p-4">
+      <div className={cn(surface.panel, 'space-y-3 p-4')}>
         <TextField
           label="Nama barang"
           value={itemName}
@@ -77,7 +71,7 @@ export function PriceHistoryReportPage() {
             <option key={s} value={s} />
           ))}
         </datalist>
-        <Button type="button" onClick={load} disabled={loading} className="w-full sm:w-auto">
+        <Button type="button" onClick={load} disabled={loading} className="w-full touch-target sm:w-auto">
           Tampilkan
         </Button>
       </div>
@@ -90,30 +84,32 @@ export function PriceHistoryReportPage() {
         <EmptyState icon={FileSearch} title="Belum ada data" description="Coba nama barang lain atau pastikan sudah ada pembelian." />
       ) : entries.length > 0 ? (
         <>
-          <ul className="divide-y rounded-xl border bg-card">
+          <ReportDataList>
             {entries.map((row, i) => (
-              <li key={i} className="flex items-center justify-between gap-2 p-4 text-sm">
-                <div>
-                  <p className="font-medium">{row.transactionDate}</p>
-                  {row.supplierName && <p className="text-muted-foreground">{row.supplierName}</p>}
+              <ReportDataListItem key={i}>
+                <div className="flex items-center justify-between gap-2">
+                  <div>
+                    <p className="font-medium">{row.transactionDate}</p>
+                    {row.supplierName && <p className="text-muted-foreground">{row.supplierName}</p>}
+                  </div>
+                  <div className="text-right">
+                    <p className="font-medium tabular-nums">{formatIDR(row.unitPrice)}</p>
+                    {row.priceDelta !== 0 && (
+                      <p className={row.priceDelta > 0 ? 'text-destructive' : 'text-emerald-600'}>
+                        {row.priceDelta > 0 ? '+' : ''}
+                        {formatIDR(row.priceDelta)}
+                      </p>
+                    )}
+                  </div>
                 </div>
-                <div className="text-right">
-                  <p className="font-medium tabular-nums">{formatIDR(row.unitPrice)}</p>
-                  {row.priceDelta !== 0 && (
-                    <p className={row.priceDelta > 0 ? 'text-destructive' : 'text-emerald-600'}>
-                      {row.priceDelta > 0 ? '+' : ''}
-                      {formatIDR(row.priceDelta)}
-                    </p>
-                  )}
-                </div>
-              </li>
+              </ReportDataListItem>
             ))}
-          </ul>
+          </ReportDataList>
           {footer && (
-            <footer className="rounded-xl border bg-muted/40 p-4 text-sm text-muted-foreground">
+            <ReportSummaryFooter title="Statistik harga">
               Terendah {formatIDR(footer.minPrice)} · Tertinggi {formatIDR(footer.maxPrice)} · Terakhir{' '}
               {formatIDR(footer.lastPrice)}
-            </footer>
+            </ReportSummaryFooter>
           )}
         </>
       ) : null}

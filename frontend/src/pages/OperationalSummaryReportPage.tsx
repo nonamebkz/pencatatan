@@ -1,19 +1,21 @@
 import { useEffect, useState } from 'react'
-import { Link } from 'react-router-dom'
+import { ShoppingCart, Wallet } from 'lucide-react'
+
 import { getOperationalSummaryReport, type OperationalSummaryReport } from '@/api/reports'
 import { purchaseCategoryLabels, transactionTypeLabel } from '@/api/finance'
+import { ReportDataList, ReportDataListItem } from '@/components/reports/ReportDataList'
+import { ReportPageIntro } from '@/components/reports/ReportPageIntro'
 import { ReportPeriodFields } from '@/components/reports/ReportPeriodFields'
+import { ReportSummaryFooter } from '@/components/reports/ReportSummaryFooter'
 import { MobileFilterPanel } from '@/components/mobile/MobileFilterPanel'
+import { MobileSectionHeader } from '@/components/mobile/MobileSectionHeader'
 import { MetricCard } from '@/components/shared/MetricCard'
 import { ErrorAlert } from '@/components/shared/ErrorAlert'
-import { PageHeader } from '@/components/shared/PageHeader'
 import { PageShell } from '@/components/shared/PageShell'
-import { Button } from '@/components/ui/button'
 import { Skeleton } from '@/components/ui/skeleton'
 import { formatIDR } from '@/lib/format'
 import { defaultReportPeriod } from '@/lib/reportPeriod'
 import { skeleton } from '@/lib/design'
-import { ShoppingCart, Wallet } from 'lucide-react'
 
 export function OperationalSummaryReportPage() {
   const defaults = defaultReportPeriod()
@@ -38,14 +40,9 @@ export function OperationalSummaryReportPage() {
 
   return (
     <PageShell>
-      <PageHeader
+      <ReportPageIntro
         title="Ringkasan operasional"
-        description="RPT-06 — agregat pengeluaran dan breakdown kategori."
-        actions={
-          <Button asChild variant="outline" className="hidden md:inline-flex">
-            <Link to="/finance/reports">Semua laporan</Link>
-          </Button>
-        }
+        description="Agregat pengeluaran dan breakdown per kategori."
       />
 
       <MobileFilterPanel title="Periode" onApply={load}>
@@ -72,40 +69,44 @@ export function OperationalSummaryReportPage() {
           </div>
 
           {report.topPurchaseCategories.length > 0 && (
-            <section className="space-y-2">
-              <h2 className="text-sm font-medium">Top kategori pembelian</h2>
-              <ul className="divide-y rounded-xl border bg-card text-sm">
+            <section className="space-y-3">
+              <MobileSectionHeader title="Top kategori pembelian" />
+              <ReportDataList>
                 {report.topPurchaseCategories.map((row) => (
-                  <li key={row.category} className="flex justify-between p-3">
-                    <span>
-                      {purchaseCategoryLabels[row.category as keyof typeof purchaseCategoryLabels] ?? row.category}
-                    </span>
-                    <span className="tabular-nums font-medium">{formatIDR(row.amount)}</span>
-                  </li>
+                  <ReportDataListItem key={row.category}>
+                    <div className="flex justify-between gap-2">
+                      <span>
+                        {purchaseCategoryLabels[row.category as keyof typeof purchaseCategoryLabels] ?? row.category}
+                      </span>
+                      <span className="tabular-nums font-medium">{formatIDR(row.amount)}</span>
+                    </div>
+                  </ReportDataListItem>
                 ))}
-              </ul>
+              </ReportDataList>
             </section>
           )}
 
           {report.byTransactionType.length > 0 && (
-            <section className="space-y-2">
-              <h2 className="text-sm font-medium">Per jenis transaksi</h2>
-              <ul className="divide-y rounded-xl border bg-card text-sm">
+            <section className="space-y-3">
+              <MobileSectionHeader title="Per jenis transaksi" />
+              <ReportDataList>
                 {report.byTransactionType.map((row) => (
-                  <li key={row.transactionType} className="flex justify-between gap-2 p-3">
-                    <span>
-                      {transactionTypeLabel(row.transactionType)} ({row.count})
-                    </span>
-                    <span className="tabular-nums font-medium">{formatIDR(row.totalAmount)}</span>
-                  </li>
+                  <ReportDataListItem key={row.transactionType}>
+                    <div className="flex justify-between gap-2">
+                      <span>
+                        {transactionTypeLabel(row.transactionType)} ({row.count})
+                      </span>
+                      <span className="tabular-nums font-medium">{formatIDR(row.totalAmount)}</span>
+                    </div>
+                  </ReportDataListItem>
                 ))}
-              </ul>
+              </ReportDataList>
             </section>
           )}
 
-          <footer className="rounded-xl border bg-muted/40 p-4 text-sm font-medium">
-            Grand total operasional {formatIDR(report.grandTotalOperational)}
-          </footer>
+          <ReportSummaryFooter title="Total operasional">
+            {formatIDR(report.grandTotalOperational)}
+          </ReportSummaryFooter>
         </div>
       ) : null}
     </PageShell>

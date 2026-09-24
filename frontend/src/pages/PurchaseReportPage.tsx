@@ -1,22 +1,21 @@
 import { useEffect, useState } from 'react'
-import { Link } from 'react-router-dom'
 import { FileSearch } from 'lucide-react'
 
 import { listPonds, type Pond } from '@/api/water-quality'
 import { getPurchaseReport, type PurchaseReportRow } from '@/api/reports'
 import { purchaseCategoryLabels } from '@/api/finance'
+import { ReportDataList, ReportDataListItem } from '@/components/reports/ReportDataList'
+import { ReportPageIntro } from '@/components/reports/ReportPageIntro'
 import { ReportPeriodFields } from '@/components/reports/ReportPeriodFields'
+import { ReportSummaryFooter } from '@/components/reports/ReportSummaryFooter'
 import { MobileFilterPanel } from '@/components/mobile/MobileFilterPanel'
 import { EmptyState } from '@/components/shared/EmptyState'
 import { ErrorAlert } from '@/components/shared/ErrorAlert'
-import { PageHeader } from '@/components/shared/PageHeader'
+import { ListSkeleton } from '@/components/shared/ListSkeleton'
 import { PageShell } from '@/components/shared/PageShell'
 import { SelectField } from '@/components/shared/Field'
-import { Button } from '@/components/ui/button'
-import { Skeleton } from '@/components/ui/skeleton'
 import { formatIDR } from '@/lib/format'
 import { defaultReportPeriod } from '@/lib/reportPeriod'
-import { skeleton } from '@/lib/design'
 
 export function PurchaseReportPage() {
   const defaults = defaultReportPeriod()
@@ -54,14 +53,9 @@ export function PurchaseReportPage() {
 
   return (
     <PageShell>
-      <PageHeader
+      <ReportPageIntro
         title="Laporan pembelian"
-        description="RPT-01 — baris item pembelian dalam periode."
-        actions={
-          <Button asChild variant="outline" className="hidden md:inline-flex">
-            <Link to="/finance/reports">Semua laporan</Link>
-          </Button>
-        }
+        description="Baris item pembelian dalam periode yang dipilih."
       />
 
       <MobileFilterPanel title="Filter" onApply={load}>
@@ -81,17 +75,14 @@ export function PurchaseReportPage() {
       {error && <ErrorAlert>{error}</ErrorAlert>}
 
       {loading ? (
-        <div className="space-y-2">
-          <Skeleton className={skeleton.block + ' h-16'} />
-          <Skeleton className={skeleton.block + ' h-16'} />
-        </div>
+        <ListSkeleton count={3} />
       ) : items.length === 0 ? (
         <EmptyState icon={FileSearch} title="Tidak ada data" description="Ubah periode atau filter kolam." />
       ) : (
         <>
-          <ul className="divide-y rounded-xl border bg-card">
+          <ReportDataList>
             {items.map((row, i) => (
-              <li key={`${row.transactionId}-${i}`} className="space-y-1 p-4 text-sm">
+              <ReportDataListItem key={`${row.transactionId}-${i}`}>
                 <div className="flex items-start justify-between gap-2">
                   <div>
                     <p className="font-medium">{row.itemName}</p>
@@ -101,21 +92,18 @@ export function PurchaseReportPage() {
                   </div>
                   <p className="shrink-0 font-medium tabular-nums">{formatIDR(row.totalPrice)}</p>
                 </div>
-                <p className="text-muted-foreground">
+                <p className="mt-1 text-muted-foreground">
                   {row.qty} {row.unit} × {formatIDR(row.unitPrice)}
                   {row.supplierName ? ` · ${row.supplierName}` : ''}
                   {row.pondName ? ` · ${row.pondName}` : ''}
                 </p>
-              </li>
+              </ReportDataListItem>
             ))}
-          </ul>
+          </ReportDataList>
           {footer && (
-            <footer className="rounded-xl border bg-muted/40 p-4 text-sm">
-              <p className="font-medium">Ringkasan</p>
-              <p className="text-muted-foreground">
-                Total {formatIDR(footer.totalAmount)} · {footer.transactionCount} transaksi · {footer.lineCount} baris
-              </p>
-            </footer>
+            <ReportSummaryFooter>
+              Total {formatIDR(footer.totalAmount)} · {footer.transactionCount} transaksi · {footer.lineCount} baris
+            </ReportSummaryFooter>
           )}
         </>
       )}

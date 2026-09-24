@@ -1,40 +1,37 @@
-import { Link } from 'react-router-dom'
 import { BarChart3, FileText, History, PieChart, Waves } from 'lucide-react'
 
+import { MobileSectionHeader } from '@/components/mobile/MobileSectionHeader'
+import { BackLink } from '@/components/shared/BackLink'
 import { PageHeader } from '@/components/shared/PageHeader'
 import { PageShell } from '@/components/shared/PageShell'
+import { ShortcutLinkCard } from '@/components/shared/ShortcutLinkCard'
 import { useCatalogAccess } from '@/hooks/useCatalogAccess'
-import { interactive } from '@/lib/design'
-import { cn } from '@/lib/utils'
 
-const cards = [
+const financeReports = [
   {
     slug: 'purchases',
     title: 'Pembelian barang',
-    description: 'RPT-01 — detail baris pembelian per periode',
+    description: 'Detail baris pembelian per periode',
     icon: FileText,
-    permission: 'finance.read' as const,
   },
   {
     slug: 'price-history',
     title: 'Histori harga',
-    description: 'RPT-02 — tren harga per nama barang',
+    description: 'Perubahan harga satuan per barang',
     icon: History,
-    permission: 'finance.read' as const,
   },
   {
     slug: 'rent',
     title: 'Sewa kolam',
-    description: 'RPT-03 — kontrak, dibayar, sisa tunggakan',
+    description: 'Kontrak, dibayar, dan sisa tunggakan',
     icon: BarChart3,
     rent: true,
   },
   {
     slug: 'summary',
     title: 'Ringkasan operasional',
-    description: 'RPT-06 — kartu agregat & per kategori',
+    description: 'Agregat pengeluaran dan kategori',
     icon: PieChart,
-    permission: 'finance.read' as const,
   },
 ]
 
@@ -44,49 +41,43 @@ export function ReportsHubPage() {
   const canRent = canPageAction('page.finance.rent', 'read')
   const canWqReport = canViewPageId('page.water_quality.report')
 
-  const visible = cards.filter((c) => {
-    if (c.rent) return canRent
-    return canFinance
-  })
+  const visible = financeReports.filter((c) => (c.rent ? canRent : canFinance))
 
   return (
     <PageShell>
-      <PageHeader
-        title="Laporan"
-        description="Laporan keuangan dan operasional workspace bisnis."
-      />
-
-      <div className="grid gap-3 sm:grid-cols-2">
-        {visible.map((card) => {
-          const Icon = card.icon
-          return (
-            <Link
-              key={card.slug}
-              to={`/finance/reports/${card.slug}`}
-              className={cn(interactive.cardLink, 'flex gap-3')}
-            >
-              <div className="flex size-10 shrink-0 items-center justify-center rounded-lg bg-muted">
-                <Icon className="size-5 text-muted-foreground" aria-hidden />
-              </div>
-              <div className="min-w-0">
-                <p className="font-medium text-foreground">{card.title}</p>
-                <p className="text-sm text-muted-foreground">{card.description}</p>
-              </div>
-            </Link>
-          )
-        })}
-        {canWqReport && (
-          <Link to="/water-quality/report" className={cn(interactive.cardLink, 'flex gap-3')}>
-            <div className="flex size-10 shrink-0 items-center justify-center rounded-lg bg-muted">
-              <Waves className="size-5 text-muted-foreground" aria-hidden />
-            </div>
-            <div className="min-w-0">
-              <p className="font-medium text-foreground">Kualitas air</p>
-              <p className="text-sm text-muted-foreground">RPT-07 — grafik tren 7/30 hari</p>
-            </div>
-          </Link>
-        )}
+      <div className="space-y-2">
+        <BackLink to="/finance" label="Keuangan" shortLabel="Keuangan" />
+        <PageHeader title="Laporan" description="Laporan keuangan dan operasional workspace bisnis." />
       </div>
+
+      {visible.length > 0 && (
+        <section className="space-y-3">
+          <MobileSectionHeader title="Keuangan & operasional" />
+          <div className="grid gap-3 sm:grid-cols-2">
+            {visible.map((card) => (
+              <ShortcutLinkCard
+                key={card.slug}
+                to={`/finance/reports/${card.slug}`}
+                title={card.title}
+                description={card.description}
+                icon={card.icon}
+              />
+            ))}
+          </div>
+        </section>
+      )}
+
+      {canWqReport && (
+        <section className="space-y-3">
+          <MobileSectionHeader title="Kualitas air" />
+          <ShortcutLinkCard
+            to="/water-quality/report"
+            title="Tren kualitas air"
+            description="Grafik ammonia dan pH (7 atau 30 hari)"
+            icon={Waves}
+          />
+        </section>
+      )}
 
       {visible.length === 0 && !canWqReport && (
         <p className="text-sm text-muted-foreground">Tidak ada laporan yang dapat diakses dengan peran Anda.</p>
