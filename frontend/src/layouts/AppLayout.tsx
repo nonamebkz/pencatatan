@@ -1,18 +1,28 @@
 import { Link, NavLink, Outlet, useLocation } from 'react-router-dom'
-import { Droplets, Fish, LayoutDashboard, Plus, Shield, UserCog, Wallet, Waves } from 'lucide-react'
+import { Droplets, Fish, LayoutDashboard, Plus, Shield, UserCog, Wallet, Waves, type LucideIcon } from 'lucide-react'
 
 import { UserMenu } from '@/components/auth/UserMenu'
 import { MobileBottomNav } from '@/components/mobile/MobileBottomNav'
 import { useAuth } from '@/contexts/AuthContext'
-import { PermRoleRead, PermUserRead } from '@/lib/permissions'
+import { accessNavFromCatalog, mainNavFromCatalog } from '@/lib/access-catalog'
 import { cn } from '@/lib/utils'
 
-const navItems = [
-  { to: '/', label: 'Beranda', description: 'Ringkasan harian', icon: LayoutDashboard, end: true },
-  { to: '/finance', label: 'Keuangan', description: 'Pembelian & pengeluaran', icon: Wallet },
-  { to: '/ponds', label: 'Kolam', description: 'Master kolam', icon: Fish },
-  { to: '/water-quality', label: 'Kualitas Air', description: 'Catatan observasi', icon: Droplets },
-]
+const NAV_ICONS: Record<string, LucideIcon> = {
+  LayoutDashboard,
+  Wallet,
+  Fish,
+  Droplets,
+  UserCog,
+  Shield,
+}
+
+const navItems = mainNavFromCatalog().map((item) => ({
+  to: item.path,
+  label: item.label,
+  description: item.description,
+  end: item.end,
+  icon: NAV_ICONS[item.icon ?? ''] ?? LayoutDashboard,
+}))
 
 function pageTitle(pathname: string) {
   if (pathname.startsWith('/users/new')) return 'Tambah Pengguna'
@@ -62,10 +72,14 @@ export function AppLayout() {
     location.pathname === '/roles/new' ||
     location.pathname.startsWith('/roles')
 
-  const accessItems = [
-    { show: check(PermUserRead), to: '/users', label: 'Pengguna', description: 'Kelola akun tim', icon: UserCog },
-    { show: check(PermRoleRead), to: '/roles', label: 'Peran', description: 'Paket permission', icon: Shield },
-  ].filter((item) => item.show)
+  const accessItems = accessNavFromCatalog()
+    .filter((item) => !item.menuPermission || check(item.menuPermission))
+    .map((item) => ({
+      to: item.path,
+      label: item.label,
+      description: item.description,
+      icon: NAV_ICONS[item.icon ?? ''] ?? Shield,
+    }))
 
   return (
     <div className="min-h-screen bg-background md:bg-[radial-gradient(circle_at_top,_oklch(0.96_0.02_155)_0%,_var(--background)_45%)]">

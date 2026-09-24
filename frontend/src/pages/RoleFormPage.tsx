@@ -20,6 +20,7 @@ import { PageHeader } from '@/components/shared/PageHeader'
 import { PageShell } from '@/components/shared/PageShell'
 import { PanelCard } from '@/components/shared/PanelCard'
 import { useAuth } from '@/contexts/AuthContext'
+import { groupCatalogForRoleForm } from '@/lib/access-catalog'
 import { PermRoleAssignPerm, PermRoleDelete, PermRoleUpdate } from '@/lib/permissions'
 import { Button } from '@/components/ui/button'
 import { Skeleton } from '@/components/ui/skeleton'
@@ -106,14 +107,14 @@ export function RoleFormPage() {
     }
   }, [name, isCreate, codeTouched])
 
-  const grouped = useMemo(() => {
-    const map = new Map<string, Permission[]>()
+  const catalogGroups = useMemo(() => groupCatalogForRoleForm(), [])
+
+  const permissionIdByCode = useMemo(() => {
+    const map = new Map<string, string>()
     for (const perm of permissions) {
-      const list = map.get(perm.resource) ?? []
-      list.push(perm)
-      map.set(perm.resource, list)
+      map.set(perm.code, perm.id)
     }
-    return [...map.entries()].sort(([a], [b]) => a.localeCompare(b))
+    return map
   }, [permissions])
 
   const togglePermission = (permId: string) => {
@@ -123,6 +124,12 @@ export function RoleFormPage() {
       else next.add(permId)
       return next
     })
+  }
+
+  const togglePermissionCode = (code: string) => {
+    const permId = permissionIdByCode.get(code)
+    if (!permId) return
+    togglePermission(permId)
   }
 
   const handleSubmit = async (event: React.FormEvent) => {
@@ -231,41 +238,58 @@ export function RoleFormPage() {
           </div>
         </PanelCard>
 
-        <PanelCard title="Permission" description="Centang akses yang diberikan ke peran ini.">
+        <PanelCard
+          title="Permission"
+          description="Mengikuti menu & aksi di aplikasi (sumber: shared/access-catalog.json)."
+        >
           {permCatalogError && <ErrorAlert className="mx-4 mt-4">{permCatalogError}</ErrorAlert>}
-          {grouped.length === 0 ? (
+          {catalogGroups.length === 0 ? (
             <p className="px-4 py-6 text-sm text-muted-foreground">
-              {permCatalogError
-                ? 'Katalog permission tidak dapat dimuat. Pastikan akun Anda punya akses kelola peran, lalu muat ulang halaman.'
-                : 'Belum ada permission terdaftar. Restart backend agar seed RBAC jalan, atau jalankan migrasi 000005_rbac.'}
+              Katalog akses kosong. Perbarui shared/access-catalog.json lalu restart backend.
             </p>
           ) : (
             <div className="divide-y">
-              {grouped.map(([resource, perms]) => (
-                <div key={resource} className="px-4 py-3">
-                  <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-muted-foreground">{resource}</p>
-                  <ul className="space-y-2">
-                    {perms.map((perm) => {
-                      const checked = selectedIds.has(perm.id)
+              {catalogGroups.map((group) => (
+                <div key={group.pageId} className="px-4 py-3">
+                  <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">{group.sectionLabel}</p>
+                  <p className="mt-0.5 text-sm font-medium">
+                    {group.pageLabel}
+                    {group.pagePath ? (
+                      <span className="ml-2 font-mono text-xs font-normal text-muted-foreground">{group.pagePath}</span>
+                    ) : null}
+                  </p>
+                  <ul className="mt-3 space-y-2">
+                    {group.actions.map((action) => {
+                      const permId = permissionIdByCode.get(action.permission)
+                      const checked = permId ? selectedIds.has(permId) : false
+                      const missingInDb = !permId
                       return (
-                        <li key={perm.id}>
+                        <li key={action.id}>
                           <label
                             className={cn(
                               'flex cursor-pointer items-start gap-3 rounded-xl border px-3 py-2.5 text-sm transition',
                               checked ? 'border-primary/30 bg-primary/5' : 'border-transparent hover:bg-muted/50',
-                              (!canEditPerms || readOnly) && 'cursor-default opacity-80',
+                              ((!canEditPerms || readOnly) || missingInDb) && 'cursor-default opacity-80',
                             )}
                           >
                             <input
                               type="checkbox"
                               className="mt-1 size-4 rounded border-input"
                               checked={checked}
-                              disabled={!canEditPerms || readOnly}
-                              onChange={() => togglePermission(perm.id)}
+                              disabled={!canEditPerms || readOnly || missingInDb}
+                              onChange={() => togglePermissionCode(action.permission)}
                             />
                             <span>
-                              <span className="font-medium">{perm.name}</span>
-                              <span className="mt-0.5 block font-mono text-xs text-muted-foreground">{perm.code}</span>
+                              <span className="font-medium">{action.label}</span>
+                              <span className="mt-0.5 block font-mono text-xs text-muted-foreground">{action.permission}</span>
+                              {action.description ? (
+                                <span className="mt-1 block text-xs text-muted-foreground">{action.description}</span>
+                              ) : null}
+                              {missingInDb ? (
+                                <span className="mt-1 block text-xs text-destructive">
+                                  Belum ada di DB — restart backend untuk sinkron seed.
+                                </span>
+                              ) : null}
                             </span>
                           </label>
                         </li>

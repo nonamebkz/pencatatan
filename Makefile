@@ -19,8 +19,11 @@ BACKEND_URL := http://localhost:$(APP_PORT)
 FRONTEND_URL := http://localhost:$(FRONTEND_DEV_PORT)
 VITE_API_BASE_LOCAL := http://localhost:$(APP_PORT)/api/v1
 
-.PHONY: help dev db db-down db-wait backend frontend install stop \
+.PHONY: help dev db db-down db-wait backend frontend install stop sync-access-catalog \
 	backend-run frontend-run docker-up docker-down docker-build
+
+sync-access-catalog:
+	cp shared/access-catalog.json backend/internal/access/catalog.json
 
 help:
 	@echo "Pencatatan Usaha — perintah lokal"
@@ -55,7 +58,7 @@ backend: db-wait backend-run
 
 frontend: frontend-run
 
-backend-run:
+backend-run: sync-access-catalog
 	cd backend && \
 	APP_PORT=$(APP_PORT) \
 	DB_HOST=localhost \

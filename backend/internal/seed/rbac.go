@@ -3,10 +3,10 @@ package seed
 import (
 	"context"
 	"database/sql"
-	"errors"
 	"log"
 	"time"
 
+	"github.com/kikichan/pencatatan/backend/internal/access"
 	"github.com/kikichan/pencatatan/backend/internal/model"
 	"github.com/kikichan/pencatatan/backend/internal/repository"
 )
@@ -20,12 +20,17 @@ func EnsureRBAC(ctx context.Context, db *sql.DB) error {
 	rbac := repository.NewRBACRepository(db)
 	userRepo := repository.NewUserRepository(db)
 
+	catalog, err := access.Load()
+	if err != nil {
+		return err
+	}
+
 	count, err := rbac.CountPermissions(ctx)
 	if err != nil {
 		return err
 	}
 	if count == 0 {
-		if err := seedPermissionsAndRoles(ctx, rbac); err != nil {
+		if err := seedPermissionsAndRoles(ctx, rbac, catalog); err != nil {
 			return err
 		}
 		log.Print("seed: RBAC permissions and roles created")
@@ -47,53 +52,23 @@ func EnsureRBAC(ctx context.Context, db *sql.DB) error {
 			return err
 		}
 	}
-	if err := ensurePermissionCatalog(ctx, rbac); err != nil {
+	if err := ensurePermissionCatalog(ctx, rbac, catalog); err != nil {
 		return err
 	}
 	return nil
 }
 
-func permissionCatalogMeta() map[string]struct{ name, resource, action, desc string } {
-	return map[string]struct{ name, resource, action, desc string }{
-		model.PermUserRead:           {"Baca pengguna", "user", "read", "Lihat daftar pengguna"},
-		model.PermUserCreate:         {"Buat pengguna", "user", "create", "Tambah akun tim"},
-		model.PermUserUpdate:         {"Ubah pengguna", "user", "update", "Edit profil dan reset password"},
-		model.PermUserDelete:         {"Hapus pengguna", "user", "delete", "Hapus akun tim"},
-		model.PermUserAssignRole:     {"Assign role user", "user", "assign_role", "Atur role pengguna"},
-		model.PermRoleRead:           {"Baca role", "role", "read", "Lihat daftar role"},
-		model.PermRoleCreate:         {"Buat role", "role", "create", "Tambah role custom"},
-		model.PermRoleUpdate:         {"Ubah role", "role", "update", "Edit metadata role"},
-		model.PermRoleDelete:         {"Hapus role", "role", "delete", "Hapus role non-sistem"},
-		model.PermRoleAssignPerm:     {"Assign permission", "role", "assign_permission", "Atur permission role"},
-		model.PermPermissionRead:     {"Baca permission", "permission", "read", "Katalog permission"},
-		model.PermAuditRead:          {"Baca audit", "audit", "read", "Log audit akses"},
-		model.PermPondDelete:         {"Hapus kolam", "pond", "delete", "Hapus master kolam"},
-		model.PermWaterQualityDelete: {"Hapus catatan kualitas air", "water_quality", "delete", "Hapus log observasi"},
-		model.PermWaterQualityCfgUp:  {"Konfigurasi kualitas air", "water_quality", "config", "Ubah template ambang workspace"},
-		model.PermCashAccountRead:    {"Baca kas", "cash_account", "read", "Lihat daftar akun kas"},
-		model.PermCashAccountCreate:  {"Buat kas", "cash_account", "create", "Tambah akun kas"},
-		model.PermCashAccountUpdate:  {"Ubah kas", "cash_account", "update", "Edit akun kas"},
-		model.PermCashAccountDelete:  {"Hapus kas", "cash_account", "delete", "Hapus akun kas"},
-	}
-}
-
-func ensurePermissionCatalog(ctx context.Context, rbac *repository.RBACRepository) error {
-	meta := permissionCatalogMeta()
-	for code, m := range meta {
-		if _, err := rbac.GetPermissionIDByCode(ctx, code); err != nil {
-			if !errors.Is(err, sql.ErrNoRows) {
-				return err
-			}
-			p := &model.Permission{
-				Name:        m.name,
-				Code:        code,
-				Resource:    m.resource,
-				Action:      m.action,
-				Description: m.desc,
-			}
-			if err := rbac.InsertPermission(ctx, p); err != nil {
-				return err
-			}
+func ensurePermissionCatalog(ctx context.Context, rbac *repository.RBACRepository, catalog *access.Catalog) error {
+	for _, meta := range catalog.FlattenPermissions() {
+		p := &model.Permission{
+			Name:        meta.Name,
+			Code:        meta.Code,
+			Resource:    meta.Resource,
+			Action:      meta.Action,
+			Description: meta.Description,
+		}
+		if err := rbac.UpsertPermissionMeta(ctx, p); err != nil {
+			return err
 		}
 	}
 
@@ -101,7 +76,7 @@ func ensurePermissionCatalog(ctx context.Context, rbac *repository.RBACRepositor
 	if err != nil {
 		return err
 	}
-	for _, code := range model.AllPermissionCodes {
+	for _, code := range catalog.AllPermissionCodes() {
 		permID, err := rbac.GetPermissionIDByCode(ctx, code)
 		if err != nil {
 			return err
@@ -115,7 +90,7 @@ func ensurePermissionCatalog(ctx context.Context, rbac *repository.RBACRepositor
 	if err != nil {
 		return err
 	}
-	for _, code := range model.OperatorPermissionCodes {
+	for _, code := range catalog.OperatorPermissionCodes() {
 		permID, err := rbac.GetPermissionIDByCode(ctx, code)
 		if err != nil {
 			return err
@@ -139,22 +114,20 @@ func syncLegacyUserRole(ctx context.Context, rbac *repository.RBACRepository, us
 	return rbac.AssignRoleToUser(ctx, userID, roleID)
 }
 
-func seedPermissionsAndRoles(ctx context.Context, rbac *repository.RBACRepository) error {
-	meta := permissionCatalogMeta()
-
-	permIDs := make(map[string]string, len(meta))
-	for code, m := range meta {
+func seedPermissionsAndRoles(ctx context.Context, rbac *repository.RBACRepository, catalog *access.Catalog) error {
+	permIDs := make(map[string]string)
+	for _, meta := range catalog.FlattenPermissions() {
 		p := &model.Permission{
-			Name:        m.name,
-			Code:        code,
-			Resource:    m.resource,
-			Action:      m.action,
-			Description: m.desc,
+			Name:        meta.Name,
+			Code:        meta.Code,
+			Resource:    meta.Resource,
+			Action:      meta.Action,
+			Description: meta.Description,
 		}
 		if err := rbac.InsertPermission(ctx, p); err != nil {
 			return err
 		}
-		permIDs[code] = p.ID
+		permIDs[meta.Code] = p.ID
 	}
 
 	adminRole := &model.Role{
@@ -166,7 +139,7 @@ func seedPermissionsAndRoles(ctx context.Context, rbac *repository.RBACRepositor
 	if err := rbac.InsertRole(ctx, adminRole); err != nil {
 		return err
 	}
-	for _, code := range model.AllPermissionCodes {
+	for _, code := range catalog.AllPermissionCodes() {
 		if err := rbac.AssignPermissionToRole(ctx, adminRole.ID, permIDs[code]); err != nil {
 			return err
 		}
@@ -181,7 +154,7 @@ func seedPermissionsAndRoles(ctx context.Context, rbac *repository.RBACRepositor
 	if err := rbac.InsertRole(ctx, opRole); err != nil {
 		return err
 	}
-	for _, code := range model.OperatorPermissionCodes {
+	for _, code := range catalog.OperatorPermissionCodes() {
 		if err := rbac.AssignPermissionToRole(ctx, opRole.ID, permIDs[code]); err != nil {
 			return err
 		}
@@ -262,8 +235,15 @@ func (e errString) Error() string { return string(e) }
 
 // LegacyPermissions fallback jika user_roles belum terisi.
 func LegacyPermissions(legacy model.UserRole) []string {
-	if legacy == model.UserRoleAdmin {
-		return append([]string(nil), model.AllPermissionCodes...)
+	catalog, err := access.Load()
+	if err != nil {
+		if legacy == model.UserRoleAdmin {
+			return append([]string(nil), model.AllPermissionCodes...)
+		}
+		return append([]string(nil), model.OperatorPermissionCodes...)
 	}
-	return append([]string(nil), model.OperatorPermissionCodes...)
+	if legacy == model.UserRoleAdmin {
+		return catalog.AllPermissionCodes()
+	}
+	return catalog.OperatorPermissionCodes()
 }

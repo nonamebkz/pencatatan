@@ -57,6 +57,8 @@ Base: `/api/v1`. Auth: Bearer JWT.
 
 ### Permissions catalog
 
+Kanonik menu/halaman/aksi: **`shared/access-catalog.json`** (lihat `docs/features/access-catalog.md`). Seed DB mengikuti file ini.
+
 | GET | `/permissions` | `permission.read` **atau** `role.read` / `role.create` / `role.assign_permission` |
 
 ### Destructive / admin ops

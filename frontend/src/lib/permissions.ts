@@ -1,3 +1,4 @@
+/** Kode permission — definisi kanonik & label UI ada di `shared/access-catalog.json`. */
 export const PermUserRead = 'user.read'
 export const PermUserCreate = 'user.create'
 export const PermUserUpdate = 'user.update'

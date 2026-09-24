@@ -1,6 +1,6 @@
 package model
 
-// Permission codes — sinkron BRD §24 / docs/features/rbac.md
+// Permission codes — sinkron shared/access-catalog.json (seed RBAC) & docs/features/access-catalog.md
 const (
 	PermUserRead           = "user.read"
 	PermUserCreate         = "user.create"

@@ -3,6 +3,7 @@ package repository
 import (
 	"context"
 	"database/sql"
+	"errors"
 	"strings"
 	"time"
 
@@ -33,6 +34,24 @@ func (r *RBACRepository) InsertPermission(ctx context.Context, p *model.Permissi
 		INSERT INTO permissions (id, name, code, resource, action, description, created_at, updated_at)
 		VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
 		p.ID, p.Name, p.Code, p.Resource, p.Action, nullString(p.Description), now, now,
+	)
+	return err
+}
+
+// UpsertPermissionMeta insert atau perbarui metadata permission dari access catalog (by code).
+func (r *RBACRepository) UpsertPermissionMeta(ctx context.Context, p *model.Permission) error {
+	existingID, err := r.GetPermissionIDByCode(ctx, p.Code)
+	if err != nil {
+		if !errors.Is(err, sql.ErrNoRows) {
+			return err
+		}
+		return r.InsertPermission(ctx, p)
+	}
+	now := time.Now()
+	_, err = r.db.ExecContext(ctx, `
+		UPDATE permissions SET name = ?, resource = ?, action = ?, description = ?, updated_at = ?
+		WHERE id = ?`,
+		p.Name, p.Resource, p.Action, nullString(p.Description), now, existingID,
 	)
 	return err
 }
