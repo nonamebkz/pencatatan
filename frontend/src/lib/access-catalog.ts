@@ -1,6 +1,4 @@
-import catalogJson from '@shared/access-catalog.json'
-
-export type AccessCatalog = typeof catalogJson
+import catalogJson from '@/config/access-catalog.json'
 
 export type CatalogPermissionEntry = {
   id: string
@@ -22,8 +20,42 @@ export type CatalogPageGroup = {
   actions: CatalogPermissionEntry[]
 }
 
-/** Kanonik: sama file dengan `shared/access-catalog.json` (backend seed RBAC). */
-export const accessCatalog: AccessCatalog = catalogJson
+export type AccessCatalogPage = {
+  id: string
+  label: string
+  path?: string
+  actions: CatalogPermissionEntry[]
+}
+
+export type AccessCatalogMenuItem = {
+  id: string
+  label: string
+  description?: string
+  path: string
+  icon?: string
+  end?: boolean
+  menuPermission?: string
+  pages?: AccessCatalogPage[]
+}
+
+export type AccessCatalogSection = {
+  id: string
+  label: string
+  menu?: AccessCatalogMenuItem[]
+}
+
+export type AccessCatalog = {
+  version: number
+  sections: AccessCatalogSection[]
+  metaPermissions?: CatalogPermissionEntry[]
+  roleDefaults?: {
+    workspaceAdmin?: string
+    operatorPermissionCodes?: string[]
+  }
+}
+
+/** Salinan `shared/access-catalog.json` — sync via `make sync-access-catalog`. */
+export const accessCatalog: AccessCatalog = catalogJson as AccessCatalog
 
 export function flattenCatalogPermissionEntries(catalog: AccessCatalog = accessCatalog): CatalogPermissionEntry[] {
   const seen = new Set<string>()

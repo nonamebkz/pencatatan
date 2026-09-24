@@ -2,9 +2,9 @@
 
 | Field | Value |
 |---|---|
-| Versi | 1.5 |
-| Status | Living document — selaras BRD v1.6 & codebase |
-| BRD Reference | [BRD.md](./BRD.md) v1.6 |
+| Versi | 1.6 |
+| Status | Living document — selaras BRD v1.7 & codebase |
+| BRD Reference | [BRD.md](./BRD.md) v1.7 |
 | Arsitektur | React SPA + Go REST API + MySQL 8 (Redis rencana) |
 
 ---
@@ -509,39 +509,40 @@ Base URL: `/api/v1`
 
 | Method | Endpoint | Body | Response | Status repo |
 |---|---|---|---|---|
-| POST | `/auth/login` | `{ email, password }` | `{ token, expiresAt, user }` | ✅ |
+| POST | `/auth/login` | `{ email, password }` | `{ token, expiresAt, user, permissions[], roles[] }` | ✅ |
 | POST | `/auth/logout` | — | `{ message }` | ✅ (no Redis blacklist) |
-| GET | `/auth/me` | — | `{ user }` | ✅ |
+| GET | `/auth/me` | — | `{ user, permissions[], roles[] }` | ✅ |
 
-**Target RBAC (§7.5):** response login/me menyertakan `permissions: string[]` (efektif dari role assignment); refresh token opsional T3.
+Login/me: `permissions` efektif dari `user_roles` → `role_permissions` (fallback legacy `ADMIN`/`USER` jika belum ter-assign).
 
 ### 5.1b Users
 
-| Method | Endpoint | Permission target | Status repo |
+| Method | Endpoint | Permission | Status repo |
 |---|---|---|---|
-| GET/POST | `/users` | `user.read` / `user.create` | ✅ **RequireAdmin** |
-| GET/PUT/DELETE | `/users/:id` | `user.read` / `user.update` / `user.delete` | ✅ **RequireAdmin** |
-| PUT | `/users/:id/reset-password` | `user.update` | ✅ **RequireAdmin** |
+| GET/POST | `/users` | `user.read` / `user.create` | ✅ |
+| GET/PUT/DELETE | `/users/:id` | `user.read` / `user.update` / `user.delete` | ✅ |
+| PUT | `/users/:id/reset-password` | `user.update` | ✅ |
+| PUT | `/users/:id/roles` | `user.assign_role` | ✅ |
 
-### 5.1c Roles & assignment (target)
+### 5.1c Roles & assignment
 
-| Method | Endpoint | Permission |
-|---|---|---|
-| GET/POST | `/roles` | `role.read` / `role.create` |
-| GET/PUT/DELETE | `/roles/:id` | `role.read` / `role.update` / `role.delete` |
-| POST | `/users/:id/roles` | `user.assign_role` |
-| POST | `/roles/:id/permissions` | `role.assign_permission` |
+| Method | Endpoint | Permission | Status repo |
+|---|---|---|---|
+| GET/POST | `/roles` | `role.read` / `role.create` | ✅ |
+| GET/PUT/DELETE | `/roles/:id` | `role.read` / `role.update` / `role.delete` | ✅ |
+| PUT | `/roles/:id/permissions` | `role.assign_permission` | ✅ |
 
-Status repo: ❌ belum — lihat [BRD §24](./BRD.md).
+Role sistem: `workspace_admin`, `operator` (`backend/internal/seed/rbac.go`). Form peran: checkbox mengikuti [`shared/access-catalog.json`](./shared/access-catalog.json) — lihat [docs/features/access-catalog.md](./docs/features/access-catalog.md).
 
-### 5.1d Permissions master (target)
+### 5.1d Permissions catalog
 
-| Method | Endpoint | Permission |
-|---|---|---|
-| GET/POST | `/permissions` | `permission.read` / `permission.create` |
-| PUT/DELETE | `/permissions/:id` | `permission.update` / `permission.delete` |
+| Method | Endpoint | Permission | Status repo |
+|---|---|---|---|
+| GET | `/permissions` | `permission.read` **or** `role.read` / `role.create` / `role.assign_permission` | ✅ list (read-only) |
+| POST | `/permissions` | `permission.create` | ❌ |
+| PUT/DELETE | `/permissions/:id` | `permission.update` / `permission.delete` | ❌ |
 
-Status repo: ❌ — biasanya hanya `super_admin` / platform.
+**Sumber daftar permission:** [`shared/access-catalog.json`](./shared/access-catalog.json) → seed upsert saat startup (`internal/access`, `make sync-access-catalog`). Bukan CRUD manual di UI (fase 3).
 
 ### 5.1e Audit logs (target)
 
@@ -887,75 +888,58 @@ export default api;
 
 Selaras [BRD §24](./BRD.md). Prinsip: **deny by default**, enforcement di backend, frontend `can()` untuk menu/CTA saja.
 
-#### Implementasi repo (fase 0)
+**Katalog kanonik (menu FE ↔ baris DB):** [`shared/access-catalog.json`](./shared/access-catalog.json) — [docs/features/access-catalog.md](./docs/features/access-catalog.md).
+
+#### Implementasi repo (live)
 
 | Aspek | Detail |
 |---|---|
-| Model user | Kolom `role`: `ADMIN` \| `USER` (`backend/internal/model/user.go`) |
-| JWT | Claim `role` string (`backend/internal/auth/jwt.go`) |
-| Middleware | `AuthMiddleware` + `RequireAdmin()` untuk grup `/users` dan handler admin tertentu |
-| Frontend | `AuthContext`: `isAdmin`, `canDelete`; `AdminRoute` untuk `/users/*`; menu Pengguna jika `isAdmin` |
+| Migrasi | `000005_rbac.up.sql` — `permissions`, `roles`, `role_permissions`, `user_roles` |
+| Seed | `EnsureRBAC` + `access.Load()` — upsert permission dari JSON; role sistem `workspace_admin` (semua kode catalog), `operator` (`roleDefaults.operatorPermissionCodes`) |
+| Legacy | Kolom `users.role` `ADMIN`/`USER` + JWT claim; disinkron ke `user_roles` |
+| Middleware | `LoadPermissions` + `RequirePermission` / `RequireAnyPermission` (`internal/middleware/permission.go`) |
+| Frontend | `AuthContext.can()`, `PermissionRoute`, sidebar dari catalog (`access-catalog.ts`), form peran per halaman/aksi |
 
-#### Skema target (fase 1+)
+#### Skema (ringkas)
 
-Tabel tambahan (MySQL):
+- `permissions` — `code` unique (`resource.action`), metadata dari access catalog
+- `roles` — `code` unique, `is_system`
+- `role_permissions`, `user_roles` — assignment
+- `audit_logs` — **belum** (fase 3)
 
-- `roles` — `id`, `name`, `code` unique, `description`, `is_system`, timestamps
-- `permissions` — `id`, `name`, `code` unique, `resource`, `action`, `description`, timestamps
-- `user_roles` — `user_id`, `role_id`, optional `workspace_id`, unique composite
-- `role_permissions` — `role_id`, `permission_id`, unique composite
-- `audit_logs` — `actor_user_id`, `event_type`, `entity_type`, `entity_id`, `before_data`, `after_data`, `ip_address`, `user_agent`, `created_at`
+Role seed live: **`workspace_admin`**, **`operator`** (role BRD lain seperti `auditor` belum).
 
-Role seed awal: `super_admin`, `workspace_admin`, `operator`, `user_manager`, `auditor`, `viewer` — mapping dari `ADMIN`/`USER` lihat BRD §24.2.
+Permission operasional live (selain `user.*`, `role.*`, `permission.read`, `audit.read`):
 
-Permission operasional produk (selain `user.*`, `role.*`, `permission.*`, `audit.*`):
+- `pond.delete`
+- `water_quality.delete`, `water_quality.config.update`
+- `cash_account.read|create|update|delete`
 
-- `pond.read|create|update|delete`
-- `water_quality.read|create|update|delete`, `water_quality.config.read|update`
-- `finance.read`, `finance.purchase.create`, `finance.expense.create`, `cash_account.manage`
+Modul keuangan/pembelian/kolam/WQ **read/create/update** di UI masih terbuka untuk user login; tambah entri `actions` di access catalog + `RequirePermission` saat perlu deny default.
 
-#### Middleware target
+#### Middleware
 
 ```go
-// Pola — belum di repo
-func RequirePermission(code string) fiber.Handler {
-    return func(c *fiber.Ctx) error {
-        perms := EffectivePermissions(c) // dari DB/cache, bukan hanya JWT role
-        if !perms.Has(code) {
-            return httpx.Forbidden(c, "FORBIDDEN", "...")
-        }
-        return c.Next()
-    }
-}
+func RequirePermission(code string) fiber.Handler // alias RequireAnyPermission(code)
+func RequireAnyPermission(codes ...string) fiber.Handler
 ```
 
-Invalidate cache permission singkat saat `user_roles` atau `role_permissions` berubah.
+Permission efektif di-resolve per request dari DB (`EffectivePermissionCodes`).
 
-#### Menu frontend (target)
+#### Menu frontend
 
-**Operasional** (`AppLayout` / template lele): Beranda, Keuangan, Kolam, Kualitas Air — visible jika `can('…read')` atau setara fase 0 (semua user login).
-
-**Kelola Akses** (grup sidebar):
-
-| Item | Route | `can()` |
-|---|---|---|
-| Pengguna | `/users` | `user.read` |
-| Peran | `/roles` | `role.read` |
-| Permission | `/permissions` | `permission.read` |
-| Audit Log | `/audit-logs` | `audit.read` |
-
-**Pengaturan:** `/settings/water-quality` → `water_quality.config.update` (repo: ADMIN).
-
-Route guard: `PermissionRoute` menggantikan `AdminRoute` bertahap; halaman `/forbidden` untuk 403 UX.
+- **Operasional:** struktur menu dari `mainNavFromCatalog()` — Beranda, Keuangan, Kolam, Kualitas Air
+- **Kelola Akses:** `accessNavFromCatalog()` — Pengguna (`user.read`), Peran (`role.read`); halaman master `/permissions` & `/audit-logs` **belum**
+- **Guard route:** `PermissionRoute` + entri `routes` di catalog (implementasi di `App.tsx`)
 
 #### Fase teknis
 
-| Fase | Backend | Frontend |
-|---|---|---|
-| 0 ✅ | `RequireAdmin`, role di JWT | `isAdmin`, menu Pengguna admin-only |
-| 1 | Migrasi RBAC + seed + `RequirePermission` + permissions di `/auth/me` | `usePermissions()`, `can()`, sidebar Kelola Akses |
-| 2 | CRUD `/roles`, assignment APIs, audit write | `/roles`, assign permission UI |
-| 3 | `/permissions`, `/audit-logs` | Master permission + audit list |
+| Fase | Backend | Frontend | Status |
+|---|---|---|---|
+| 0 | `RequireAdmin`, role di JWT | `isAdmin` | ✅ digantikan bertahap |
+| 1 | Migrasi RBAC + seed catalog + `/auth/me` permissions | `can()`, Kelola Akses | ✅ |
+| 2 | CRUD `/roles`, PUT permissions, PUT user roles | `/roles`, form peran + catalog UI | ✅ |
+| 3 | Audit write; CRUD `/permissions` master | `/permissions`, `/audit-logs` | ❌ |
 
 ---
 
@@ -1436,7 +1420,9 @@ func main() {
 
 ## 19. Referensi
 
-- [BRD.md](./BRD.md) — business requirements (v1.6 + §23–§24 RBAC)
+- [BRD.md](./BRD.md) — business requirements (v1.7 + §23–§24 RBAC)
+- [docs/features/access-catalog.md](./docs/features/access-catalog.md) — menu FE ↔ permission DB (`shared/access-catalog.json`)
+- [docs/features/rbac.md](./docs/features/rbac.md) — kontrak RBAC implementasi
 - [raw idea.md](./raw%20idea.md) — ide awal
 - [jangka panjang.md](./jangka%20panjang.md) — visi jangka panjang
 
@@ -1450,14 +1436,16 @@ Ringkasan singkat — detail bisnis: [BRD §23](./BRD.md#23-status-implementasi-
 |---|---|---|
 | Health | `GET /health` | ✅ |
 | Auth | `/api/v1/auth/*` | ✅ |
-| Users | `/api/v1/users/*` (`RequireAdmin` → target `user.*`) | ✅ |
-| RBAC | roles, permissions, `/auth/me` permissions, `RequirePermission` | ✅ fase 1–2 (audit UI ❌) |
+| Users | `/api/v1/users/*` + `PUT /users/:id/roles` | ✅ `RequirePermission` |
+| RBAC | roles, `GET /permissions`, `/auth/me` permissions, access catalog seed | ✅ fase 1–2 (audit UI ❌; master permission CRUD ❌) |
+| Kas | `/cash-accounts` CRUD + RBAC | ✅ [docs/features/cash-accounts.md](./docs/features/cash-accounts.md) |
 | Kolam | `/ponds`, `/ponds/:id` | ✅ |
 | Batch | `GET /batches` | ✅ list only |
 | Kualitas air | `/water-quality-logs`, `/water-quality/config`, `/dashboard`, `/reports/water-quality` | ✅ |
 | FE | Operasional + Kelola Akses (`/users`, `/roles`, `/forbidden`) | ✅ |
+| Access catalog | `shared/access-catalog.json`, `make sync-access-catalog` | ✅ |
 | Workspace | `X-Workspace-ID` default UUID | ⚠️ satu workspace seed |
 | Transaksi MVP | Pembelian + pengeluaran lain | ⚠️ sewa, pakan, bagi hasil, histori harga ❌ |
 | Redis | cache + logout blacklist | ❌ |
 
-**Backlog teknis berikutnya:** workspace CRUD + switcher → histori harga & sisa modul keuangan → **RBAC fase 1 (§7.5)** → Redis production hardening.
+**Backlog teknis berikutnya:** workspace CRUD + switcher → histori harga & sisa modul keuangan → RBAC fase 3 (audit + master permission UI) → Redis production hardening.

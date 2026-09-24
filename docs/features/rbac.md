@@ -8,7 +8,9 @@
 
 Mengganti otorisasi hardcode `ADMIN`/`USER` dengan **permission** (`resource.action`), role sebagai paket permission, menu **Kelola Akses** di frontend. Kolom `users.role` tetap untuk JWT transisi; assignment di `user_roles`.
 
-Out of scope MVP slice: audit log UI, CRUD master permission, multi-tenant scope.
+Out of scope MVP slice: audit log UI, CRUD master permission (definisi permission via **access catalog**), multi-tenant scope.
+
+**Access catalog:** [`shared/access-catalog.json`](../../shared/access-catalog.json) — [access-catalog.md](./access-catalog.md).
 
 ## Business flow
 
@@ -46,12 +48,15 @@ Base: `/api/v1`. Auth: Bearer JWT.
 | POST | `/users` | `user.create` |
 | PUT | `/users/:id`, reset-password | `user.update` |
 | DELETE | `/users/:id` | `user.delete` |
+| PUT | `/users/:id/roles` | `user.assign_role` |
 
 ### Roles
 
 | Method | Path | Permission |
 |--------|------|------------|
 | GET | `/roles`, `/roles/:id` | `role.read` |
+| POST | `/roles` | `role.create` |
+| DELETE | `/roles/:id` | `role.delete` |
 | PUT | `/roles/:id` | `role.update` |
 | PUT | `/roles/:id/permissions` | `role.assign_permission` |
 
@@ -86,8 +91,11 @@ Kanonik menu/halaman/aksi: **`shared/access-catalog.json`** (lihat `docs/feature
 |-------|---------|------------------|
 | `/users/*` | existing | `user.read` |
 | `/roles` | `RoleListPage` | `role.read` |
-| `/roles/:id/edit` | `RoleFormPage` | `role.read` |
+| `/roles/new` | `RoleFormPage` | `role.create` |
+| `/roles/:id/edit` | `RoleFormPage` | `role.read` (edit metadata: `role.update`; checkbox: `role.assign_permission`) |
 | `/forbidden` | `ForbiddenPage` | — |
+
+Form peran: checkbox permission dikelompokkan per **menu/halaman** dari access catalog (bukan hanya `resource` DB).
 
 ### UI / design
 

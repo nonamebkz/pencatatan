@@ -24,6 +24,7 @@ VITE_API_BASE_LOCAL := http://localhost:$(APP_PORT)/api/v1
 
 sync-access-catalog:
 	cp shared/access-catalog.json backend/internal/access/catalog.json
+	cp shared/access-catalog.json frontend/src/config/access-catalog.json
 
 help:
 	@echo "Pencatatan Usaha — perintah lokal"

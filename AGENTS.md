@@ -26,5 +26,6 @@ Dokumen ringkas untuk manusia dan AI. Aturan detail ada di `.cursor/rules/`.
 
 ## Monorepo
 
-- Backend: `backend/` — Go, Fiber, MariaDB
+- Backend: `backend/` — Go, Fiber, MySQL
 - Frontend: `frontend/` — React, Vite, shadcn
+- **Access catalog (RBAC):** [`shared/access-catalog.json`](shared/access-catalog.json) — menu/aksi FE ↔ seed DB; lihat [docs/features/access-catalog.md](docs/features/access-catalog.md). Setelah edit JSON: `make sync-access-catalog` (otomatis sebelum `backend-run`).

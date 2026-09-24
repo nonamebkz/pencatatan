@@ -1,0 +1,329 @@
+{
+  "version": 1,
+  "sections": [
+    {
+      "id": "main",
+      "label": "Menu utama",
+      "menu": [
+        {
+          "id": "nav.dashboard",
+          "label": "Beranda",
+          "description": "Ringkasan harian",
+          "path": "/",
+          "icon": "LayoutDashboard",
+          "end": true
+        },
+        {
+          "id": "nav.finance",
+          "label": "Keuangan",
+          "description": "Pembelian & pengeluaran",
+          "path": "/finance",
+          "icon": "Wallet",
+          "pages": [
+            {
+              "id": "page.finance.home",
+              "label": "Ringkasan keuangan",
+              "path": "/finance",
+              "actions": []
+            },
+            {
+              "id": "page.finance.purchases",
+              "label": "Pembelian",
+              "path": "/finance/purchases",
+              "actions": []
+            },
+            {
+              "id": "page.finance.expenses",
+              "label": "Pengeluaran lain",
+              "path": "/finance/expenses",
+              "actions": []
+            },
+            {
+              "id": "page.finance.cash_accounts",
+              "label": "Akun kas",
+              "path": "/finance/cash-accounts",
+              "actions": [
+                {
+                  "id": "read",
+                  "label": "Lihat daftar & pilih di form",
+                  "permission": "cash_account.read",
+                  "resource": "cash_account",
+                  "action": "read",
+                  "description": "Halaman akun kas & daftar kas di pembelian/pengeluaran",
+                  "routes": ["/finance/cash-accounts"],
+                  "operatorDefault": true
+                },
+                {
+                  "id": "create",
+                  "label": "Tambah akun kas",
+                  "permission": "cash_account.create",
+                  "resource": "cash_account",
+                  "action": "create",
+                  "description": "Form tambah kas",
+                  "routes": ["/finance/cash-accounts/new"],
+                  "operatorDefault": true
+                },
+                {
+                  "id": "update",
+                  "label": "Ubah akun kas",
+                  "permission": "cash_account.update",
+                  "resource": "cash_account",
+                  "action": "update",
+                  "description": "Form edit kas & jadikan default",
+                  "routes": ["/finance/cash-accounts/:id/edit"],
+                  "operatorDefault": true
+                },
+                {
+                  "id": "delete",
+                  "label": "Hapus akun kas",
+                  "permission": "cash_account.delete",
+                  "resource": "cash_account",
+                  "action": "delete",
+                  "description": "Tombol hapus di form edit kas"
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "id": "nav.ponds",
+          "label": "Kolam",
+          "description": "Master kolam",
+          "path": "/ponds",
+          "icon": "Fish",
+          "pages": [
+            {
+              "id": "page.ponds.list",
+              "label": "Daftar kolam",
+              "path": "/ponds",
+              "actions": []
+            },
+            {
+              "id": "page.ponds.form",
+              "label": "Tambah / ubah kolam",
+              "path": "/ponds",
+              "actions": []
+            },
+            {
+              "id": "page.ponds.detail",
+              "label": "Detail kolam",
+              "path": "/ponds/:id",
+              "actions": [
+                {
+                  "id": "delete",
+                  "label": "Hapus kolam",
+                  "permission": "pond.delete",
+                  "resource": "pond",
+                  "action": "delete",
+                  "description": "Hapus master kolam dari UI"
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "id": "nav.water_quality",
+          "label": "Kualitas Air",
+          "description": "Catatan observasi",
+          "path": "/water-quality",
+          "icon": "Droplets",
+          "pages": [
+            {
+              "id": "page.water_quality.list",
+              "label": "Daftar catatan",
+              "path": "/water-quality",
+              "actions": []
+            },
+            {
+              "id": "page.water_quality.report",
+              "label": "Laporan",
+              "path": "/water-quality/report",
+              "actions": []
+            },
+            {
+              "id": "page.water_quality.form",
+              "label": "Catat / ubah observasi",
+              "path": "/water-quality",
+              "actions": [
+                {
+                  "id": "delete",
+                  "label": "Hapus catatan",
+                  "permission": "water_quality.delete",
+                  "resource": "water_quality",
+                  "action": "delete",
+                  "description": "Hapus log kualitas air"
+                }
+              ]
+            },
+            {
+              "id": "page.water_quality.config",
+              "label": "Konfigurasi ambang",
+              "path": "/settings/water-quality",
+              "actions": [
+                {
+                  "id": "update_config",
+                  "label": "Ubah template ambang",
+                  "permission": "water_quality.config.update",
+                  "resource": "water_quality",
+                  "action": "config",
+                  "description": "Halaman pengaturan kualitas air workspace",
+                  "routes": ["/settings/water-quality"]
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "access",
+      "label": "Kelola Akses",
+      "menu": [
+        {
+          "id": "nav.users",
+          "label": "Pengguna",
+          "description": "Kelola akun tim",
+          "path": "/users",
+          "icon": "UserCog",
+          "menuPermission": "user.read",
+          "pages": [
+            {
+              "id": "page.users.list",
+              "label": "Daftar pengguna",
+              "path": "/users",
+              "actions": [
+                {
+                  "id": "read",
+                  "label": "Lihat daftar & detail",
+                  "permission": "user.read",
+                  "resource": "user",
+                  "action": "read",
+                  "description": "Menu pengguna & halaman daftar",
+                  "routes": ["/users", "/users/:id/edit"]
+                },
+                {
+                  "id": "create",
+                  "label": "Tambah pengguna",
+                  "permission": "user.create",
+                  "resource": "user",
+                  "action": "create",
+                  "description": "Form tambah pengguna",
+                  "routes": ["/users/new"]
+                },
+                {
+                  "id": "update",
+                  "label": "Ubah profil & reset password",
+                  "permission": "user.update",
+                  "resource": "user",
+                  "action": "update",
+                  "description": "Form edit pengguna"
+                },
+                {
+                  "id": "delete",
+                  "label": "Hapus pengguna",
+                  "permission": "user.delete",
+                  "resource": "user",
+                  "action": "delete",
+                  "description": "Hapus akun tim"
+                },
+                {
+                  "id": "assign_role",
+                  "label": "Atur peran pengguna",
+                  "permission": "user.assign_role",
+                  "resource": "user",
+                  "action": "assign_role",
+                  "description": "Pilih role RBAC di form pengguna"
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "id": "nav.roles",
+          "label": "Peran",
+          "description": "Paket permission",
+          "path": "/roles",
+          "icon": "Shield",
+          "menuPermission": "role.read",
+          "pages": [
+            {
+              "id": "page.roles.list",
+              "label": "Daftar peran",
+              "path": "/roles",
+              "actions": [
+                {
+                  "id": "read",
+                  "label": "Lihat daftar & detail peran",
+                  "permission": "role.read",
+                  "resource": "role",
+                  "action": "read",
+                  "description": "Menu peran & form edit metadata",
+                  "routes": ["/roles", "/roles/:id/edit"]
+                },
+                {
+                  "id": "create",
+                  "label": "Buat peran custom",
+                  "permission": "role.create",
+                  "resource": "role",
+                  "action": "create",
+                  "description": "Form tambah peran",
+                  "routes": ["/roles/new"]
+                },
+                {
+                  "id": "update",
+                  "label": "Ubah nama & deskripsi peran",
+                  "permission": "role.update",
+                  "resource": "role",
+                  "action": "update",
+                  "description": "Simpan profil peran"
+                },
+                {
+                  "id": "delete",
+                  "label": "Hapus peran custom",
+                  "permission": "role.delete",
+                  "resource": "role",
+                  "action": "delete",
+                  "description": "Hapus peran non-sistem"
+                },
+                {
+                  "id": "assign_permission",
+                  "label": "Centang permission peran",
+                  "permission": "role.assign_permission",
+                  "resource": "role",
+                  "action": "assign_permission",
+                  "description": "Simpan checkbox permission di form peran"
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    }
+  ],
+  "metaPermissions": [
+    {
+      "id": "meta.permission.read",
+      "label": "Baca katalog permission (API)",
+      "permission": "permission.read",
+      "resource": "permission",
+      "action": "read",
+      "description": "Endpoint GET /permissions (juga via akses kelola peran)"
+    },
+    {
+      "id": "meta.audit.read",
+      "label": "Baca log audit",
+      "permission": "audit.read",
+      "resource": "audit",
+      "action": "read",
+      "description": "Log audit akses (fase berikutnya)"
+    }
+  ],
+  "roleDefaults": {
+    "workspaceAdmin": "all",
+    "operatorPermissionCodes": [
+      "cash_account.read",
+      "cash_account.create",
+      "cash_account.update"
+    ]
+  }
+}

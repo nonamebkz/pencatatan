@@ -2,6 +2,8 @@
 
 **Status:** `done`
 
+**Katalog akses:** entri halaman `page.finance.cash_accounts` di [`shared/access-catalog.json`](../../shared/access-catalog.json) — selaras checkbox form Peran & seed DB.
+
 ## Business flow
 
 - User login membuka **Keuangan → Akun kas** untuk melihat daftar sumber dana.

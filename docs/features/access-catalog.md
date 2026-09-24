@@ -2,6 +2,8 @@
 
 **Status:** `done`
 
+**Dokumen terkait:** [TECHNICAL_SPEC §7.5](../../TECHNICAL_SPEC.md), [BRD §24.1b](../../BRD.md), [rbac.md](./rbac.md).
+
 ## Tujuan
 
 Satu file JSON menjadi **sumber kebenaran** untuk:
@@ -17,7 +19,8 @@ Satu file JSON menjadi **sumber kebenaran** untuk:
 |------|-----------|
 | `shared/access-catalog.json` | Edit di sini |
 | `backend/internal/access/catalog.json` | Salinan embed (`make sync-access-catalog`) |
-| `frontend/src/lib/access-catalog.ts` | Helper TS; import JSON via alias `@shared/` |
+| `frontend/src/config/access-catalog.json` | Salinan untuk build FE / Docker (`make sync-access-catalog`) |
+| `frontend/src/lib/access-catalog.ts` | Helper TS |
 
 Override path backend (opsional): env `ACCESS_CATALOG_PATH`.
 
