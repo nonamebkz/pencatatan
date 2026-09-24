@@ -50,6 +50,7 @@ func main() {
 	waterQualityRepo := repository.NewWaterQualityRepository(db)
 	financeRepo := repository.NewFinanceRepository(db)
 	rentRepo := repository.NewRentRepository(db)
+	reportRepo := repository.NewReportRepository(db)
 	settingsRepo := repository.NewSettingsRepository(db)
 
 	healthHandler := handler.NewHealthHandler(db)
@@ -62,6 +63,7 @@ func main() {
 	waterQualityHandler := handler.NewWaterQualityHandler(waterQualityRepo, pondRepo, settingsRepo)
 	financeHandler := handler.NewFinanceHandler(financeRepo)
 	rentHandler := handler.NewRentHandler(rentRepo, financeRepo)
+	reportHandler := handler.NewReportHandler(reportRepo, rentRepo)
 
 	app := fiber.New(fiber.Config{
 		AppName:      "pencatatan-api",
@@ -127,6 +129,11 @@ func main() {
 	protected.Delete("/water-quality-logs/:id", middleware.RequirePermission(model.PermWaterQualityDelete), waterQualityHandler.Delete)
 
 	protected.Get("/reports/water-quality", waterQualityHandler.Report)
+	protected.Get("/reports/purchases", middleware.RequirePermission("finance.read"), reportHandler.Purchases)
+	protected.Get("/reports/price-history", middleware.RequirePermission("finance.read"), reportHandler.PriceHistory)
+	protected.Get("/reports/price-history/items", middleware.RequirePermission("finance.read"), reportHandler.PriceHistoryItems)
+	protected.Get("/reports/rent", middleware.RequirePermission("finance.rent.read"), reportHandler.Rent)
+	protected.Get("/reports/summary", middleware.RequirePermission("finance.read"), reportHandler.Summary)
 	protected.Get("/dashboard", waterQualityHandler.DashboardSummary)
 
 	protected.Get("/cash-accounts", middleware.RequirePermission(model.PermCashAccountRead), financeHandler.ListCashAccounts)

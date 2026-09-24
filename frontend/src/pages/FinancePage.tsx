@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
-import { FileText, Landmark, Plus, Receipt, ShoppingCart, Wallet } from 'lucide-react'
+import { BarChart3, FileText, Landmark, Plus, Receipt, ShoppingCart, Wallet } from 'lucide-react'
 
 import {
   getFinanceSummary,
@@ -78,7 +78,8 @@ export function FinancePage() {
     load()
   }, [])
 
-  const showQuickActions = showCashAccounts || showExpenses || showPurchases || showRent
+  const showReports = canPageAction('page.finance.reports', 'read')
+  const showQuickActions = showCashAccounts || showExpenses || showPurchases || showRent || showReports
 
   return (
     <PageShell>
@@ -109,6 +110,14 @@ export function FinancePage() {
                   <Link to="/finance/rent">
                     <FileText className="size-4" />
                     Sewa kolam
+                  </Link>
+                </Button>
+              )}
+              {showReports && (
+                <Button asChild variant="outline">
+                  <Link to="/finance/reports">
+                    <BarChart3 className="size-4" />
+                    Laporan
                   </Link>
                 </Button>
               )}
@@ -150,6 +159,14 @@ export function FinancePage() {
                 <Link to="/finance/rent">
                   <FileText className="size-4" />
                   Sewa kolam
+                </Link>
+              </Button>
+            )}
+            {showReports && (
+              <Button asChild variant="outline" className="h-11 w-full touch-target">
+                <Link to="/finance/reports">
+                  <BarChart3 className="size-4" />
+                  Laporan
                 </Link>
               </Button>
             )}

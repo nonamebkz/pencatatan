@@ -679,15 +679,20 @@ Kontrak: [docs/features/rent-contracts.md](./docs/features/rent-contracts.md). M
 
 ### 5.10 Reports
 
-| Method | Endpoint | Query | Response |
-|---|---|---|---|
-| GET | `/reports/purchases` | `from, to, businessUnitId?` | `{ items[], total }` |
-| GET | `/reports/price-history` | `itemName` | `{ entries[], changes[] }` |
-| GET | `/reports/rent` | `from?, to?` | `{ contracts[], totalPaid, totalRemaining }` |
-| GET | `/reports/feed` | `from, to, status?` | `{ lots[], avgDurationDays }` |
-| GET | `/reports/distribution` | `from, to, paymentStatus?` | `{ records[], totalPaid, totalUnpaid }` |
-| GET | `/reports/summary` | `from, to` | `{ purchases, feed, rent, distribution }` |
-| GET | `/reports/water-quality` | `from, to, businessUnitId?, days=7\|30` | `{ logs[], trends, notMeasuredToday[] }` |
+Auth: `finance.read` (kecuali sewa: `finance.rent.read`). Spesifikasi kolom: `BRD.md` §14.
+
+| Method | Endpoint | Query | Response | Status |
+|---|---|---|---|---|
+| GET | `/reports/purchases` | `from?, to?, businessUnitId?` | `{ items[], footer }` | ✅ |
+| GET | `/reports/price-history` | `itemName` (wajib) | `{ entries[], footer }` | ✅ |
+| GET | `/reports/price-history/items` | `q?` | `{ items: string[] }` | ✅ |
+| GET | `/reports/rent` | `timeStatus?, paymentStatus?` | `{ contracts[], totalPaid, totalRemaining, footer }` | ✅ |
+| GET | `/reports/feed` | `from, to, status?` | `{ lots[], avgDurationDays }` | ❌ (belum ada `consumable_lots`) |
+| GET | `/reports/distribution` | `from, to, paymentStatus?` | `{ records[], totalPaid, totalUnpaid }` | ❌ |
+| GET | `/reports/summary` | `from?, to?` | `OperationalSummaryReport` (kartu §13 + top kategori + per type) | ✅ |
+| GET | `/reports/water-quality` | `from, to, businessUnitId?, days=7\|30` | `{ logs[], trends, notMeasuredToday[] }` | ✅ |
+
+**Frontend:** `/finance/reports` (hub), `/finance/reports/purchases`, `price-history`, `rent`, `summary` — lihat `docs/features/operational-reports.md`.
 
 ### 5.11 Dashboard
 
@@ -1404,7 +1409,7 @@ func main() {
 
 ### Sprint 2 — Pakan + Sewa + Laporan 1
 
-**Backend / Frontend:** [x] **Sewa** (MVP-04 core) · [ ] Pakan · [ ] Laporan RPT-01+
+**Backend / Frontend:** [x] **Sewa** (MVP-04 core) · [ ] Pakan · [x] Laporan RPT-01/02/03/06 + hub UI · [ ] RPT-04/05/P
 
 ### Sprint 3 — Bagi Hasil + Laporan 2 + Polish
 

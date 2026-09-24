@@ -38,6 +38,28 @@
               ]
             },
             {
+              "id": "page.finance.reports",
+              "label": "Laporan keuangan",
+              "path": "/finance/reports",
+              "actions": [
+                {
+                  "id": "read",
+                  "label": "Lihat laporan operasional",
+                  "permission": "finance.read",
+                  "resource": "finance",
+                  "action": "reports",
+                  "description": "RPT-01, 02, 06 dan hub laporan",
+                  "routes": [
+                    "/finance/reports",
+                    "/finance/reports/purchases",
+                    "/finance/reports/price-history",
+                    "/finance/reports/summary"
+                  ],
+                  "operatorDefault": true
+                }
+              ]
+            },
+            {
               "id": "page.finance.purchases",
               "label": "Pembelian",
               "path": "/finance/purchases",

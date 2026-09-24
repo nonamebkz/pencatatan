@@ -15,6 +15,7 @@ Aturan lengkap: `.cursor/rules/feature-delivery.mdc`
 
 | File | Status | Isi |
 |------|--------|-----|
+| [`operational-reports.md`](./operational-reports.md) | `done` | RPT-01/02/03/06 — API + halaman `/finance/reports/*` |
 | [`rent-contracts.md`](./rent-contracts.md) | `done` | Kontrak sewa kolam, jadwal cicilan, bayar → `RENT_PAYMENT` |
 | [`cash-accounts.md`](./cash-accounts.md) | `done` | CRUD akun kas workspace |
 | [`access-catalog.md`](./access-catalog.md) | `done` | Menu FE ↔ permission DB |

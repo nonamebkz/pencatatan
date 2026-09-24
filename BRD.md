@@ -172,7 +172,7 @@ Workspace
 | MVP-05 | Pakan (ConsumableLot): lifecycle + buat manual/direct | ❌ |
 | MVP-06 | Bagi hasil: skema 2 pihak + realisasi manual | ❌ |
 | MVP-07 | Dashboard dengan metrik terdefinisi | ⚠️ (hanya metrik kualitas air) |
-| MVP-08 | 6 laporan dengan spesifikasi kolom | ❌ |
+| MVP-08 | 6 laporan dengan spesifikasi kolom | ⚠️ RPT-01–03, 06 + RPT-07 ✅; RPT-04/05 belum |
 | MVP-09 | Batch opsional | ⚠️ (DB; belum di form WQ) |
 | MVP-10 | Login + kelola user (admin, tanpa register) | ✅ |
 | MVP-11 | Kas default per workspace | ✅ (CRUD akun kas — [docs/features/cash-accounts.md](./docs/features/cash-accounts.md)) |
@@ -431,7 +431,7 @@ Status waktu dan pembayaran dihitung on-read, bukan disimpan sebagai single enum
 
 ### FR-12 Laporan
 - Lihat §14 Report Specification  
-- **Status repo:** ⚠️ API laporan kualitas air; UI laporan dedicated & RPT-01–06 **belum**
+- **Status repo:** ✅ RPT-07 + hub `/finance/reports` (RPT-01, 02, 03, 06); RPT-04 pakan & RPT-05 bagi hasil **belum** (master data belum)
 
 ---
 

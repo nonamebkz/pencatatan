@@ -29,6 +29,11 @@ import { CashAccountFormPage } from '@/pages/CashAccountFormPage'
 import { RentDetailPage } from '@/pages/RentDetailPage'
 import { RentFormPage } from '@/pages/RentFormPage'
 import { RentListPage } from '@/pages/RentListPage'
+import { ReportsHubPage } from '@/pages/ReportsHubPage'
+import { PurchaseReportPage } from '@/pages/PurchaseReportPage'
+import { PriceHistoryReportPage } from '@/pages/PriceHistoryReportPage'
+import { RentReportPage } from '@/pages/RentReportPage'
+import { OperationalSummaryReportPage } from '@/pages/OperationalSummaryReportPage'
 
 function App() {
   return (
@@ -52,6 +57,15 @@ function App() {
               <Route path="water-quality/:id/edit" element={<WaterQualityFormPage />} />
               <Route path="water-quality/:id" element={<WaterQualityDetailPage />} />
               <Route path="finance" element={<FinancePage />} />
+              <Route element={<PermissionRoute permission="finance.read" />}>
+                <Route path="finance/reports" element={<ReportsHubPage />} />
+                <Route path="finance/reports/purchases" element={<PurchaseReportPage />} />
+                <Route path="finance/reports/price-history" element={<PriceHistoryReportPage />} />
+                <Route path="finance/reports/summary" element={<OperationalSummaryReportPage />} />
+              </Route>
+              <Route element={<PermissionRoute permission="finance.rent.read" />}>
+                <Route path="finance/reports/rent" element={<RentReportPage />} />
+              </Route>
               <Route path="finance/purchases/new" element={<PurchaseFormPage />} />
               <Route path="finance/purchases/:id" element={<PurchaseDetailPage />} />
               <Route path="finance/transactions/:id" element={<TransactionDetailPage />} />
