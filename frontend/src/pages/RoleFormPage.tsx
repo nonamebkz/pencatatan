@@ -24,6 +24,7 @@ import { groupCatalogForRoleForm } from '@/lib/access-catalog'
 import { PermRoleAssignPerm, PermRoleDelete, PermRoleUpdate } from '@/lib/permissions'
 import { Button } from '@/components/ui/button'
 import { Skeleton } from '@/components/ui/skeleton'
+import { pageLayout, skeleton } from '@/lib/design'
 import { cn } from '@/lib/utils'
 
 function slugFromName(name: string) {
@@ -181,8 +182,8 @@ export function RoleFormPage() {
 
   if (loading) {
     return (
-      <PageShell>
-        <Skeleton className="h-64 rounded-2xl" />
+      <PageShell className={pageLayout.formLg}>
+        <Skeleton className={`${skeleton.block} h-64`} />
       </PageShell>
     )
   }
@@ -190,7 +191,7 @@ export function RoleFormPage() {
   const readOnly = !isCreate && !canEditMeta && !canEditPerms
 
   return (
-    <PageShell className="pb-24 md:pb-8">
+    <PageShell className={pageLayout.formLg}>
       <BackLink to="/roles" label="Kembali ke daftar peran" />
       <PageHeader
         title={isCreate ? 'Tambah Peran' : role?.name ?? 'Peran'}

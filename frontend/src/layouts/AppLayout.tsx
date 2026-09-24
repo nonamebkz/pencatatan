@@ -205,7 +205,7 @@ export function AppLayout() {
           </main>
 
           <MobileBottomNav
-            hidePrimaryAction={hidePrimaryAction || !showWaterQualityNav}
+            hidePrimaryAction={hidePrimaryAction || !showQuickRecord}
             navItems={navItems.map(({ to, label, icon, end }) => ({
               to,
               label: to === '/water-quality' ? 'Catatan' : label,

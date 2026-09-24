@@ -11,10 +11,12 @@ import { InfoCallout } from '@/components/shared/InfoCallout'
 import { MobileFormFooter } from '@/components/shared/MobileFormFooter'
 import { PanelCard } from '@/components/shared/PanelCard'
 import { PageHeader } from '@/components/shared/PageHeader'
+import { PageShell } from '@/components/shared/PageShell'
 import { Button } from '@/components/ui/button'
 import { Skeleton } from '@/components/ui/skeleton'
 import { useAuth } from '@/contexts/AuthContext'
 import { useCatalogAccess } from '@/hooks/useCatalogAccess'
+import { pageLayout } from '@/lib/design'
 
 export function UserFormPage() {
   const navigate = useNavigate()
@@ -111,17 +113,17 @@ export function UserFormPage() {
 
   if (loading) {
     return (
-      <div className="mx-auto max-w-2xl space-y-6">
+      <PageShell className={pageLayout.formSm}>
         <Skeleton className="h-10 w-48" />
         <Skeleton className="h-96 rounded-2xl" />
-      </div>
+      </PageShell>
     )
   }
 
   const isSelf = currentUser?.id === id
 
   return (
-    <div className="mx-auto max-w-2xl space-y-6 pb-24 md:space-y-8 md:pb-0">
+    <PageShell className={pageLayout.formSm}>
       <BackLink to="/users" label="Kembali ke daftar pengguna" />
 
       <PageHeader
@@ -226,6 +228,6 @@ export function UserFormPage() {
           Simpan
         </Button>
       </MobileFormFooter>
-    </div>
+    </PageShell>
   )
 }

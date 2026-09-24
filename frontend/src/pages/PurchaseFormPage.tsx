@@ -8,16 +8,19 @@ import {
   type PurchaseCategory,
   type PurchaseItemInput,
 } from '@/api/finance'
+import { MobileSectionHeader } from '@/components/mobile/MobileSectionHeader'
 import { BackLink } from '@/components/shared/BackLink'
 import { Field, SelectField, TextField, TextareaField } from '@/components/shared/Field'
 import { ErrorAlert } from '@/components/shared/ErrorAlert'
 import { MobileFormFooter } from '@/components/shared/MobileFormFooter'
 import { PageHeader } from '@/components/shared/PageHeader'
+import { PageShell } from '@/components/shared/PageShell'
 import { PanelCard } from '@/components/shared/PanelCard'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Select } from '@/components/ui/select'
 import { useCashAccountAndPonds } from '@/hooks/useCashAccountAndPonds'
+import { pageLayout } from '@/lib/design'
 import { formatIDR, todayISO } from '@/lib/format'
 
 type LineDraft = PurchaseItemInput & { key: string }
@@ -74,7 +77,7 @@ export function PurchaseFormPage() {
   }
 
   return (
-    <div className="mx-auto max-w-3xl space-y-6 pb-24 md:space-y-8 md:pb-0">
+    <PageShell className={pageLayout.formLg}>
       <BackLink to="/finance" label="Kembali ke keuangan" />
 
       <PageHeader
@@ -143,16 +146,17 @@ export function PurchaseFormPage() {
           </div>
         </PanelCard>
 
-        <div className="space-y-4">
-          <div className="flex items-center justify-between gap-3">
-            <h2 className="text-base font-semibold">Barang dibeli</h2>
+        <MobileSectionHeader
+          title="Barang dibeli"
+          action={
             <Button type="button" variant="outline" size="sm" onClick={() => setLines((prev) => [...prev, emptyLine()])}>
               <Plus className="size-4" />
               Tambah baris
             </Button>
-          </div>
+          }
+        />
 
-          {lines.map((line, index) => (
+        {lines.map((line, index) => (
             <PanelCard key={line.key} className="overflow-hidden" contentClassName="p-0">
               <div className="flex items-center justify-between border-b px-4 py-2 sm:px-5">
                 <span className="text-sm font-medium text-muted-foreground">Baris {index + 1}</span>
@@ -233,7 +237,6 @@ export function PurchaseFormPage() {
               </div>
             </PanelCard>
           ))}
-        </div>
 
         <PanelCard contentClassName="p-4 sm:p-5">
           <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
@@ -266,6 +269,6 @@ export function PurchaseFormPage() {
           {submitting ? 'Menyimpan…' : `Simpan · ${formatIDR(total)}`}
         </Button>
       </MobileFormFooter>
-    </div>
+    </PageShell>
   )
 }

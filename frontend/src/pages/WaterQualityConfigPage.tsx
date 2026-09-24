@@ -14,8 +14,10 @@ import { InfoCallout } from '@/components/shared/InfoCallout'
 import { MobileFormFooter } from '@/components/shared/MobileFormFooter'
 import { PanelCard } from '@/components/shared/PanelCard'
 import { PageHeader } from '@/components/shared/PageHeader'
+import { PageShell } from '@/components/shared/PageShell'
 import { Button } from '@/components/ui/button'
 import { Skeleton } from '@/components/ui/skeleton'
+import { pageLayout } from '@/lib/design'
 import { linesFromSteps, stepsFromLines } from '@/lib/waterQualityAdvice'
 
 type AdviceFields = Pick<
@@ -86,10 +88,10 @@ export function WaterQualityConfigPage() {
 
   if (loading) {
     return (
-      <div className="mx-auto max-w-3xl space-y-6">
+      <PageShell className={pageLayout.formLg}>
         <Skeleton className="h-10 w-48" />
         <Skeleton className="h-96 rounded-2xl" />
-      </div>
+      </PageShell>
     )
   }
 
@@ -106,7 +108,7 @@ export function WaterQualityConfigPage() {
   ]
 
   return (
-    <div className="mx-auto max-w-3xl space-y-6 pb-24 md:space-y-8 md:pb-0">
+    <PageShell className={pageLayout.formLg}>
       <BackLink to="/water-quality" label="Kembali ke daftar catatan" />
 
       <PageHeader
@@ -205,6 +207,6 @@ export function WaterQualityConfigPage() {
           Simpan
         </Button>
       </MobileFormFooter>
-    </div>
+    </PageShell>
   )
 }

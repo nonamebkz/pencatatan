@@ -5,16 +5,21 @@ import { Droplets, FlaskConical, Pencil } from 'lucide-react'
 import { getWaterQualityLog, type WaterQualityLog } from '@/api/water-quality'
 import { BackLink } from '@/components/shared/BackLink'
 import { ErrorAlert } from '@/components/shared/ErrorAlert'
-import { PanelCard } from '@/components/shared/PanelCard'
 import { PageHeader } from '@/components/shared/PageHeader'
+import { PageShell } from '@/components/shared/PageShell'
+import { PanelCard } from '@/components/shared/PanelCard'
 import { WaterQualityAdvicePanel } from '@/components/water-quality/WaterQualityAdvicePanel'
 import { WaterQualityStatusBadge } from '@/components/water-quality/WaterQualityStatusBadge'
 import { Button } from '@/components/ui/button'
 import { Skeleton } from '@/components/ui/skeleton'
+import { useCatalogAccess } from '@/hooks/useCatalogAccess'
+import { pageLayout, skeleton } from '@/lib/design'
 import { formatDateTime } from '@/lib/format'
 
 export function WaterQualityDetailPage() {
   const { id = '' } = useParams()
+  const { canPageAction } = useCatalogAccess()
+  const canUpdate = canPageAction('page.water_quality.form', 'update')
   const [log, setLog] = useState<WaterQualityLog | null>(null)
   const [error, setError] = useState<string | null>(null)
   const [loading, setLoading] = useState(true)
@@ -28,38 +33,40 @@ export function WaterQualityDetailPage() {
 
   if (loading) {
     return (
-      <div className="mx-auto max-w-2xl space-y-6">
+      <PageShell className={pageLayout.detail}>
         <Skeleton className="h-10 w-48" />
-        <Skeleton className="h-64 rounded-2xl" />
-      </div>
+        <Skeleton className={`${skeleton.block} h-64`} />
+      </PageShell>
     )
   }
 
   if (error || !log) {
     return (
-      <div className="mx-auto max-w-2xl space-y-4">
+      <PageShell className={pageLayout.detail}>
         <ErrorAlert>{error ?? 'Catatan tidak ditemukan'}</ErrorAlert>
         <Button asChild variant="outline">
           <Link to="/water-quality">Kembali ke daftar</Link>
         </Button>
-      </div>
+      </PageShell>
     )
   }
 
   return (
-    <div className="mx-auto max-w-2xl space-y-6 pb-8">
+    <PageShell className={pageLayout.detail}>
       <BackLink to="/water-quality" label="Kembali ke catatan kualitas air" />
 
       <PageHeader
         title={log.businessUnitName ?? 'Catatan kualitas air'}
         description={formatDateTime(log.measuredAt)}
         actions={
-          <Button asChild size="lg" className="w-full sm:w-auto">
-            <Link to={`/water-quality/${log.id}/edit`}>
-              <Pencil className="size-4" />
-              Ubah
-            </Link>
-          </Button>
+          canUpdate ? (
+            <Button asChild size="lg" className="w-full sm:w-auto">
+              <Link to={`/water-quality/${log.id}/edit`}>
+                <Pencil className="size-4" />
+                Ubah
+              </Link>
+            </Button>
+          ) : undefined
         }
       />
 
@@ -91,6 +98,6 @@ export function WaterQualityDetailPage() {
       )}
 
       <WaterQualityAdvicePanel advice={log.advice} status={log.status} />
-    </div>
+    </PageShell>
   )
 }

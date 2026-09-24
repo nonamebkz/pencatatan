@@ -8,6 +8,7 @@ import { EmptyState } from '@/components/shared/EmptyState'
 import { CountBadge } from '@/components/shared/CountBadge'
 import { ErrorAlert } from '@/components/shared/ErrorAlert'
 import { ListSkeleton } from '@/components/shared/ListSkeleton'
+import { MobileListFab } from '@/components/shared/MobileListFab'
 import { PageHeader } from '@/components/shared/PageHeader'
 import { PageShell } from '@/components/shared/PageShell'
 import { SelectField, TextField } from '@/components/shared/Field'
@@ -17,7 +18,10 @@ import { useCatalogAccess } from '@/hooks/useCatalogAccess'
 import { RECORD_LIST_LIMIT } from '@/lib/listing'
 
 export function WaterQualityListPage() {
-  const { canPageAction } = useCatalogAccess()
+  const { canPageAction, canViewPageId } = useCatalogAccess()
+  const canCreate = canPageAction('page.water_quality.form', 'create')
+  const canViewReport = canViewPageId('page.water_quality.report')
+  const canUpdateLog = canPageAction('page.water_quality.form', 'update')
   const canDeleteLog = canPageAction('page.water_quality.form', 'delete')
   const [ponds, setPonds] = useState<Pond[]>([])
   const [logs, setLogs] = useState<WaterQualityLog[]>([])
@@ -81,20 +85,26 @@ export function WaterQualityListPage() {
         title="Kualitas Air"
         description="Catatan observasi ammonia, pH, dan catatan operasional."
         actions={
-          <div className="flex w-full flex-col gap-2 sm:w-auto sm:flex-row">
-            <Button asChild variant="outline" className="w-full sm:w-auto">
-              <Link to="/water-quality/report">
-                <LineChart className="size-4" />
-                Laporan tren
-              </Link>
-            </Button>
-            <Button asChild size="lg" className="hidden w-full md:inline-flex md:w-auto">
-              <Link to="/water-quality/new">
-                <Plus className="size-4" />
-                Tambah Catatan
-              </Link>
-            </Button>
-          </div>
+          canViewReport || canCreate ? (
+            <div className="flex w-full flex-col gap-2 sm:w-auto sm:flex-row">
+              {canViewReport && (
+                <Button asChild variant="outline" className="w-full sm:w-auto">
+                  <Link to="/water-quality/report">
+                    <LineChart className="size-4" />
+                    Laporan tren
+                  </Link>
+                </Button>
+              )}
+              {canCreate && (
+                <Button asChild size="lg" className="hidden w-full md:inline-flex md:w-auto">
+                  <Link to="/water-quality/new">
+                    <Plus className="size-4" />
+                    Tambah Catatan
+                  </Link>
+                </Button>
+              )}
+            </div>
+          ) : undefined
         }
       />
 
@@ -136,9 +146,11 @@ export function WaterQualityListPage() {
             title="Belum ada catatan"
             description="Tambah catatan kualitas air untuk mulai memantau kondisi kolam."
             action={
-              <Button asChild className="w-full sm:w-auto">
-                <Link to="/water-quality/new">Tambah Catatan</Link>
-              </Button>
+              canCreate ? (
+                <Button asChild className="w-full sm:w-auto">
+                  <Link to="/water-quality/new">Tambah Catatan</Link>
+                </Button>
+              ) : undefined
             }
           />
         ) : (
@@ -147,6 +159,7 @@ export function WaterQualityListPage() {
               <WaterQualityLogRow
                 key={log.id}
                 log={log}
+                canUpdate={canUpdateLog}
                 canDelete={canDeleteLog}
                 deleting={deletingLogId === log.id}
                 onDelete={handleDeleteLog}
@@ -166,6 +179,8 @@ export function WaterQualityListPage() {
           </div>
         )}
       </div>
+
+      {canCreate && <MobileListFab to="/water-quality/new" ariaLabel="Tambah catatan kualitas air" />}
     </PageShell>
   )
 }

@@ -21,13 +21,17 @@ import { Button } from '@/components/ui/button'
 import { Skeleton } from '@/components/ui/skeleton'
 import { useCatalogAccess } from '@/hooks/useCatalogAccess'
 import { RECORD_LIST_LIMIT } from '@/lib/listing'
+import { pageLayout, skeleton, statusTone } from '@/lib/design'
 import { cn } from '@/lib/utils'
 
 export function PondDetailPage() {
   const navigate = useNavigate()
   const { id = '' } = useParams()
   const { canPageAction } = useCatalogAccess()
-  const canDelete = canPageAction('page.ponds.detail', 'delete')
+  const canDeletePond = canPageAction('page.ponds.detail', 'delete')
+  const canUpdateLog = canPageAction('page.water_quality.form', 'update')
+  const canDeleteLog = canPageAction('page.water_quality.form', 'delete')
+  const canRecordWQ = canPageAction('page.water_quality.form', 'create')
   const [pond, setPond] = useState<Pond | null>(null)
   const [logs, setLogs] = useState<WaterQualityLog[]>([])
   const [error, setError] = useState<string | null>(null)
@@ -95,30 +99,38 @@ export function PondDetailPage() {
 
   if (loading) {
     return (
-      <div className="space-y-6">
-        <Skeleton className="h-40 rounded-3xl" />
-        <Skeleton className="h-64 rounded-2xl" />
-      </div>
+      <PageShell className={pageLayout.detailLg}>
+        <Skeleton className={`${skeleton.block} h-40`} />
+        <Skeleton className={`${skeleton.block} h-64`} />
+      </PageShell>
     )
   }
 
   if (error && !pond) {
-    return <ErrorAlert>{error}</ErrorAlert>
+    return (
+      <PageShell className={pageLayout.detailLg}>
+        <ErrorAlert>{error}</ErrorAlert>
+      </PageShell>
+    )
   }
 
   if (!pond) {
-    return <ErrorAlert>Kolam tidak ditemukan</ErrorAlert>
+    return (
+      <PageShell className={pageLayout.detailLg}>
+        <ErrorAlert>Kolam tidak ditemukan</ErrorAlert>
+      </PageShell>
+    )
   }
 
   const isActive = pond.status === 'ACTIVE'
 
   return (
-    <PageShell>
+    <PageShell className={pageLayout.detailLg}>
       <BackLink to="/ponds" label="Kembali ke daftar kolam" />
 
       {error && <ErrorAlert>{error}</ErrorAlert>}
 
-      <section className="overflow-hidden rounded-2xl border bg-gradient-to-br from-primary/10 via-card to-background p-4 shadow-sm sm:rounded-3xl sm:p-6 md:p-8">
+      <section className="overflow-hidden rounded-2xl border bg-gradient-to-br from-primary/10 via-card to-background p-4 shadow-sm sm:p-6 md:p-8">
         <div className="flex flex-col gap-4 sm:gap-6 lg:flex-row lg:items-start lg:justify-between">
           <div className="space-y-3 sm:space-y-4">
             <div className="flex items-start gap-3 sm:gap-4">
@@ -136,7 +148,7 @@ export function PondDetailPage() {
             <span
               className={cn(
                 'inline-flex rounded-full px-3 py-1 text-xs font-semibold',
-                isActive ? 'bg-emerald-500/10 text-emerald-700' : 'bg-muted text-muted-foreground',
+                isActive ? statusTone.success : statusTone.muted,
               )}
             >
               Status {isActive ? 'Aktif' : 'Nonaktif'}
@@ -145,13 +157,15 @@ export function PondDetailPage() {
           </div>
 
           <div className="flex w-full flex-col gap-2 lg:w-auto">
-            <Button asChild size="lg" className="w-full lg:w-auto">
-              <Link to={`/water-quality/new?pondId=${pond.id}`}>
-                <Plus className="size-4" />
-                Catat Kualitas Air
-              </Link>
-            </Button>
-            {canDelete && (
+            {canRecordWQ && (
+              <Button asChild size="lg" className="w-full lg:w-auto">
+                <Link to={`/water-quality/new?pondId=${pond.id}`}>
+                  <Plus className="size-4" />
+                  Catat Kualitas Air
+                </Link>
+              </Button>
+            )}
+            {canDeletePond && (
               <DeleteOutlineButton
                 className="w-full lg:w-auto"
                 disabled={deletingPond}
@@ -172,9 +186,11 @@ export function PondDetailPage() {
             title="Belum ada catatan"
             description="Mulai catat kualitas air untuk kolam ini."
             action={
-              <Button asChild>
-                <Link to={`/water-quality/new?pondId=${pond.id}`}>Catat Sekarang</Link>
-              </Button>
+              canRecordWQ ? (
+                <Button asChild>
+                  <Link to={`/water-quality/new?pondId=${pond.id}`}>Catat Sekarang</Link>
+                </Button>
+              ) : undefined
             }
           />
         ) : (
@@ -183,7 +199,8 @@ export function PondDetailPage() {
               <WaterQualityLogRow
                 key={log.id}
                 log={log}
-                canDelete={canDelete}
+                canUpdate={canUpdateLog}
+                canDelete={canDeleteLog}
                 deleting={deletingLogId === log.id}
                 onDelete={handleDeleteLog}
               />

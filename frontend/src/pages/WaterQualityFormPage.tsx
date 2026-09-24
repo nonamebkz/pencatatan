@@ -22,11 +22,13 @@ import { InfoCallout } from '@/components/shared/InfoCallout'
 import { MobileFormFooter } from '@/components/shared/MobileFormFooter'
 import { PanelCard } from '@/components/shared/PanelCard'
 import { PageHeader } from '@/components/shared/PageHeader'
+import { PageShell } from '@/components/shared/PageShell'
 import { WaterQualityAdvicePanel } from '@/components/water-quality/WaterQualityAdvicePanel'
 import { WaterQualityStatusBadge } from '@/components/water-quality/WaterQualityStatusBadge'
 import { Button } from '@/components/ui/button'
 import { Skeleton } from '@/components/ui/skeleton'
 import { useCatalogAccess } from '@/hooks/useCatalogAccess'
+import { pageLayout } from '@/lib/design'
 
 function toLocalInputValue(date: Date) {
   const offset = date.getTimezoneOffset()
@@ -172,15 +174,15 @@ export function WaterQualityFormPage() {
 
   if (loading) {
     return (
-      <div className="mx-auto max-w-3xl space-y-6">
+      <PageShell className={pageLayout.formLg}>
         <Skeleton className="h-10 w-48" />
         <Skeleton className="h-96 rounded-2xl" />
-      </div>
+      </PageShell>
     )
   }
 
   return (
-    <div className="mx-auto max-w-3xl space-y-6 pb-24 md:space-y-8 md:pb-0">
+    <PageShell className={pageLayout.formLg}>
       <BackLink to="/water-quality" label="Kembali ke daftar catatan" />
 
       <PageHeader
@@ -311,6 +313,6 @@ export function WaterQualityFormPage() {
           Simpan
         </Button>
       </MobileFormFooter>
-    </div>
+    </PageShell>
   )
 }

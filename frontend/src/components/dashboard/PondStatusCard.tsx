@@ -5,13 +5,8 @@ import type { WaterQualitySummary } from '@/api/water-quality'
 import { WaterQualityAdvicePanel } from '@/components/water-quality/WaterQualityAdvicePanel'
 import { WaterQualityStatusBadge } from '@/components/water-quality/WaterQualityStatusBadge'
 import { formatDateTime } from '@/lib/format'
+import { alertInline, interactive, wqStatusSurface } from '@/lib/design'
 import { cn } from '@/lib/utils'
-
-const statusAccent = {
-  NORMAL: 'border-emerald-500/20 bg-emerald-500/[0.04]',
-  WARNING: 'border-amber-500/30 bg-amber-500/[0.06]',
-  DANGER: 'border-red-500/30 bg-red-500/[0.06]',
-}
 
 export function PondStatusCard({ summary }: { summary: WaterQualitySummary }) {
   return (
@@ -19,7 +14,7 @@ export function PondStatusCard({ summary }: { summary: WaterQualitySummary }) {
       to={`/ponds/${summary.businessUnitId}`}
       className={cn(
         'group block rounded-2xl border p-4 shadow-sm transition active:scale-[0.99] md:p-5 md:hover:-translate-y-0.5 md:hover:shadow-md',
-        statusAccent[summary.status],
+        wqStatusSurface[summary.status],
       )}
     >
       <div className="flex items-start justify-between gap-3">
@@ -35,14 +30,14 @@ export function PondStatusCard({ summary }: { summary: WaterQualitySummary }) {
       </div>
 
       {summary.notMeasuredToday && (
-        <div className="mt-3 flex items-center gap-2 rounded-xl border border-amber-200/80 bg-amber-50 px-3 py-2 text-xs text-amber-900 dark:border-amber-900/40 dark:bg-amber-950/40 dark:text-amber-200">
+        <div className={cn('mt-3', alertInline.warning)}>
           <AlertTriangle className="size-3.5 shrink-0" />
           Belum diukur hari ini
         </div>
       )}
 
       <div className="mt-4 grid grid-cols-2 gap-3">
-        <div className="rounded-xl border bg-background/80 p-3">
+        <div className={interactive.metricCellOutlined}>
           <div className="mb-1 flex items-center gap-1.5 text-[11px] text-muted-foreground">
             <FlaskConical className="size-3.5" />
             Ammonia
@@ -50,7 +45,7 @@ export function PondStatusCard({ summary }: { summary: WaterQualitySummary }) {
           <p className="text-xl font-semibold tabular-nums">{summary.ammoniaPpm ?? '—'}</p>
           <p className="text-[11px] text-muted-foreground">ppm</p>
         </div>
-        <div className="rounded-xl border bg-background/80 p-3">
+        <div className={interactive.metricCellOutlined}>
           <div className="mb-1 flex items-center gap-1.5 text-[11px] text-muted-foreground">
             <Droplets className="size-3.5" />
             pH

@@ -14,10 +14,10 @@ import { getDashboardSummary, type WaterQualitySummary } from '@/api/water-quali
 import { PondStatusCard } from '@/components/dashboard/PondStatusCard'
 import { StatCard } from '@/components/dashboard/StatCard'
 import { MobileSectionHeader } from '@/components/mobile/MobileSectionHeader'
+import { EmptyState } from '@/components/shared/EmptyState'
 import { ErrorAlert } from '@/components/shared/ErrorAlert'
 import { PageShell } from '@/components/shared/PageShell'
 import { Button } from '@/components/ui/button'
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Skeleton } from '@/components/ui/skeleton'
 import heroImage from '@/assets/hero.png'
 
@@ -79,7 +79,7 @@ export function DashboardPage() {
 
   return (
     <PageShell>
-      <section className="relative overflow-hidden rounded-2xl border bg-gradient-to-br from-primary/10 via-card to-background p-4 shadow-sm md:rounded-3xl md:p-8">
+      <section className="relative overflow-hidden rounded-2xl border bg-gradient-to-br from-primary/10 via-card to-background p-4 shadow-sm md:p-8">
         <div className="relative z-10 flex flex-col gap-4 md:grid md:grid-cols-[1.2fr_0.8fr] md:items-center md:gap-6">
           <div className="space-y-3">
             <div className="flex items-center justify-between gap-2">
@@ -189,22 +189,21 @@ export function DashboardPage() {
             ))}
           </div>
         ) : summaries.length === 0 && !error ? (
-          <Card className="rounded-2xl border-dashed">
-            <CardHeader>
-              <CardTitle>Belum ada kolam aktif</CardTitle>
-              <CardDescription>
-                Tambah kolam terlebih dulu, lalu mulai catat ammonia, pH, dan observasi harian.
-              </CardDescription>
-            </CardHeader>
-            <CardContent className="flex flex-col gap-2 sm:flex-row sm:flex-wrap sm:gap-3">
-              <Button asChild className="w-full sm:w-auto">
-                <Link to="/ponds">Kelola Kolam</Link>
-              </Button>
-              <Button asChild variant="outline" className="w-full sm:w-auto">
-                <Link to="/water-quality/new">Catat Kualitas Air</Link>
-              </Button>
-            </CardContent>
-          </Card>
+          <EmptyState
+            icon={Fish}
+            title="Belum ada kolam aktif"
+            description="Tambah kolam terlebih dulu, lalu mulai catat ammonia, pH, dan observasi harian."
+            action={
+              <div className="flex w-full flex-col gap-2 sm:w-auto sm:flex-row">
+                <Button asChild className="w-full sm:w-auto">
+                  <Link to="/ponds">Kelola Kolam</Link>
+                </Button>
+                <Button asChild variant="outline" className="w-full sm:w-auto">
+                  <Link to="/water-quality/new">Catat Kualitas Air</Link>
+                </Button>
+              </div>
+            }
+          />
         ) : (
           <div className="space-y-3 md:grid md:grid-cols-2 md:gap-4 md:space-y-0">
             {summaries.map((summary) => (

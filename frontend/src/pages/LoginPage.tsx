@@ -39,7 +39,7 @@ export function LoginPage() {
     <div className="safe-top safe-bottom flex min-h-screen flex-col bg-[radial-gradient(circle_at_top,_oklch(0.96_0.02_155)_0%,_var(--background)_50%)]">
       <div className="mx-auto flex w-full max-w-md flex-1 flex-col px-4 py-8">
         <div className="mb-8 flex flex-col items-center text-center">
-          <div className="mb-4 flex size-16 items-center justify-center rounded-3xl bg-primary text-primary-foreground shadow-[0_12px_32px_-8px_oklch(0.45_0.12_155/0.45)]">
+          <div className="mb-4 flex size-16 items-center justify-center rounded-2xl bg-primary text-primary-foreground shadow-[0_12px_32px_-8px_oklch(0.45_0.12_155/0.45)]">
             <Waves className="size-8" />
           </div>
           <p className="text-xs font-semibold uppercase tracking-[0.18em] text-primary">Pencatatan Usaha</p>
@@ -49,7 +49,7 @@ export function LoginPage() {
           </p>
         </div>
 
-        <div className="rounded-3xl border bg-card/90 p-5 shadow-sm backdrop-blur-sm sm:p-6">
+        <div className="rounded-2xl border bg-card/90 p-5 shadow-sm backdrop-blur-sm sm:p-6">
           <form className="space-y-5" onSubmit={handleSubmit}>
             <TextField
               label="Email"

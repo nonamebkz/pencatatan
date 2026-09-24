@@ -10,12 +10,14 @@ import {
 } from '@/api/finance'
 import { TransactionRow } from '@/components/finance/TransactionRow'
 import { MobileFilterPanel } from '@/components/mobile/MobileFilterPanel'
+import { MobileSectionHeader } from '@/components/mobile/MobileSectionHeader'
 import { CountBadge } from '@/components/shared/CountBadge'
 import { EmptyState } from '@/components/shared/EmptyState'
 import { ErrorAlert } from '@/components/shared/ErrorAlert'
 import { ListSkeleton } from '@/components/shared/ListSkeleton'
 import { MetricCard } from '@/components/shared/MetricCard'
 import { PageHeader } from '@/components/shared/PageHeader'
+import { MobileListFab } from '@/components/shared/MobileListFab'
 import { PageShell } from '@/components/shared/PageShell'
 import { Button } from '@/components/ui/button'
 import { SelectField, TextField } from '@/components/shared/Field'
@@ -75,40 +77,68 @@ export function FinancePage() {
     load()
   }, [])
 
+  const showQuickActions = showCashAccounts || showExpenses || showPurchases
+
   return (
     <PageShell>
       <PageHeader
         title="Keuangan"
         description="Catat pembelian barang dan pengeluaran operasional."
         actions={
-          <div className="flex w-full flex-col gap-2 sm:w-auto sm:flex-row">
-            {showCashAccounts && (
-              <Button asChild variant="outline" className="w-full sm:w-auto">
-                <Link to="/finance/cash-accounts">
-                  <Landmark className="size-4" />
-                  Akun kas
-                </Link>
-              </Button>
-            )}
+          showQuickActions ? (
+            <div className="hidden flex-col gap-2 md:flex md:flex-row">
+              {showCashAccounts && (
+                <Button asChild variant="outline">
+                  <Link to="/finance/cash-accounts">
+                    <Landmark className="size-4" />
+                    Akun kas
+                  </Link>
+                </Button>
+              )}
+              {showExpenses && (
+                <Button asChild variant="outline">
+                  <Link to="/finance/expenses/new">
+                    <Receipt className="size-4" />
+                    Pengeluaran lain
+                  </Link>
+                </Button>
+              )}
+              {showPurchases && (
+                <Button asChild size="lg">
+                  <Link to="/finance/purchases/new">
+                    <ShoppingCart className="size-4" />
+                    Catat pembelian
+                  </Link>
+                </Button>
+              )}
+            </div>
+          ) : undefined
+        }
+      />
+
+      {showQuickActions && (
+        <section className="space-y-3 md:hidden">
+          <MobileSectionHeader title="Aksi cepat" />
+          <div className="grid gap-2">
             {showExpenses && (
-              <Button asChild variant="outline" className="w-full sm:w-auto">
+              <Button asChild variant="outline" className="h-11 w-full touch-target">
                 <Link to="/finance/expenses/new">
                   <Receipt className="size-4" />
                   Pengeluaran lain
                 </Link>
               </Button>
             )}
-            {showPurchases && (
-              <Button asChild size="lg" className="w-full sm:w-auto">
-                <Link to="/finance/purchases/new">
-                  <ShoppingCart className="size-4" />
-                  Catat pembelian
+            {showCashAccounts && (
+              <Button asChild variant="outline" className="h-11 w-full touch-target">
+                <Link to="/finance/cash-accounts">
+                  <Landmark className="size-4" />
+                  Akun kas
                 </Link>
               </Button>
             )}
           </div>
-        }
-      />
+        </section>
+      )}
 
       {error && <ErrorAlert>{error}</ErrorAlert>}
 
@@ -177,7 +207,7 @@ export function FinancePage() {
             description="Mulai dengan mencatat pembelian pakan, obat, atau pengeluaran operasional."
             action={
               showPurchases ? (
-                <Button asChild>
+                <Button asChild className="w-full sm:w-auto">
                   <Link to="/finance/purchases/new">
                     <Plus className="size-4" />
                     Catat pembelian
@@ -205,6 +235,8 @@ export function FinancePage() {
           </div>
         )}
       </div>
+
+      {showPurchases && <MobileListFab to="/finance/purchases/new" ariaLabel="Catat pembelian" />}
     </PageShell>
   )
 }

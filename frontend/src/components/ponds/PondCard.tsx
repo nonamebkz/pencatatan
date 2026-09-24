@@ -4,20 +4,25 @@ import { ChevronRight, Fish, MapPin, Pencil, Plus } from 'lucide-react'
 import type { Pond } from '@/api/water-quality'
 import { DeleteIconButton } from '@/components/shared/DeleteButton'
 import { Button } from '@/components/ui/button'
+import { interactive, statusTone } from '@/lib/design'
 import { cn } from '@/lib/utils'
 
 type PondCardProps = {
   pond: Pond
+  canUpdate?: boolean
+  canRecordWaterQuality?: boolean
   canDelete?: boolean
   deleting?: boolean
   onDelete?: (pond: Pond) => void | Promise<void>
 }
 
-export function PondCard({ pond, canDelete, deleting, onDelete }: PondCardProps) {
+export function PondCard({ pond, canUpdate = false, canRecordWaterQuality = false, canDelete, deleting, onDelete }: PondCardProps) {
   const isActive = pond.status === 'ACTIVE'
 
   return (
-    <article className="group rounded-2xl border bg-card p-4 shadow-sm transition hover:-translate-y-0.5 hover:shadow-md sm:p-5">
+    <article
+      className={cn('group p-4 sm:p-5', interactive.listArticle, interactive.listArticleHover)}
+    >
       <div className="flex items-start justify-between gap-2 sm:gap-3">
         <div className="flex min-w-0 items-start gap-3">
           <div className="shrink-0 rounded-xl bg-primary/10 p-2.5 text-primary">
@@ -35,7 +40,7 @@ export function PondCard({ pond, canDelete, deleting, onDelete }: PondCardProps)
           <span
             className={cn(
               'rounded-full px-2.5 py-1 text-xs font-medium',
-              isActive ? 'bg-emerald-500/10 text-emerald-700' : 'bg-muted text-muted-foreground',
+              isActive ? statusTone.success : statusTone.muted,
             )}
           >
             {isActive ? 'Aktif' : 'Nonaktif'}
@@ -53,25 +58,34 @@ export function PondCard({ pond, canDelete, deleting, onDelete }: PondCardProps)
 
       {pond.notes && <p className="mt-3 line-clamp-2 text-sm text-muted-foreground sm:mt-4">{pond.notes}</p>}
 
-      <div className="mt-4 grid grid-cols-3 gap-2 sm:mt-5">
+      <div
+        className={cn(
+          'mt-4 grid gap-2 sm:mt-5',
+          canUpdate && canRecordWaterQuality ? 'grid-cols-3' : canUpdate || canRecordWaterQuality ? 'grid-cols-2' : 'grid-cols-1',
+        )}
+      >
         <Button asChild variant="outline" size="sm" className="h-11 w-full touch-target">
           <Link to={`/ponds/${pond.id}`}>
             Detail
             <ChevronRight className="size-4" />
           </Link>
         </Button>
-        <Button asChild variant="outline" size="sm" className="h-11 w-full touch-target">
-          <Link to={`/ponds/${pond.id}/edit`}>
-            <Pencil className="size-4" />
-            Ubah
-          </Link>
-        </Button>
-        <Button asChild variant="ghost" size="sm" className="h-11 w-full touch-target">
-          <Link to={`/water-quality/new?pondId=${pond.id}`}>
-            <Plus className="size-4" />
-            Catat
-          </Link>
-        </Button>
+        {canUpdate && (
+          <Button asChild variant="outline" size="sm" className="h-11 w-full touch-target">
+            <Link to={`/ponds/${pond.id}/edit`}>
+              <Pencil className="size-4" />
+              Ubah
+            </Link>
+          </Button>
+        )}
+        {canRecordWaterQuality && (
+          <Button asChild variant="ghost" size="sm" className="h-11 w-full touch-target">
+            <Link to={`/water-quality/new?pondId=${pond.id}`}>
+              <Plus className="size-4" />
+              Catat
+            </Link>
+          </Button>
+        )}
       </div>
     </article>
   )

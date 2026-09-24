@@ -8,9 +8,11 @@ import { SelectField, TextField, TextareaField } from '@/components/shared/Field
 import { ErrorAlert } from '@/components/shared/ErrorAlert'
 import { MobileFormFooter } from '@/components/shared/MobileFormFooter'
 import { PageHeader } from '@/components/shared/PageHeader'
+import { PageShell } from '@/components/shared/PageShell'
 import { PanelCard } from '@/components/shared/PanelCard'
 import { Button } from '@/components/ui/button'
 import { useCashAccountAndPonds } from '@/hooks/useCashAccountAndPonds'
+import { pageLayout } from '@/lib/design'
 import { todayISO } from '@/lib/format'
 
 export function OtherExpenseFormPage() {
@@ -47,7 +49,7 @@ export function OtherExpenseFormPage() {
   }
 
   return (
-    <div className="mx-auto max-w-2xl space-y-6 pb-24 md:space-y-8 md:pb-0">
+    <PageShell className={pageLayout.formSm}>
       <BackLink to="/finance" label="Kembali ke keuangan" />
 
       <PageHeader
@@ -158,6 +160,6 @@ export function OtherExpenseFormPage() {
           {submitting ? 'Menyimpan…' : 'Simpan'}
         </Button>
       </MobileFormFooter>
-    </div>
+    </PageShell>
   )
 }

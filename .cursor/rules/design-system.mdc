@@ -4,106 +4,568 @@ globs: frontend/**/*
 alwaysApply: false
 ---
 
-# Design system — Pencatatan Usaha
+# Design System --- Pencatatan Usaha
 
-Aplikasi budidaya lele. **Prioritas #1: mobile** — baca dulu **`mobile-first.mdc`** (360px, bottom nav, sticky footer, touch).
+Aplikasi budidaya lele.
 
-Stack: **shadcn `new-york`**, **Lucide**, token CSS di `frontend/src/index.css`, utilitas di `frontend/src/lib/design.ts`.
+**Prioritas utama: mobile-first UX.**
 
-Ikuti juga `frontend-dry-solid.mdc` (DRY/SOLID). Rule ini fokus **tampilan & UX**.
+Sebelum membuat atau mengubah UI: - Baca `mobile-first.mdc`. - Ikuti
+aturan viewport 360px, bottom navigation, sticky footer, safe area, dan
+touch interaction. - Ikuti `frontend-dry-solid.mdc` untuk prinsip
+DRY/SOLID.
 
-## Warna & token
+Rule ini fokus pada: - konsistensi visual - layout - reusable
+component - UX pattern - aksesibilitas
 
-- **Jangan** hardcode hex/oklch di komponen halaman — pakai semantic Tailwind: `background`, `foreground`, `card`, `primary`, `muted`, `muted-foreground`, `destructive`, `border`.
-- Aksen brand = **`primary`** (hijau oklch di `:root`). Status:
-  - sukses/aktif: `emerald-*` atau `IconTone` `success`
-  - peringatan: `amber-*` / `warning`
-  - bahaya/error: `destructive` / `danger`
-- Dark mode: class `.dark` — uji kontras untuk teks di atas `bg-primary/5` dan `bg-card`.
+------------------------------------------------------------------------
 
-## Tipografi
+# Stack
 
-| Elemen | Kelas |
-|--------|--------|
-| Judul halaman | `PageHeader` (h2: `hidden` di bawah `md`, `md:text-3xl`, `font-bold`) |
-| Judul section / panel | `PanelCard` title atau `MobileSectionHeader` (`text-base` / `sm:text-lg`, `font-semibold`) |
-| Body | `text-sm`, deskripsi `text-muted-foreground` |
-| Label form | `Label` / `Field` |
-| Angka uang / stat | `tabular-nums`, `font-semibold` |
-| Eyebrow brand | `text-xs font-semibold uppercase tracking-[0.18em] text-primary` (hanya header/login/sidebar) |
+Gunakan:
 
-Satu halaman = **satu** judul. Di ponsel judul ada di header `AppLayout` (h1); `PageHeader` h2 disembunyikan di bawah `md`. Di desktop header layout disembunyikan (`md:hidden`) dan `PageHeader` yang menjadi judul.
+-   shadcn/ui `new-york`
+-   Lucide Icons
+-   Semantic Tailwind tokens
+-   CSS token:
+    -   `frontend/src/index.css`
+    -   `frontend/src/lib/design.ts`
 
-## Spacing & layout
+------------------------------------------------------------------------
 
-- Daftar halaman dalam layout: **`PageShell`** (`space-y-6 md:space-y-8`).
-- Form panjang: `mx-auto max-w-2xl` atau `max-w-3xl`; padding bawah mobile `pb-24` jika ada sticky footer.
-- Grid metrik: `grid gap-3 sm:grid-cols-2` atau `sm:grid-cols-3`.
-- Main content: `px-4 py-4 pb-mobile-nav` (mobile) — jangan override kecuali halaman full-bleed khusus.
+# Warna & Token
 
-## Radius & surface
+## Semantic Token Only
 
-- Panel/kartu aplikasi: **`rounded-2xl`** via `surface.*` di `design.ts` atau `PanelCard` / `MetricCard`.
-- Jangan campur `rounded-xl` untuk kartu halaman utama (primitif shadcn `Card` internal boleh `rounded-xl` jika tidak di-wrap).
-- **`PanelCard`**: header terpisah; isi custom pakai `contentClassName="p-0"` + padding dalam child (hindari double padding).
+Jangan menggunakan warna hardcode hex/oklch pada komponen halaman.
 
-## Pola UI — gunakan komponen ini
+Gunakan semantic token:
 
-| Kebutuhan | Komponen |
-|-----------|----------|
-| Layout halaman | `PageShell` |
-| Judul + aksi | `PageHeader` |
-| Kartu berisi form/list | `PanelCard` |
-| KPI / ringkasan angka | `MetricCard`, dashboard `StatCard` |
-| Badge jumlah | `CountBadge` |
-| Kosong | `EmptyState` |
-| Error | `ErrorAlert` |
-| Info / hint | `InfoCallout` |
-| Kembali | `BackLink` |
-| Form field | `TextField`, `SelectField`, `TextareaField`, `Field` |
-| Loading list | `ListSkeleton` + `skeleton.*` dari `design.ts` |
-| Submit mobile | `MobileFormFooter` + `form` id |
-| Hapus (admin) | `DeleteOutlineButton` |
-| Filter daftar | `MobileFilterPanel` — desktop satu baris tanpa judul panel; ponsel accordion "Filter" |
-| Subjudul list | `MobileSectionHeader` |
-| Ikon dalam kartu | `iconBadge(tone)` |
+-   `background`
+-   `foreground`
+-   `card`
+-   `primary`
+-   `muted`
+-   `muted-foreground`
+-   `destructive`
+-   `border`
 
-**Anti-pattern:** `rounded-2xl border bg-card p-4` copy-paste di halaman; `Label`+`Input` manual jika sudah ada `*Field`.
+Contoh yang tidak diperbolehkan:
 
-## Tombol & aksi
+``` tsx
+bg-[#xxxxxx]
+text-[#xxxxxx]
+```
 
-- Primitif: `@/components/ui/button`.
-- Aksi utama: `default` / `size="lg"`; sekunder: `outline`; navigasi ringan: `ghost`.
-- Mobile: aksi utama full width di footer (`MobileFormFooter`) atau `w-full sm:w-auto` di `PageHeader` actions.
-- FAB/list: ikuti pola `UserListPage` (fixed + safe area), jangan FAB baru tanpa alasan.
+------------------------------------------------------------------------
 
-## Mobile & safe area
+## Brand Color
 
-Detail wajib: **`mobile-first.mdc`**. Ringkas:
+Aksen utama aplikasi:
 
-- Class util: `safe-top`, `safe-bottom`, `pb-mobile-nav`, `touch-target` (`index.css`).
-- Sticky footer form: `MobileFormFooter` (offset di atas `MobileBottomNav`).
-- Sembunyikan duplikasi CTA desktop di mobile (`hidden md:flex` / `md:inline-flex`).
-- Grid desktop: `grid-cols-1` default → `sm:grid-cols-2` / `md:grid-cols-*`.
+`primary`
 
-## Ikon
+Primary berasal dari token hijau pada `:root`.
 
-- **Lucide** saja (`size-4` inline, `size-5`/`size-6` hero).
-- Warna ikon mengikuti teks parent atau `text-primary` di callout.
+Gunakan untuk: - CTA utama - active state - brand highlight
 
-## Desain fitur baru
+------------------------------------------------------------------------
 
-Sebelum UI baru:
+## Status Color
 
-1. Cek komponen shared + `design.ts` — extend token/komponen jika pola akan dipakai ≥2 kali.
-2. Di `docs/features/<slug>.md` → bagian **UI / design**: halaman, states (loading/empty/error), komponen shared.
-3. Primitif shadcn baru: tambah via CLI/MCP ke `components/ui/`, jangan fork style acak.
-4. Setelah implement: `npm run build`, `cd frontend && graphify update .`.
+Gunakan standar:
 
-## Review visual cepat
+  Status    Penggunaan
+  --------- ----------------------------------
+  Success   emerald-\* atau IconTone success
+  Warning   amber-\* atau warning
+  Error     destructive atau danger
 
-- [ ] Hanya token semantic (bukan warna raw arbitrary kecuali gradient layout yang sudah ada di `AppLayout`/login).
-- [ ] `PageShell` + `PageHeader` pada halaman list/form standar.
-- [ ] Loading/error/empty memakai pola shared.
-- [ ] Form mobile punya footer sticky jika submit di bawah fold.
-- [ ] Kontras teks & tap target cukup di viewport 360px.
+Jangan membuat warna status baru tanpa kebutuhan.
+
+### Token `design.ts`
+
+| Export | Pemakaian |
+|--------|-----------|
+| `surface.*` | Panel, metric, empty, sticky bar |
+| `interactive.*` | Kartu list/link domain (`cardLink`, `listArticle`, `metricCell`) |
+| `statusTone.*` | Badge aktif/nonaktif (`success`, `muted`, `danger`) |
+| `wqStatusSurface.*` | Border kartu dashboard per status WQ |
+| `alertInline.warning` | Callout peringatan inline (belum diukur, dll.) |
+| `pageLayout.*` | Lebar form/detail |
+| `skeleton.*` | Loading placeholder |
+| `iconBadge(tone)` | Ikon dalam kartu |
+
+------------------------------------------------------------------------
+
+## Dark Mode
+
+Dark mode menggunakan:
+
+`.dark`
+
+Wajib melakukan pengecekan kontras terutama:
+
+-   teks pada `bg-primary/5`
+-   teks pada `bg-card`
+
+------------------------------------------------------------------------
+
+# Tipografi
+
+  ------------------------------------------------------------------------------------------------------
+  Elemen                              Pattern
+  ----------------------------------- ------------------------------------------------------------------
+  Judul halaman                       `PageHeader`
+
+  Judul section                       `PanelCard` title / `MobileSectionHeader`
+
+  Body                                `text-sm`
+
+  Deskripsi                           `text-muted-foreground`
+
+  Label form                          `Label` / `Field`
+
+  Angka uang/stat                     `tabular-nums font-semibold`
+
+  Eyebrow brand                       `text-xs font-semibold uppercase tracking-[0.18em] text-primary`
+  ------------------------------------------------------------------------------------------------------
+
+Eyebrow hanya digunakan pada: - header - login - sidebar
+
+------------------------------------------------------------------------
+
+# Page Title Rule
+
+Satu halaman hanya memiliki satu judul utama.
+
+## Mobile
+
+Judul berasal dari:
+
+`AppLayout h1`
+
+## Desktop
+
+Judul berasal dari:
+
+`PageHeader`
+
+Ketentuan:
+
+-   Mobile menyembunyikan `PageHeader h2`
+-   Desktop menyembunyikan header title dari layout
+
+Gunakan:
+
+``` tsx
+hidden md:block
+md:text-3xl
+font-bold
+```
+
+------------------------------------------------------------------------
+
+# Spacing & Layout
+
+## Page Wrapper
+
+Semua halaman standar menggunakan:
+
+`PageShell`
+
+Default:
+
+`space-y-6 md:space-y-8`
+
+------------------------------------------------------------------------
+
+## Page Layout Token
+
+Gunakan:
+
+-   `pageLayout.formSm`
+-   `pageLayout.formLg`
+-   `pageLayout.detail`
+
+dari:
+
+`frontend/src/lib/design.ts`
+
+Jangan membuat width manual jika token sudah tersedia.
+
+------------------------------------------------------------------------
+
+## Form Panjang
+
+Gunakan:
+
+`PageShell className={pageLayout.formSm|formLg}`
+
+Token sudah menangani:
+
+-   spacing
+-   mobile padding
+-   sticky footer space
+
+Jangan menambahkan:
+
+`space-y-6`
+
+secara manual pada wrapper luar.
+
+------------------------------------------------------------------------
+
+## Main Content
+
+Gunakan:
+
+`px-4 py-4 pb-mobile-nav`
+
+Jangan override kecuali:
+
+-   full-bleed page
+-   canvas
+-   map
+-   visualisasi khusus
+
+------------------------------------------------------------------------
+
+## Grid
+
+Metric:
+
+`grid gap-3 sm:grid-cols-2`
+
+atau:
+
+`sm:grid-cols-3`
+
+Default:
+
+`grid-cols-1`
+
+------------------------------------------------------------------------
+
+# Radius & Surface
+
+Gunakan:
+
+`rounded-2xl`
+
+untuk surface aplikasi.
+
+Sumber:
+
+-   `surface.*` dari `design.ts`
+-   `PanelCard`
+-   `MetricCard`
+
+Jangan menggunakan:
+
+`rounded-xl`
+
+untuk kartu halaman utama.
+
+Pengecualian: - primitive shadcn Card internal yang tidak di-wrap.
+
+------------------------------------------------------------------------
+
+## PanelCard Padding
+
+Gunakan:
+
+`contentClassName="p-0"`
+
+untuk custom content.
+
+Padding diberikan pada child.
+
+Hindari:
+
+PanelCard padding + child padding.
+
+------------------------------------------------------------------------
+
+# Pola UI
+
+  Kebutuhan           Komponen
+  ------------------- ------------------------------
+  Layout halaman      `PageShell` + `pageLayout.*`
+  FAB tambah mobile   `MobileListFab`
+  Judul + aksi        `PageHeader`
+  Form/List card      `PanelCard`
+  KPI                 `MetricCard`
+  Dashboard stat      `StatCard`
+  Badge jumlah        `CountBadge`
+  Empty state         `EmptyState`
+  Error               `ErrorAlert`
+  Info                `InfoCallout`
+  Back navigation     `BackLink`
+  Input               `TextField`
+  Select              `SelectField`
+  Textarea            `TextareaField`
+  Generic field       `Field`
+  Loading             `ListSkeleton`
+  Submit mobile       `MobileFormFooter`
+  Delete admin        `DeleteOutlineButton`
+  Filter              `MobileFilterPanel`
+  Section header      `MobileSectionHeader`
+  Icon card           `iconBadge(tone)`
+  Kartu list domain   `interactive.cardLink` / `interactive.listArticle`
+  Sel ammonia/pH      `interactive.metricCell` / `metricCellOutlined`
+  Badge aktif         `statusTone` + pill `rounded-full px-2.5 py-1 text-xs font-medium`
+
+------------------------------------------------------------------------
+
+# Anti Pattern
+
+Jangan:
+
+``` tsx
+rounded-2xl border bg-card p-4
+```
+
+copy-paste pada halaman.
+
+Jangan membuat:
+
+``` tsx
+Label + Input
+```
+
+manual jika sudah tersedia:
+
+`*Field`
+
+------------------------------------------------------------------------
+
+# Tombol & Action
+
+Primitive:
+
+`@/components/ui/button`
+
+Variant:
+
+  Jenis        Variant
+  ------------ ---------
+  Primary      default
+  Secondary    outline
+  Navigation   ghost
+
+------------------------------------------------------------------------
+
+## Mobile Action
+
+Primary action:
+
+Mobile:
+
+`w-full`
+
+Desktop:
+
+`w-full sm:w-auto`
+
+Untuk form:
+
+Gunakan:
+
+`MobileFormFooter`
+
+Jangan membuat sticky footer manual.
+
+------------------------------------------------------------------------
+
+# Mobile & Safe Area
+
+Utility:
+
+-   `safe-top`
+-   `safe-bottom`
+-   `pb-mobile-nav`
+-   `touch-target`
+
+Sticky footer:
+
+Gunakan:
+
+`MobileFormFooter`
+
+Pastikan offset terhadap:
+
+`MobileBottomNav`
+
+------------------------------------------------------------------------
+
+# Icon System
+
+Gunakan hanya:
+
+`Lucide`
+
+Ukuran:
+
+-   Inline: `size-4`
+-   Card: `size-5`
+-   Hero: `size-6`
+
+Warna:
+
+Mengikuti parent.
+
+Highlight:
+
+`text-primary`
+
+------------------------------------------------------------------------
+
+# Fitur Baru
+
+Sebelum membuat UI baru:
+
+1.  Cek:
+    -   shared component
+    -   `design.ts`
+    -   existing page
+2.  Jika pattern dipakai \>=2 kali:
+    -   extend component/token
+3.  Dokumentasikan:
+
+`docs/features/<slug>.md`
+
+Bagian:
+
+`UI / design`
+
+Isi: - halaman - komponen - loading state - empty state - error state
+
+------------------------------------------------------------------------
+
+# Shadcn Component
+
+Primitive baru:
+
+Tambahkan melalui:
+
+-   shadcn CLI
+-   MCP
+
+Jangan fork style secara manual.
+
+------------------------------------------------------------------------
+
+# Validation
+
+Setelah implementasi:
+
+Jalankan:
+
+``` bash
+npm run build
+```
+
+Kemudian:
+
+``` bash
+cd frontend && graphify update .
+```
+
+------------------------------------------------------------------------
+
+# Permission & CTA
+
+Gunakan:
+
+`useCatalogAccess()`
+
+dan:
+
+page id dari catalog.
+
+Jangan menggunakan legacy JWT role.
+
+------------------------------------------------------------------------
+
+## Permission Rule
+
+Jika user tidak memiliki permission:
+
+Sembunyikan tombol.
+
+Jangan hanya:
+
+``` tsx
+disabled
+```
+
+------------------------------------------------------------------------
+
+## FAB Permission
+
+FAB mengikuti:
+
+-   `AppLayout`
+-   `MobileBottomNav`
+
+Gunakan:
+
+`hidePrimaryAction`
+
+ketika permission tidak tersedia.
+
+------------------------------------------------------------------------
+
+# Review Visual Checklist
+
+## Layout
+
+-   [ ] Menggunakan PageShell
+-   [ ] Menggunakan PageHeader
+-   [ ] Tidak ada title duplikat
+-   [ ] Aman pada viewport 360px
+
+## Token
+
+-   [ ] Tidak ada warna raw
+-   [ ] Semantic token digunakan
+-   [ ] Dark mode aman
+
+## Component
+
+-   [ ] Shared component digunakan
+-   [ ] Tidak membuat card manual
+-   [ ] Tidak ada duplicate pattern
+
+## UX
+
+-   [ ] Loading memakai shared skeleton
+-   [ ] Empty memakai EmptyState
+-   [ ] Error memakai ErrorAlert
+-   [ ] Touch target cukup
+
+## Mobile
+
+-   [ ] Sticky footer benar
+-   [ ] Bottom navigation tidak tertutup
+-   [ ] CTA tidak duplikat
+
+## RBAC
+
+-   [ ] Mengikuti catalog access
+-   [ ] Tidak menggunakan role legacy JWT
+
+------------------------------------------------------------------------
+
+# Golden Rule
+
+Jika pattern UI muncul lebih dari satu kali:
+
+Buat shared component.
+
+Jika shared component sudah tersedia:
+
+Gunakan component tersebut.
+
+Semua halaman harus terasa sebagai satu aplikasi yang sama.

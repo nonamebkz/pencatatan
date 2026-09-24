@@ -8,7 +8,7 @@ alwaysApply: false
 
 ## Prinsip utama
 
-1. **DRY** — Jangan duplikasi pola UI (badge hitung, kartu metrik, callout info, back link, sticky form footer, skeleton list). Taruh di `frontend/src/components/shared/` atau `frontend/src/lib/design.ts`.
+1. **DRY** — Jangan duplikasi pola UI (badge hitung, kartu metrik, callout info, back link, sticky form footer, skeleton list). Taruh di `frontend/src/components/shared/` atau `frontend/src/lib/design.ts` (`surface`, `interactive`, `statusTone`, `pageLayout`, `skeleton`).
 2. **SOLID (praktis untuk React)**
    - **S** — Satu komponen = satu tanggung jawab (mis. `PageHeader` hanya judul/aksi, bukan fetch data).
    - **O** — Perluas lewat props (`tone`, `variant`, `className`), bukan copy-paste markup.
@@ -32,9 +32,24 @@ alwaysApply: false
 
 Konvensi visual, tipografi, mobile, dan mapping komponen: **`.cursor/rules/design-system.mdc`**.
 
+## RBAC & access catalog
+
+Kanoni menu/aksi: [`shared/access-catalog.json`](../../shared/access-catalog.json) — lihat [docs/features/access-catalog.md](../../docs/features/access-catalog.md).
+
+| Kebutuhan | Pakai | Jangan |
+|-----------|--------|--------|
+| Menu sidebar / bottom nav | `visibleMainNavFromCatalog`, `visibleAccessNavFromCatalog` + `AuthContext.can` | Hardcode link hanya untuk `ADMIN` / `USER` |
+| Tombol create/edit/delete | `useCatalogAccess()` → `canPageAction(pageId, actionId)`, `canViewPageId` | `isAdmin`, `user.role === 'ADMIN'` untuk gate fitur |
+| Route terproteksi | `PermissionRoute` + konstanta `@/lib/permissions` selaras catalog | `AdminRoute` (deprecated) |
+| Form peran | `groupCatalogForRoleForm()` | Checkbox permission manual tanpa catalog |
+| Permission user | `permissions[]` dari `/auth/me` | Asumsi semua user login lihat modul operasional |
+
+FAB / **Catat Cepat** (`MobileBottomNav`, sidebar): sembunyikan jika `!canPageAction('page.water_quality.form', 'create')` (lihat `AppLayout`).
+
 ## Checklist sebelum merge UI
 
 - [ ] Sesuai `mobile-first.mdc` + `design-system.mdc`.
+- [ ] CTA & FAB selaras access catalog (`useCatalogAccess`).
 - [ ] Form field: `Field` / `TextField` / `SelectField` / `TextareaField`.
 - [ ] Form keuangan: `useCashAccountAndPonds`, `MobileFormFooter` + `form` id.
 - [ ] `npm run build`; `cd frontend && graphify update .` jika kode berubah.

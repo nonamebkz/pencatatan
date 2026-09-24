@@ -2,7 +2,6 @@ import { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { Plus, Users } from 'lucide-react'
 
-
 import { useCatalogAccess } from '@/hooks/useCatalogAccess'
 import type { UserRecord } from '@/api/users'
 import { listUsers } from '@/api/users'
@@ -11,6 +10,7 @@ import { EmptyState } from '@/components/shared/EmptyState'
 import { ErrorAlert } from '@/components/shared/ErrorAlert'
 import { ListSkeleton } from '@/components/shared/ListSkeleton'
 import { MetricCard } from '@/components/shared/MetricCard'
+import { MobileListFab } from '@/components/shared/MobileListFab'
 import { PageHeader } from '@/components/shared/PageHeader'
 import { PageShell } from '@/components/shared/PageShell'
 import { Button } from '@/components/ui/button'
@@ -78,13 +78,7 @@ export function UserListPage() {
         </div>
       )}
 
-      {canCreate && (
-        <Button asChild size="lg" className="fixed bottom-[calc(6.5rem+env(safe-area-inset-bottom,0px))] right-4 z-30 size-14 rounded-full p-0 shadow-lg md:hidden">
-          <Link to="/users/new" aria-label="Tambah pengguna">
-            <Plus className="size-6" />
-          </Link>
-        </Button>
-      )}
+      {canCreate && <MobileListFab to="/users/new" ariaLabel="Tambah pengguna" />}
     </PageShell>
   )
 }

@@ -9,10 +9,12 @@ import { EmptyState } from '@/components/shared/EmptyState'
 import { ErrorAlert } from '@/components/shared/ErrorAlert'
 import { InfoCallout } from '@/components/shared/InfoCallout'
 import { ListSkeleton } from '@/components/shared/ListSkeleton'
+import { MobileListFab } from '@/components/shared/MobileListFab'
 import { PageHeader } from '@/components/shared/PageHeader'
 import { PageShell } from '@/components/shared/PageShell'
 import { Button } from '@/components/ui/button'
 import { useCatalogAccess } from '@/hooks/useCatalogAccess'
+import { pageLayout } from '@/lib/design'
 
 export function CashAccountListPage() {
   const { canPageAction } = useCatalogAccess()
@@ -31,7 +33,7 @@ export function CashAccountListPage() {
   const defaultCount = accounts.filter((item) => item.isDefault).length
 
   return (
-    <PageShell>
+    <PageShell className={pageLayout.detail}>
       <BackLink to="/finance" label="Kembali ke keuangan" />
 
       <PageHeader
@@ -85,17 +87,7 @@ export function CashAccountListPage() {
         </div>
       )}
 
-      {canCreate && (
-        <Button
-          asChild
-          size="lg"
-          className="fixed bottom-[calc(6.5rem+env(safe-area-inset-bottom,0px))] right-4 z-30 size-14 rounded-full p-0 shadow-lg md:hidden"
-        >
-          <Link to="/finance/cash-accounts/new" aria-label="Tambah akun kas">
-            <Plus className="size-6" />
-          </Link>
-        </Button>
-      )}
+      {canCreate && <MobileListFab to="/finance/cash-accounts/new" ariaLabel="Tambah akun kas" />}
     </PageShell>
   )
 }

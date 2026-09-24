@@ -6,18 +6,26 @@ import { DeleteIconButton } from '@/components/shared/DeleteButton'
 import { WaterQualityAdvicePanel } from '@/components/water-quality/WaterQualityAdvicePanel'
 import { WaterQualityStatusBadge } from '@/components/water-quality/WaterQualityStatusBadge'
 import { Button } from '@/components/ui/button'
+import { interactive } from '@/lib/design'
 import { formatDateTime } from '@/lib/format'
 
 type WaterQualityLogRowProps = {
   log: WaterQualityLog
+  canUpdate?: boolean
   canDelete?: boolean
   deleting?: boolean
   onDelete?: (log: WaterQualityLog) => void | Promise<void>
 }
 
-export function WaterQualityLogRow({ log, canDelete, deleting, onDelete }: WaterQualityLogRowProps) {
+export function WaterQualityLogRow({
+  log,
+  canUpdate = false,
+  canDelete,
+  deleting,
+  onDelete,
+}: WaterQualityLogRowProps) {
   return (
-    <article className="rounded-2xl border bg-card p-4 shadow-sm">
+    <article className={interactive.listArticle}>
       <div className="flex items-start justify-between gap-3">
         <div className="min-w-0 flex-1 space-y-2">
           <div className="flex flex-wrap items-center gap-2">
@@ -35,16 +43,18 @@ export function WaterQualityLogRow({ log, canDelete, deleting, onDelete }: Water
               onConfirm={() => onDelete(log)}
             />
           )}
-          <Button asChild variant="ghost" size="sm" className="size-9 shrink-0 p-0">
-            <Link to={`/water-quality/${log.id}/edit`} aria-label="Edit catatan">
-              <Pencil className="size-4" />
-            </Link>
-          </Button>
+          {canUpdate && (
+            <Button asChild variant="ghost" size="sm" className="size-9 shrink-0 touch-target p-0">
+              <Link to={`/water-quality/${log.id}/edit`} aria-label="Edit catatan">
+                <Pencil className="size-4" />
+              </Link>
+            </Button>
+          )}
         </div>
       </div>
 
       <div className="mt-3 grid grid-cols-2 gap-3">
-        <div className="rounded-xl bg-muted/60 p-3">
+        <div className={interactive.metricCell}>
           <div className="mb-1 flex items-center gap-1.5 text-[11px] text-muted-foreground">
             <FlaskConical className="size-3.5" />
             Ammonia
@@ -52,7 +62,7 @@ export function WaterQualityLogRow({ log, canDelete, deleting, onDelete }: Water
           <p className="text-lg font-semibold tabular-nums">{log.ammoniaPpm ?? '—'}</p>
           <p className="text-[11px] text-muted-foreground">ppm</p>
         </div>
-        <div className="rounded-xl bg-muted/60 p-3">
+        <div className={interactive.metricCell}>
           <div className="mb-1 flex items-center gap-1.5 text-[11px] text-muted-foreground">
             <Droplets className="size-3.5" />
             pH

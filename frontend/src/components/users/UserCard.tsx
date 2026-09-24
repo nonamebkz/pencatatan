@@ -2,6 +2,7 @@ import { Link } from 'react-router-dom'
 import { ChevronRight, Mail, Shield, UserRound } from 'lucide-react'
 
 import type { UserRecord } from '@/api/users'
+import { interactive, statusTone } from '@/lib/design'
 import { cn } from '@/lib/utils'
 import { Badge } from '@/components/ui/badge'
 
@@ -12,10 +13,7 @@ export function UserCard({ user }: { user: UserRecord }) {
   return (
     <Link
       to={`/users/${user.id}/edit`}
-      className={cn(
-        'block rounded-2xl border bg-card p-4 shadow-sm transition active:scale-[0.99]',
-        !user.isActive && 'opacity-70',
-      )}
+      className={cn(interactive.cardLink, !user.isActive && 'opacity-70')}
     >
       <div className="flex items-start justify-between gap-3">
         <div className="flex min-w-0 items-start gap-3">
@@ -41,8 +39,8 @@ export function UserCard({ user }: { user: UserRecord }) {
         )}
         <span
           className={cn(
-            'rounded-full px-2.5 py-1 text-[11px] font-medium',
-            user.isActive ? 'bg-emerald-500/10 text-emerald-700' : 'bg-red-500/10 text-red-700',
+            'rounded-full px-2.5 py-1 text-xs font-medium',
+            user.isActive ? statusTone.success : statusTone.danger,
           )}
         >
           {user.isActive ? 'Aktif' : 'Nonaktif'}

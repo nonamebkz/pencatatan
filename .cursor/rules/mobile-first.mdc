@@ -25,7 +25,7 @@ Pengguna utama di lapangan kolam memakai **ponsel**. Desktop adalah perluasan, b
 | Aksi di header | `PageHeader` actions = `w-full` stack; tombol sekunder `outline` di bawah utama di footer |
 | Filter | **`MobileFilterPanel`** (bukan bar filter horizontal desktop-only) |
 | Navigasi kembali | **`BackLink`** (area tap cukup besar) |
-| List primary action | FAB/fixed seperti `UserListPage` — hormati `safe-area-inset-bottom` |
+| List primary action | FAB/fixed seperti `UserListPage` — hormati `safe-area-inset-bottom`; FAB catat WQ hanya jika `canPageAction('page.water_quality.form', 'create')` |
 
 ## Typography & form
 

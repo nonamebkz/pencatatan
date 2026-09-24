@@ -3,6 +3,7 @@ import { ChevronRight } from 'lucide-react'
 
 import { type Transaction, transactionTypeLabel } from '@/api/finance'
 import { formatIDR } from '@/lib/format'
+import { interactive } from '@/lib/design'
 import { cn } from '@/lib/utils'
 
 type TransactionRowProps = {
@@ -21,8 +22,10 @@ export function TransactionRow({ item, showDetailLink }: TransactionRowProps) {
   const inner = (
     <div
       className={cn(
-        'flex items-center gap-3 rounded-2xl border bg-card p-4 transition',
-        canOpenDetail && 'hover:border-primary/30',
+        'flex items-center gap-3',
+        interactive.listArticle,
+        'transition',
+        canOpenDetail && interactive.listRowHover,
       )}
     >
       <div className="min-w-0 flex-1">

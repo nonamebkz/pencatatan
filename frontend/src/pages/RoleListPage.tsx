@@ -7,6 +7,7 @@ import { useAuth } from '@/contexts/AuthContext'
 import { EmptyState } from '@/components/shared/EmptyState'
 import { ErrorAlert } from '@/components/shared/ErrorAlert'
 import { ListSkeleton } from '@/components/shared/ListSkeleton'
+import { MobileListFab } from '@/components/shared/MobileListFab'
 import { PageHeader } from '@/components/shared/PageHeader'
 import { PageShell } from '@/components/shared/PageShell'
 import { PanelCard } from '@/components/shared/PanelCard'
@@ -90,13 +91,7 @@ export function RoleListPage() {
         </div>
       )}
 
-      {canCreate && (
-        <Button asChild size="lg" className="fixed bottom-[calc(6.5rem+env(safe-area-inset-bottom,0px))] right-4 z-30 size-14 rounded-full p-0 shadow-lg md:hidden">
-          <Link to="/roles/new" aria-label="Tambah peran">
-            <Plus className="size-6" />
-          </Link>
-        </Button>
-      )}
+      {canCreate && <MobileListFab to="/roles/new" ariaLabel="Tambah peran" />}
     </PageShell>
   )
 }

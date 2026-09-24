@@ -5,10 +5,11 @@ import { getTransaction, purchaseCategoryLabels, transactionTypeLabel, type Tran
 import { BackLink } from '@/components/shared/BackLink'
 import { ErrorAlert } from '@/components/shared/ErrorAlert'
 import { PageHeader } from '@/components/shared/PageHeader'
+import { PageShell } from '@/components/shared/PageShell'
 import { PanelCard } from '@/components/shared/PanelCard'
 import { Button } from '@/components/ui/button'
 import { Skeleton } from '@/components/ui/skeleton'
-import { skeleton } from '@/lib/design'
+import { pageLayout, skeleton } from '@/lib/design'
 import { formatIDR } from '@/lib/format'
 import { cn } from '@/lib/utils'
 
@@ -28,28 +29,28 @@ export function TransactionDetailPage() {
 
   if (loading) {
     return (
-      <div className="mx-auto max-w-2xl space-y-4">
+      <PageShell className={pageLayout.detail}>
         <Skeleton className="h-10 w-48" />
         <Skeleton className={cn(skeleton.block, 'h-64')} />
-      </div>
+      </PageShell>
     )
   }
 
   if (error || !item) {
     return (
-      <div className="mx-auto max-w-2xl space-y-4">
+      <PageShell className={pageLayout.detail}>
         <ErrorAlert>{error ?? 'Transaksi tidak ditemukan'}</ErrorAlert>
         <Button asChild variant="outline">
           <Link to="/finance">Kembali ke keuangan</Link>
         </Button>
-      </div>
+      </PageShell>
     )
   }
 
   const isPurchase = item.transactionType === 'PURCHASE'
 
   return (
-    <div className="mx-auto max-w-2xl space-y-6">
+    <PageShell className={pageLayout.detail}>
       <BackLink to="/finance" label="Kembali ke keuangan" />
 
       <PageHeader
@@ -104,6 +105,6 @@ export function TransactionDetailPage() {
           </ul>
         </PanelCard>
       )}
-    </div>
+    </PageShell>
   )
 }
