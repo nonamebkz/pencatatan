@@ -5,6 +5,7 @@ Dokumen di folder ini **bukan kontrak fitur**. Gunakan sebagai acuan sebelum men
 | Dokumen | Topik |
 |---------|--------|
 | [`pond-spec-water-quality.md`](./pond-spec-water-quality.md) | Spesifikasi kolam lele, parameter air, degradasi, penanganan (pH/amonia), implikasi field aplikasi |
+| [`pond-operational-activities.md`](./pond-operational-activities.md) | Aktivitas harian kolam (pakan, mortalitas, sampling, …) vs atom yang sudah ada di BRD |
 
 **Alur disarankan:** riset → review dengan praktisi → `docs/features/<slug>.md` (status `contract-ready`) → implementasi.
 
