@@ -29,12 +29,18 @@ func LoadPermissions(rbac *repository.RBACRepository) fiber.Handler {
 }
 
 func RequirePermission(code string) fiber.Handler {
+	return RequireAnyPermission(code)
+}
+
+func RequireAnyPermission(codes ...string) fiber.Handler {
 	return func(c *fiber.Ctx) error {
 		set, _ := c.Locals(permissionsLocalKey).(map[string]struct{})
-		if !hasPermission(set, code) {
-			return httpx.Fail(c, fiber.StatusForbidden, "FORBIDDEN", "Anda tidak memiliki izin untuk aksi ini")
+		for _, code := range codes {
+			if hasPermission(set, code) {
+				return c.Next()
+			}
 		}
-		return c.Next()
+		return httpx.Fail(c, fiber.StatusForbidden, "FORBIDDEN", "Anda tidak memiliki izin untuk aksi ini")
 	}
 }
 

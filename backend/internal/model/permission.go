@@ -17,6 +17,9 @@ const (
 	PermPondDelete         = "pond.delete"
 	PermWaterQualityDelete = "water_quality.delete"
 	PermWaterQualityCfgUp  = "water_quality.config.update"
+	PermCashAccountRead    = "cash_account.read"
+	PermCashAccountCreate  = "cash_account.create"
+	PermCashAccountUpdate  = "cash_account.update"
 	PermCashAccountDelete  = "cash_account.delete"
 )
 
@@ -25,11 +28,14 @@ var AllPermissionCodes = []string{
 	PermUserRead, PermUserCreate, PermUserUpdate, PermUserDelete, PermUserAssignRole,
 	PermRoleRead, PermRoleCreate, PermRoleUpdate, PermRoleDelete, PermRoleAssignPerm,
 	PermPermissionRead, PermAuditRead,
-	PermPondDelete, PermWaterQualityDelete, PermWaterQualityCfgUp, PermCashAccountDelete,
+	PermPondDelete, PermWaterQualityDelete, PermWaterQualityCfgUp,
+	PermCashAccountRead, PermCashAccountCreate, PermCashAccountUpdate, PermCashAccountDelete,
 }
 
 // OperatorPermissionCodes subset untuk peran operator (legacy USER) — tanpa Kelola Akses.
-var OperatorPermissionCodes []string
+var OperatorPermissionCodes = []string{
+	PermCashAccountRead, PermCashAccountCreate, PermCashAccountUpdate,
+}
 
 type Permission struct {
 	ID          string `json:"id"`
@@ -50,6 +56,7 @@ type Role struct {
 }
 
 type RoleSummary struct {
+	ID   string `json:"id,omitempty"`
 	Code string `json:"code"`
 	Name string `json:"name"`
 }

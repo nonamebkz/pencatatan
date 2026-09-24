@@ -57,14 +57,22 @@ Base: `/api/v1`. Auth: Bearer JWT.
 
 ### Permissions catalog
 
-| GET | `/permissions` | `permission.read` |
+| GET | `/permissions` | `permission.read` **atau** `role.read` / `role.create` / `role.assign_permission` |
 
 ### Destructive / admin ops
 
 | DELETE | `/ponds/:id` | `pond.delete` |
 | DELETE | `/water-quality-logs/:id` | `water_quality.delete` |
-| DELETE | `/cash-accounts/:id` | `cash_account.delete` |
 | PUT | `/water-quality/config` | `water_quality.config.update` |
+
+### Cash accounts
+
+| Method | Path | Permission |
+|--------|------|------------|
+| GET | `/cash-accounts`, `/cash-accounts/:id` | `cash_account.read` |
+| POST | `/cash-accounts` | `cash_account.create` |
+| PUT | `/cash-accounts/:id` | `cash_account.update` |
+| DELETE | `/cash-accounts/:id` | `cash_account.delete` |
 
 ### Perubahan skema DB
 

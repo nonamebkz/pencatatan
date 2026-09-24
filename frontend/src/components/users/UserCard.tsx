@@ -1,11 +1,14 @@
 import { Link } from 'react-router-dom'
 import { ChevronRight, Mail, Shield, UserRound } from 'lucide-react'
 
-import type { AuthUser } from '@/api/auth'
-import { RoleBadge } from '@/components/users/RoleBadge'
+import type { UserRecord } from '@/api/users'
 import { cn } from '@/lib/utils'
+import { Badge } from '@/components/ui/badge'
 
-export function UserCard({ user }: { user: AuthUser }) {
+export function UserCard({ user }: { user: UserRecord }) {
+  const primaryRole = user.roles[0]
+  const isAdminLegacy = user.role === 'ADMIN'
+
   return (
     <Link
       to={`/users/${user.id}/edit`}
@@ -17,7 +20,7 @@ export function UserCard({ user }: { user: AuthUser }) {
       <div className="flex items-start justify-between gap-3">
         <div className="flex min-w-0 items-start gap-3">
           <div className="flex size-11 shrink-0 items-center justify-center rounded-2xl bg-primary/10 text-primary">
-            {user.role === 'ADMIN' ? <Shield className="size-5" /> : <UserRound className="size-5" />}
+            {isAdminLegacy ? <Shield className="size-5" /> : <UserRound className="size-5" />}
           </div>
           <div className="min-w-0">
             <p className="truncate font-semibold">{user.name}</p>
@@ -31,7 +34,11 @@ export function UserCard({ user }: { user: AuthUser }) {
       </div>
 
       <div className="mt-4 flex flex-wrap items-center gap-2">
-        <RoleBadge role={user.role} />
+        {primaryRole ? (
+          <Badge variant="secondary">{primaryRole.name}</Badge>
+        ) : (
+          <Badge variant="outline">{user.role}</Badge>
+        )}
         <span
           className={cn(
             'rounded-full px-2.5 py-1 text-[11px] font-medium',

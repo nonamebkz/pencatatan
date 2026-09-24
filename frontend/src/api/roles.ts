@@ -22,6 +22,21 @@ export async function listRoles() {
   return api.get<Role[]>('/roles')
 }
 
+export type RoleCreateInput = {
+  name: string
+  code: string
+  description?: string
+  permissionIds: string[]
+}
+
+export async function createRole(body: RoleCreateInput) {
+  return api.post<Role>('/roles', body)
+}
+
+export async function deleteRole(id: string) {
+  return api.delete(`/roles/${id}`)
+}
+
 export async function getRole(id: string) {
   return api.get<Role>(`/roles/${id}`)
 }

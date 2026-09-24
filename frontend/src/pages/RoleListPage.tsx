@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
-import { Shield } from 'lucide-react'
+import { Plus, Shield } from 'lucide-react'
 
 import { listRoles, type Role } from '@/api/roles'
 import { useAuth } from '@/contexts/AuthContext'
@@ -10,11 +10,13 @@ import { ListSkeleton } from '@/components/shared/ListSkeleton'
 import { PageHeader } from '@/components/shared/PageHeader'
 import { PageShell } from '@/components/shared/PageShell'
 import { PanelCard } from '@/components/shared/PanelCard'
-import { PermRoleRead } from '@/lib/permissions'
+import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
+import { PermRoleCreate, PermRoleRead } from '@/lib/permissions'
 
 export function RoleListPage() {
   const { can: check } = useAuth()
+  const canCreate = check(PermRoleCreate)
   const [roles, setRoles] = useState<Role[]>([])
   const [error, setError] = useState<string | null>(null)
   const [loading, setLoading] = useState(true)
@@ -34,7 +36,17 @@ export function RoleListPage() {
     <PageShell>
       <PageHeader
         title="Peran"
-        description="Paket permission untuk tim. Role sistem tidak dapat diubah permission-nya."
+        description="Paket permission untuk tim. Tambah peran custom atau ubah permission per role."
+        actions={
+          canCreate ? (
+            <Button asChild size="lg" className="hidden md:inline-flex">
+              <Link to="/roles/new">
+                <Plus className="size-4" />
+                Tambah Peran
+              </Link>
+            </Button>
+          ) : undefined
+        }
       />
 
       {error && <ErrorAlert>{error}</ErrorAlert>}
@@ -42,7 +54,18 @@ export function RoleListPage() {
       {loading ? (
         <ListSkeleton count={3} />
       ) : roles.length === 0 ? (
-        <EmptyState icon={Shield} title="Belum ada peran" description="Jalankan migrasi RBAC di backend." />
+        <EmptyState
+          icon={Shield}
+          title="Belum ada peran"
+          description="Jalankan migrasi RBAC atau buat peran pertama."
+          action={
+            canCreate ? (
+              <Button asChild className="w-full sm:w-auto">
+                <Link to="/roles/new">Tambah Peran</Link>
+              </Button>
+            ) : undefined
+          }
+        />
       ) : (
         <div className="space-y-3">
           {roles.map((role) => (
@@ -63,6 +86,14 @@ export function RoleListPage() {
             </PanelCard>
           ))}
         </div>
+      )}
+
+      {canCreate && (
+        <Button asChild size="lg" className="fixed bottom-[calc(6.5rem+env(safe-area-inset-bottom,0px))] right-4 z-30 size-14 rounded-full p-0 shadow-lg md:hidden">
+          <Link to="/roles/new" aria-label="Tambah peran">
+            <Plus className="size-6" />
+          </Link>
+        </Button>
       )}
     </PageShell>
   )

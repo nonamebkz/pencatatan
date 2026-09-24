@@ -63,6 +63,45 @@ func (r *RBACRepository) AssignPermissionToRole(ctx context.Context, roleID, per
 	return err
 }
 
+func (r *RBACRepository) SetUserRoles(ctx context.Context, userID string, roleIDs []string) error {
+	tx, err := r.db.BeginTx(ctx, nil)
+	if err != nil {
+		return err
+	}
+	defer tx.Rollback()
+
+	if _, err := tx.ExecContext(ctx, `DELETE FROM user_roles WHERE user_id = ?`, userID); err != nil {
+		return err
+	}
+	now := time.Now()
+	for _, roleID := range roleIDs {
+		if _, err := tx.ExecContext(ctx, `
+			INSERT INTO user_roles (id, user_id, role_id, created_at)
+			VALUES (?, ?, ?, ?)`, uuid.NewString(), userID, roleID, now); err != nil {
+			return err
+		}
+	}
+	return tx.Commit()
+}
+
+func (r *RBACRepository) ListUserRoleIDs(ctx context.Context, userID string) ([]string, error) {
+	rows, err := r.db.QueryContext(ctx, `
+		SELECT role_id FROM user_roles WHERE user_id = ? ORDER BY created_at`, userID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	ids := make([]string, 0)
+	for rows.Next() {
+		var id string
+		if err := rows.Scan(&id); err != nil {
+			return nil, err
+		}
+		ids = append(ids, id)
+	}
+	return ids, rows.Err()
+}
+
 func (r *RBACRepository) AssignRoleToUser(ctx context.Context, userID, roleID string) error {
 	_, err := r.db.ExecContext(ctx, `
 		INSERT IGNORE INTO user_roles (id, user_id, role_id, created_at)
@@ -115,7 +154,7 @@ func (r *RBACRepository) EffectivePermissionCodes(ctx context.Context, userID st
 
 func (r *RBACRepository) ListRoleSummariesForUser(ctx context.Context, userID string) ([]model.RoleSummary, error) {
 	rows, err := r.db.QueryContext(ctx, `
-		SELECT r.code, r.name
+		SELECT r.id, r.code, r.name
 		FROM roles r
 		INNER JOIN user_roles ur ON ur.role_id = r.id
 		WHERE ur.user_id = ?
@@ -128,7 +167,7 @@ func (r *RBACRepository) ListRoleSummariesForUser(ctx context.Context, userID st
 	items := make([]model.RoleSummary, 0)
 	for rows.Next() {
 		var item model.RoleSummary
-		if err := rows.Scan(&item.Code, &item.Name); err != nil {
+		if err := rows.Scan(&item.ID, &item.Code, &item.Name); err != nil {
 			return nil, err
 		}
 		items = append(items, item)
@@ -155,7 +194,17 @@ func (r *RBACRepository) ListRoles(ctx context.Context) ([]model.Role, error) {
 		item.IsSystem = isSystem == 1
 		items = append(items, item)
 	}
-	return items, rows.Err()
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	for i := range items {
+		perms, err := r.permissionCodesForRole(ctx, items[i].ID)
+		if err != nil {
+			return nil, err
+		}
+		items[i].Permissions = perms
+	}
+	return items, nil
 }
 
 func (r *RBACRepository) GetRoleByID(ctx context.Context, id string) (*model.Role, error) {
@@ -246,6 +295,43 @@ func (r *RBACRepository) UpdateRoleMeta(ctx context.Context, role *model.Role) e
 		role.Name, nullString(role.Description), time.Now(), role.ID,
 	)
 	return err
+}
+
+func (r *RBACRepository) GetRoleByCode(ctx context.Context, code string) (*model.Role, error) {
+	row := r.db.QueryRowContext(ctx, `
+		SELECT id, name, code, COALESCE(description,''), is_system
+		FROM roles WHERE code = ?`, code)
+	var item model.Role
+	var isSystem int
+	if err := row.Scan(&item.ID, &item.Name, &item.Code, &item.Description, &isSystem); err != nil {
+		if err == sql.ErrNoRows {
+			return nil, nil
+		}
+		return nil, err
+	}
+	item.IsSystem = isSystem == 1
+	return &item, nil
+}
+
+func (r *RBACRepository) CountUsersWithRole(ctx context.Context, roleID string) (int, error) {
+	var n int
+	err := r.db.QueryRowContext(ctx, `SELECT COUNT(*) FROM user_roles WHERE role_id = ?`, roleID).Scan(&n)
+	return n, err
+}
+
+func (r *RBACRepository) DeleteRole(ctx context.Context, roleID string) error {
+	result, err := r.db.ExecContext(ctx, `DELETE FROM roles WHERE id = ? AND is_system = 0`, roleID)
+	if err != nil {
+		return err
+	}
+	affected, err := result.RowsAffected()
+	if err != nil {
+		return err
+	}
+	if affected == 0 {
+		return sql.ErrNoRows
+	}
+	return nil
 }
 
 func (r *RBACRepository) UserHasRoleAssignment(ctx context.Context, userID string) (bool, error) {

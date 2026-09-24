@@ -1,36 +1,176 @@
 import { useEffect, useMemo, useState } from 'react'
-import { useNavigate, useParams } from 'react-router-dom'
+import { useLocation, useNavigate, useParams } from 'react-router-dom'
+import { Save, Trash2 } from 'lucide-react'
 
-import { getRole, listPermissions, type Permission, type Role } from '@/api/roles'
+import {
+  createRole,
+  deleteRole,
+  getRole,
+  listPermissions,
+  setRolePermissions,
+  updateRole,
+  type Permission,
+  type Role,
+} from '@/api/roles'
 import { BackLink } from '@/components/shared/BackLink'
+import { TextField, TextareaField } from '@/components/shared/Field'
 import { ErrorAlert } from '@/components/shared/ErrorAlert'
-import { InfoCallout } from '@/components/shared/InfoCallout'
+import { MobileFormFooter } from '@/components/shared/MobileFormFooter'
 import { PageHeader } from '@/components/shared/PageHeader'
 import { PageShell } from '@/components/shared/PageShell'
 import { PanelCard } from '@/components/shared/PanelCard'
+import { useAuth } from '@/contexts/AuthContext'
+import { PermRoleAssignPerm, PermRoleDelete, PermRoleUpdate } from '@/lib/permissions'
+import { Button } from '@/components/ui/button'
 import { Skeleton } from '@/components/ui/skeleton'
-import { Badge } from '@/components/ui/badge'
+import { cn } from '@/lib/utils'
+
+function slugFromName(name: string) {
+  return name
+    .toLowerCase()
+    .trim()
+    .replace(/[^a-z0-9]+/g, '_')
+    .replace(/^_+|_+$/g, '')
+    .slice(0, 64)
+}
+
+function permissionIdsFromCodes(all: Permission[], codes: string[]) {
+  const set = new Set(codes)
+  return new Set(all.filter((p) => set.has(p.code)).map((p) => p.id))
+}
+
+function normalizePermissionList(data: Permission[] | null | undefined): Permission[] {
+  return Array.isArray(data) ? data : []
+}
 
 export function RoleFormPage() {
   const { id } = useParams<{ id: string }>()
+  const location = useLocation()
   const navigate = useNavigate()
+  const isCreate = location.pathname === '/roles/new'
+  const { can: check } = useAuth()
+  const canEditMeta = check(PermRoleUpdate) || isCreate
+  const canEditPerms = check(PermRoleAssignPerm) || isCreate
+  const canDeleteRole = check(PermRoleDelete)
+
   const [role, setRole] = useState<Role | null>(null)
   const [permissions, setPermissions] = useState<Permission[]>([])
+  const [name, setName] = useState('')
+  const [code, setCode] = useState('')
+  const [codeTouched, setCodeTouched] = useState(false)
+  const [description, setDescription] = useState('')
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set())
   const [error, setError] = useState<string | null>(null)
+  const [permCatalogError, setPermCatalogError] = useState<string | null>(null)
   const [loading, setLoading] = useState(true)
+  const [submitting, setSubmitting] = useState(false)
 
   useEffect(() => {
+    setPermCatalogError(null)
+
+    const loadCatalog = () =>
+      listPermissions()
+        .then((response) => normalizePermissionList(response.data))
+        .catch((err) => {
+          const message = err instanceof Error ? err.message : 'Gagal memuat katalog permission'
+          setPermCatalogError(message)
+          return [] as Permission[]
+        })
+
+    if (isCreate) {
+      loadCatalog()
+        .then((catalog) => setPermissions(catalog))
+        .finally(() => setLoading(false))
+      return
+    }
     if (!id) return
-    Promise.all([getRole(id), listPermissions()])
-      .then(([roleRes, permRes]) => {
-        setRole(roleRes.data)
-        setPermissions(permRes.data)
+
+    setLoading(true)
+    Promise.all([getRole(id), loadCatalog()])
+      .then(([roleRes, catalog]) => {
+        const r = roleRes.data
+        setRole(r)
+        setName(r.name)
+        setCode(r.code)
+        setDescription(r.description ?? '')
+        setPermissions(catalog)
+        setSelectedIds(permissionIdsFromCodes(catalog, r.permissions ?? []))
       })
       .catch((err) => setError(err instanceof Error ? err.message : 'Gagal memuat peran'))
       .finally(() => setLoading(false))
-  }, [id])
+  }, [id, isCreate])
 
-  const assigned = useMemo(() => new Set(role?.permissions ?? []), [role])
+  useEffect(() => {
+    if (isCreate && !codeTouched && name) {
+      setCode(slugFromName(name))
+    }
+  }, [name, isCreate, codeTouched])
+
+  const grouped = useMemo(() => {
+    const map = new Map<string, Permission[]>()
+    for (const perm of permissions) {
+      const list = map.get(perm.resource) ?? []
+      list.push(perm)
+      map.set(perm.resource, list)
+    }
+    return [...map.entries()].sort(([a], [b]) => a.localeCompare(b))
+  }, [permissions])
+
+  const togglePermission = (permId: string) => {
+    setSelectedIds((prev) => {
+      const next = new Set(prev)
+      if (next.has(permId)) next.delete(permId)
+      else next.add(permId)
+      return next
+    })
+  }
+
+  const handleSubmit = async (event: React.FormEvent) => {
+    event.preventDefault()
+    if (selectedIds.size === 0) {
+      setError('Minimal satu permission harus aktif')
+      return
+    }
+    setSubmitting(true)
+    setError(null)
+    try {
+      if (isCreate) {
+        await createRole({
+          name: name.trim(),
+          code: code.trim(),
+          description: description.trim(),
+          permissionIds: [...selectedIds],
+        })
+      } else if (id && role) {
+        if (canEditMeta) {
+          await updateRole(id, { name: name.trim(), description: description.trim() })
+        }
+        if (canEditPerms) {
+          await setRolePermissions(id, [...selectedIds])
+        }
+      }
+      navigate('/roles')
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Gagal menyimpan peran')
+    } finally {
+      setSubmitting(false)
+    }
+  }
+
+  const handleDelete = async () => {
+    if (!id || !role || role.isSystem) return
+    if (!window.confirm(`Hapus peran "${role.name}"?`)) return
+    setSubmitting(true)
+    setError(null)
+    try {
+      await deleteRole(id)
+      navigate('/roles')
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Gagal menghapus peran')
+    } finally {
+      setSubmitting(false)
+    }
+  }
 
   if (loading) {
     return (
@@ -40,47 +180,135 @@ export function RoleFormPage() {
     )
   }
 
-  if (!role) {
-    return (
-      <PageShell>
-        <ErrorAlert>Peran tidak ditemukan</ErrorAlert>
-      </PageShell>
-    )
-  }
+  const readOnly = !isCreate && !canEditMeta && !canEditPerms
 
   return (
-    <PageShell>
+    <PageShell className="pb-24 md:pb-8">
       <BackLink to="/roles" label="Kembali ke daftar peran" />
-      <PageHeader title={role.name} description={`Kode: ${role.code}`} />
+      <PageHeader
+        title={isCreate ? 'Tambah Peran' : role?.name ?? 'Peran'}
+        description={
+          isCreate
+            ? 'Buat paket permission baru untuk tim.'
+            : `Kode: ${role?.code ?? code}${role?.isSystem ? ' · sistem' : ''}`
+        }
+      />
 
-      {error && <ErrorAlert>{error}</ErrorAlert>}
+      <form id="role-form" className="space-y-6" onSubmit={handleSubmit}>
+        <PanelCard title="Profil peran">
+          <div className="space-y-4">
+            <TextField
+              label="Nama tampilan"
+              id="role-name"
+              value={name}
+              onChange={(e) => setName(e.target.value)}
+              disabled={!canEditMeta || readOnly}
+              required
+            />
+            <TextField
+              label="Kode (unik)"
+              id="role-code"
+              value={code}
+              onChange={(e) => {
+                setCodeTouched(true)
+                setCode(e.target.value.toLowerCase().replace(/[^a-z0-9_]/g, ''))
+              }}
+              disabled={!isCreate}
+              required
+              placeholder="mis. supervisor_kolam"
+            />
+            {!isCreate && (
+              <p className="text-xs text-muted-foreground">Kode role tidak dapat diubah setelah dibuat.</p>
+            )}
+            <TextareaField
+              label="Deskripsi"
+              id="role-desc"
+              value={description}
+              onChange={(e) => setDescription(e.target.value)}
+              disabled={!canEditMeta || readOnly}
+              rows={3}
+            />
+          </div>
+        </PanelCard>
 
-      {role.isSystem && (
-        <InfoCallout>
-          Role sistem — permission dikelola lewat seed. Ubah assignment user di halaman Pengguna (peran legacy ADMIN/USER).
-        </InfoCallout>
-      )}
-
-      <PanelCard title="Permission">
-        <ul className="divide-y">
-          {permissions.map((perm) => {
-            const active = assigned.has(perm.code)
-            return (
-              <li key={perm.id} className="flex items-start justify-between gap-3 px-4 py-3 text-sm">
-                <div>
-                  <p className="font-medium">{perm.name}</p>
-                  <p className="font-mono text-xs text-muted-foreground">{perm.code}</p>
+        <PanelCard title="Permission" description="Centang akses yang diberikan ke peran ini.">
+          {permCatalogError && <ErrorAlert className="mx-4 mt-4">{permCatalogError}</ErrorAlert>}
+          {grouped.length === 0 ? (
+            <p className="px-4 py-6 text-sm text-muted-foreground">
+              {permCatalogError
+                ? 'Katalog permission tidak dapat dimuat. Pastikan akun Anda punya akses kelola peran, lalu muat ulang halaman.'
+                : 'Belum ada permission terdaftar. Restart backend agar seed RBAC jalan, atau jalankan migrasi 000005_rbac.'}
+            </p>
+          ) : (
+            <div className="divide-y">
+              {grouped.map(([resource, perms]) => (
+                <div key={resource} className="px-4 py-3">
+                  <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-muted-foreground">{resource}</p>
+                  <ul className="space-y-2">
+                    {perms.map((perm) => {
+                      const checked = selectedIds.has(perm.id)
+                      return (
+                        <li key={perm.id}>
+                          <label
+                            className={cn(
+                              'flex cursor-pointer items-start gap-3 rounded-xl border px-3 py-2.5 text-sm transition',
+                              checked ? 'border-primary/30 bg-primary/5' : 'border-transparent hover:bg-muted/50',
+                              (!canEditPerms || readOnly) && 'cursor-default opacity-80',
+                            )}
+                          >
+                            <input
+                              type="checkbox"
+                              className="mt-1 size-4 rounded border-input"
+                              checked={checked}
+                              disabled={!canEditPerms || readOnly}
+                              onChange={() => togglePermission(perm.id)}
+                            />
+                            <span>
+                              <span className="font-medium">{perm.name}</span>
+                              <span className="mt-0.5 block font-mono text-xs text-muted-foreground">{perm.code}</span>
+                            </span>
+                          </label>
+                        </li>
+                      )
+                    })}
+                  </ul>
                 </div>
-                <Badge variant={active ? 'default' : 'outline'}>{active ? 'Aktif' : '—'}</Badge>
-              </li>
-            )
-          })}
-        </ul>
-      </PanelCard>
+              ))}
+            </div>
+          )}
+        </PanelCard>
 
-      <button type="button" className="sr-only" onClick={() => navigate('/roles')}>
-        Kembali
-      </button>
+        {error && <ErrorAlert>{error}</ErrorAlert>}
+
+        {!readOnly && (
+          <div className="hidden flex-wrap gap-3 md:flex">
+            <Button type="submit" size="lg" disabled={submitting}>
+              <Save className="size-4" />
+              {isCreate ? 'Buat peran' : 'Simpan peran'}
+            </Button>
+            {!isCreate && canDeleteRole && role && !role.isSystem && (
+              <Button type="button" variant="outline" disabled={submitting} onClick={() => void handleDelete()}>
+                <Trash2 className="size-4" />
+                Hapus
+              </Button>
+            )}
+          </div>
+        )}
+      </form>
+
+      {!readOnly && (
+        <MobileFormFooter>
+          {!isCreate && canDeleteRole && role && !role.isSystem && (
+            <Button type="button" variant="outline" disabled={submitting} className="flex-1" onClick={() => void handleDelete()}>
+              <Trash2 className="size-4" />
+            </Button>
+          )}
+          <Button type="submit" form="role-form" disabled={submitting} className="flex-[1.6]">
+            <Save className="size-4" />
+            {isCreate ? 'Buat' : 'Simpan'}
+          </Button>
+        </MobileFormFooter>
+      )}
     </PageShell>
   )
 }

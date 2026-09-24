@@ -89,14 +89,22 @@ func main() {
 	protected.Post("/users", middleware.RequirePermission(model.PermUserCreate), userHandler.Create)
 	protected.Put("/users/:id", middleware.RequirePermission(model.PermUserUpdate), userHandler.Update)
 	protected.Put("/users/:id/reset-password", middleware.RequirePermission(model.PermUserUpdate), userHandler.ResetPassword)
+	protected.Put("/users/:id/roles", middleware.RequirePermission(model.PermUserAssignRole), userHandler.SetRoles)
 	protected.Delete("/users/:id", middleware.RequirePermission(model.PermUserDelete), userHandler.Delete)
 
 	protected.Get("/roles", middleware.RequirePermission(model.PermRoleRead), roleHandler.List)
+	protected.Post("/roles", middleware.RequirePermission(model.PermRoleCreate), roleHandler.Create)
 	protected.Get("/roles/:id", middleware.RequirePermission(model.PermRoleRead), roleHandler.Get)
 	protected.Put("/roles/:id", middleware.RequirePermission(model.PermRoleUpdate), roleHandler.Update)
+	protected.Delete("/roles/:id", middleware.RequirePermission(model.PermRoleDelete), roleHandler.Delete)
 	protected.Put("/roles/:id/permissions", middleware.RequirePermission(model.PermRoleAssignPerm), roleHandler.SetPermissions)
 
-	protected.Get("/permissions", middleware.RequirePermission(model.PermPermissionRead), permissionHandler.List)
+	protected.Get("/permissions", middleware.RequireAnyPermission(
+		model.PermPermissionRead,
+		model.PermRoleRead,
+		model.PermRoleCreate,
+		model.PermRoleAssignPerm,
+	), permissionHandler.List)
 
 	protected.Get("/batches", batchHandler.List)
 	protected.Get("/ponds", pondHandler.List)
@@ -119,10 +127,10 @@ func main() {
 	protected.Get("/reports/water-quality", waterQualityHandler.Report)
 	protected.Get("/dashboard", waterQualityHandler.DashboardSummary)
 
-	protected.Get("/cash-accounts", financeHandler.ListCashAccounts)
-	protected.Get("/cash-accounts/:id", financeHandler.GetCashAccount)
-	protected.Post("/cash-accounts", financeHandler.CreateCashAccount)
-	protected.Put("/cash-accounts/:id", financeHandler.UpdateCashAccount)
+	protected.Get("/cash-accounts", middleware.RequirePermission(model.PermCashAccountRead), financeHandler.ListCashAccounts)
+	protected.Get("/cash-accounts/:id", middleware.RequirePermission(model.PermCashAccountRead), financeHandler.GetCashAccount)
+	protected.Post("/cash-accounts", middleware.RequirePermission(model.PermCashAccountCreate), financeHandler.CreateCashAccount)
+	protected.Put("/cash-accounts/:id", middleware.RequirePermission(model.PermCashAccountUpdate), financeHandler.UpdateCashAccount)
 	protected.Delete("/cash-accounts/:id", middleware.RequirePermission(model.PermCashAccountDelete), financeHandler.DeleteCashAccount)
 	protected.Get("/finance/summary", financeHandler.Summary)
 	protected.Get("/transactions", financeHandler.ListTransactions)

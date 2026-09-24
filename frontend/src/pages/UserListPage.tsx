@@ -4,7 +4,7 @@ import { Plus, Users } from 'lucide-react'
 
 import { useAuth } from '@/contexts/AuthContext'
 import { PermUserCreate } from '@/lib/permissions'
-import type { AuthUser } from '@/api/auth'
+import type { UserRecord } from '@/api/users'
 import { listUsers } from '@/api/users'
 import { UserCard } from '@/components/users/UserCard'
 import { EmptyState } from '@/components/shared/EmptyState'
@@ -18,7 +18,7 @@ import { Button } from '@/components/ui/button'
 export function UserListPage() {
   const { can: check } = useAuth()
   const canCreate = check(PermUserCreate)
-  const [users, setUsers] = useState<AuthUser[]>([])
+  const [users, setUsers] = useState<UserRecord[]>([])
   const [error, setError] = useState<string | null>(null)
   const [loading, setLoading] = useState(true)
 

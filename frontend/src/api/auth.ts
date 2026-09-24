@@ -27,6 +27,7 @@ export type AuthUser = {
 }
 
 export type RoleSummary = {
+  id?: string
   code: string
   name: string
 }

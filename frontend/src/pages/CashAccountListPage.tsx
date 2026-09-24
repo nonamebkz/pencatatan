@@ -12,8 +12,12 @@ import { ListSkeleton } from '@/components/shared/ListSkeleton'
 import { PageHeader } from '@/components/shared/PageHeader'
 import { PageShell } from '@/components/shared/PageShell'
 import { Button } from '@/components/ui/button'
+import { useAuth } from '@/contexts/AuthContext'
+import { PermCashAccountCreate } from '@/lib/permissions'
 
 export function CashAccountListPage() {
+  const { can: check } = useAuth()
+  const canCreate = check(PermCashAccountCreate)
   const [accounts, setAccounts] = useState<CashAccount[]>([])
   const [error, setError] = useState<string | null>(null)
   const [loading, setLoading] = useState(true)
@@ -35,12 +39,14 @@ export function CashAccountListPage() {
         title="Akun Kas"
         description="Kelola sumber dana untuk pembelian dan pengeluaran. Minimal satu akun harus ada."
         actions={
-          <Button asChild size="lg" className="hidden w-full md:inline-flex md:w-auto">
-            <Link to="/finance/cash-accounts/new">
-              <Plus className="size-4" />
-              Tambah kas
-            </Link>
-          </Button>
+          canCreate ? (
+            <Button asChild size="lg" className="hidden w-full md:inline-flex md:w-auto">
+              <Link to="/finance/cash-accounts/new">
+                <Plus className="size-4" />
+                Tambah kas
+              </Link>
+            </Button>
+          ) : undefined
         }
       />
 
@@ -59,12 +65,14 @@ export function CashAccountListPage() {
           title="Belum ada akun kas"
           description="Tambahkan akun kas pertama agar transaksi keuangan bisa dicatat."
           action={
-            <Button asChild className="w-full sm:w-auto">
-              <Link to="/finance/cash-accounts/new">
-                <Plus className="size-4" />
-                Tambah kas
-              </Link>
-            </Button>
+            canCreate ? (
+              <Button asChild className="w-full sm:w-auto">
+                <Link to="/finance/cash-accounts/new">
+                  <Plus className="size-4" />
+                  Tambah kas
+                </Link>
+              </Button>
+            ) : undefined
           }
         />
       ) : (
@@ -78,15 +86,17 @@ export function CashAccountListPage() {
         </div>
       )}
 
-      <Button
-        asChild
-        size="lg"
-        className="fixed bottom-[calc(6.5rem+env(safe-area-inset-bottom,0px))] right-4 z-30 size-14 rounded-full p-0 shadow-lg md:hidden"
-      >
-        <Link to="/finance/cash-accounts/new" aria-label="Tambah akun kas">
-          <Plus className="size-6" />
-        </Link>
-      </Button>
+      {canCreate && (
+        <Button
+          asChild
+          size="lg"
+          className="fixed bottom-[calc(6.5rem+env(safe-area-inset-bottom,0px))] right-4 z-30 size-14 rounded-full p-0 shadow-lg md:hidden"
+        >
+          <Link to="/finance/cash-accounts/new" aria-label="Tambah akun kas">
+            <Plus className="size-6" />
+          </Link>
+        </Button>
+      )}
     </PageShell>
   )
 }

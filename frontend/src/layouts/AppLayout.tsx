@@ -18,7 +18,8 @@ function pageTitle(pathname: string) {
   if (pathname.startsWith('/users/new')) return 'Tambah Pengguna'
   if (pathname.startsWith('/users/') && pathname.endsWith('/edit')) return 'Edit Pengguna'
   if (pathname.startsWith('/users')) return 'Pengguna'
-  if (pathname.startsWith('/roles/') && pathname.endsWith('/edit')) return 'Detail Peran'
+  if (pathname === '/roles/new') return 'Tambah Peran'
+  if (pathname.startsWith('/roles/') && pathname.endsWith('/edit')) return 'Ubah Peran'
   if (pathname.startsWith('/roles')) return 'Peran'
   if (pathname === '/forbidden') return 'Akses ditolak'
   if (pathname.startsWith('/finance/cash-accounts/new')) return 'Tambah Kas'
@@ -58,6 +59,7 @@ export function AppLayout() {
     (location.pathname.startsWith('/finance/') && !location.pathname.startsWith('/finance/cash-accounts')) ||
     location.pathname.endsWith('/edit') ||
     location.pathname.startsWith('/users') ||
+    location.pathname === '/roles/new' ||
     location.pathname.startsWith('/roles')
 
   const accessItems = [

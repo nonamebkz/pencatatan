@@ -578,6 +578,18 @@ Filter: `actor_user_id`, `entity_type`, `event_type`, `date_from`, `date_to`. St
 | POST | `/batches` | `{ name, businessUnitId?, startDate?, endDate? }` | `Batch` |
 | PUT | `/batches/:id` | `{ ...fields }` | `Batch` |
 
+### 5.4a Cash accounts (Akun kas)
+
+| Method | Endpoint | Permission | Body / Query | Response |
+|---|---|---|---|---|
+| GET | `/cash-accounts` | `cash_account.read` | — | `[CashAccount]` |
+| GET | `/cash-accounts/:id` | `cash_account.read` | — | `CashAccount` |
+| POST | `/cash-accounts` | `cash_account.create` | `{ name, isDefault? }` | `CashAccount` |
+| PUT | `/cash-accounts/:id` | `cash_account.update` | `{ name, isDefault? }` | `CashAccount` |
+| DELETE | `/cash-accounts/:id` | `cash_account.delete` | — | `204` |
+
+Seed migrasi `000003_finance`: **Kas Utama** default (`is_default=1`).
+
 ### 5.5 Purchase (Transaction + LineItems)
 
 | Method | Endpoint | Body / Query | Response |

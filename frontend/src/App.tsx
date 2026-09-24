@@ -18,7 +18,7 @@ import { FinancePage } from '@/pages/FinancePage'
 import { ForbiddenPage } from '@/pages/ForbiddenPage'
 import { RoleFormPage } from '@/pages/RoleFormPage'
 import { RoleListPage } from '@/pages/RoleListPage'
-import { PermRoleRead, PermUserRead, PermWaterQualityCfgUp } from '@/lib/permissions'
+import { PermCashAccountCreate, PermCashAccountRead, PermCashAccountUpdate, PermRoleCreate, PermRoleRead, PermUserRead, PermWaterQualityCfgUp } from '@/lib/permissions'
 import { OtherExpenseFormPage } from '@/pages/OtherExpenseFormPage'
 import { PurchaseDetailPage } from '@/pages/PurchaseDetailPage'
 import { TransactionDetailPage } from '@/pages/TransactionDetailPage'
@@ -53,9 +53,16 @@ function App() {
               <Route path="finance/purchases/:id" element={<PurchaseDetailPage />} />
               <Route path="finance/transactions/:id" element={<TransactionDetailPage />} />
               <Route path="finance/expenses/new" element={<OtherExpenseFormPage />} />
-              <Route path="finance/cash-accounts" element={<CashAccountListPage />} />
-              <Route path="finance/cash-accounts/new" element={<CashAccountFormPage />} />
-              <Route path="finance/cash-accounts/:id/edit" element={<CashAccountFormPage />} />
+
+              <Route element={<PermissionRoute permission={PermCashAccountRead} />}>
+                <Route path="finance/cash-accounts" element={<CashAccountListPage />} />
+              </Route>
+              <Route element={<PermissionRoute permission={PermCashAccountCreate} />}>
+                <Route path="finance/cash-accounts/new" element={<CashAccountFormPage />} />
+              </Route>
+              <Route element={<PermissionRoute permission={PermCashAccountUpdate} />}>
+                <Route path="finance/cash-accounts/:id/edit" element={<CashAccountFormPage />} />
+              </Route>
 
               <Route element={<PermissionRoute permission={PermUserRead} />}>
                 <Route path="users" element={<UserListPage />} />
@@ -66,6 +73,10 @@ function App() {
               <Route element={<PermissionRoute permission={PermRoleRead} />}>
                 <Route path="roles" element={<RoleListPage />} />
                 <Route path="roles/:id/edit" element={<RoleFormPage />} />
+              </Route>
+
+              <Route element={<PermissionRoute permission={PermRoleCreate} />}>
+                <Route path="roles/new" element={<RoleFormPage />} />
               </Route>
 
               <Route element={<PermissionRoute permission={PermWaterQualityCfgUp} />}>

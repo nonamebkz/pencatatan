@@ -2,11 +2,12 @@ import { useEffect, useState } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
 import { KeyRound, Save, Trash2 } from 'lucide-react'
 
-import type { UserRole } from '@/api/auth'
+import { listRoles } from '@/api/roles'
 import { createUser, deleteUser, getUser, resetUserPassword, updateUser } from '@/api/users'
 import { SelectField, TextField } from '@/components/shared/Field'
 import { BackLink } from '@/components/shared/BackLink'
 import { ErrorAlert } from '@/components/shared/ErrorAlert'
+import { InfoCallout } from '@/components/shared/InfoCallout'
 import { MobileFormFooter } from '@/components/shared/MobileFormFooter'
 import { PanelCard } from '@/components/shared/PanelCard'
 import { PageHeader } from '@/components/shared/PageHeader'
@@ -24,23 +25,43 @@ export function UserFormPage() {
 
   const [name, setName] = useState('')
   const [email, setEmail] = useState('')
-  const [role, setRole] = useState<UserRole>('USER')
+  const [roleId, setRoleId] = useState('')
+  const [roleOptions, setRoleOptions] = useState<{ id: string; label: string }[]>([])
   const [isActive, setIsActive] = useState(true)
   const [password, setPassword] = useState('')
   const [newPassword, setNewPassword] = useState('')
   const [error, setError] = useState<string | null>(null)
-  const [loading, setLoading] = useState(isEdit)
+  const [loading, setLoading] = useState(true)
   const [submitting, setSubmitting] = useState(false)
 
   useEffect(() => {
-    if (!isEdit || !id) return
+    listRoles()
+      .then((response) => {
+        const options = response.data.map((role) => ({
+          id: role.id,
+          label: `${role.name} (${role.code})`,
+        }))
+        setRoleOptions(options)
+        if (!isEdit && options.length > 0 && !roleId) {
+          const operator = response.data.find((r) => r.code === 'operator')
+          setRoleId(operator?.id ?? options[0].id)
+        }
+      })
+      .catch((err) => setError(err instanceof Error ? err.message : 'Gagal memuat peran'))
+  }, [isEdit])
+
+  useEffect(() => {
+    if (!isEdit || !id) {
+      setLoading(false)
+      return
+    }
     setLoading(true)
     getUser(id)
       .then((response) => {
         const user = response.data
         setName(user.name)
         setEmail(user.email)
-        setRole(user.role)
+        setRoleId(user.roleIds[0] ?? '')
         setIsActive(user.isActive)
       })
       .catch((err) => setError(err instanceof Error ? err.message : 'Gagal memuat pengguna'))
@@ -49,16 +70,21 @@ export function UserFormPage() {
 
   const handleSubmit = async (event: React.FormEvent) => {
     event.preventDefault()
+    if (!roleId) {
+      setError('Pilih peran untuk pengguna')
+      return
+    }
     setSubmitting(true)
     setError(null)
     try {
+      const body = { name, email, roleIds: [roleId], isActive }
       if (isEdit && id) {
-        await updateUser(id, { name, email, role, isActive })
+        await updateUser(id, body)
         if (newPassword) {
           await resetUserPassword(id, newPassword)
         }
       } else {
-        await createUser({ name, email, role, isActive, password })
+        await createUser({ ...body, password })
       }
       navigate('/users')
     } catch (err) {
@@ -99,7 +125,7 @@ export function UserFormPage() {
 
       <PageHeader
         title={isEdit ? 'Edit Pengguna' : 'Tambah Pengguna'}
-        description="Buat akun login untuk anggota tim. Password minimal 8 karakter."
+        description="Peran menentukan permission efektif. Pengguna perlu login ulang setelah peran diubah."
       />
 
       <PanelCard title="Informasi Akun">
@@ -116,9 +142,13 @@ export function UserFormPage() {
           />
 
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-            <SelectField label="Peran" id="role" value={role} onChange={(e) => setRole(e.target.value as UserRole)}>
-              <option value="USER">User — operasional harian</option>
-              <option value="ADMIN">Admin — kelola pengguna</option>
+            <SelectField label="Peran RBAC" id="roleId" value={roleId} onChange={(e) => setRoleId(e.target.value)} required>
+              <option value="">Pilih peran…</option>
+              {roleOptions.map((option) => (
+                <option key={option.id} value={option.id}>
+                  {option.label}
+                </option>
+              ))}
             </SelectField>
             <SelectField
               label="Status"
@@ -131,6 +161,10 @@ export function UserFormPage() {
               <option value="0">Nonaktif</option>
             </SelectField>
           </div>
+
+          <InfoCallout>
+            Permission efektif mengikuti peran yang dipilih. Ubah detail permission di menu Peran.
+          </InfoCallout>
 
           {!isEdit ? (
             <TextField
