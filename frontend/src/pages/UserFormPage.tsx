@@ -13,11 +13,13 @@ import { PageHeader } from '@/components/shared/PageHeader'
 import { Button } from '@/components/ui/button'
 import { Skeleton } from '@/components/ui/skeleton'
 import { useAuth } from '@/contexts/AuthContext'
+import { PermUserDelete } from '@/lib/permissions'
 
 export function UserFormPage() {
   const navigate = useNavigate()
   const { id } = useParams()
-  const { user: currentUser, canDelete } = useAuth()
+  const { user: currentUser, can: check } = useAuth()
+  const canDeleteUser = check(PermUserDelete)
   const isEdit = Boolean(id)
 
   const [name, setName] = useState('')
@@ -159,7 +161,7 @@ export function UserFormPage() {
               <Save className="size-4" />
               Simpan
             </Button>
-            {isEdit && canDelete && !isSelf && (
+            {isEdit && canDeleteUser && !isSelf && (
               <Button type="button" variant="outline" disabled={submitting} onClick={() => void handleDelete()}>
                 <Trash2 className="size-4" />
                 Hapus
@@ -179,7 +181,7 @@ export function UserFormPage() {
       )}
 
       <MobileFormFooter maxWidthClassName="max-w-2xl">
-        {isEdit && canDelete && !isSelf && (
+        {isEdit && canDeleteUser && !isSelf && (
           <Button type="button" variant="outline" disabled={submitting} className="flex-1" onClick={() => void handleDelete()}>
             <Trash2 className="size-4" />
           </Button>

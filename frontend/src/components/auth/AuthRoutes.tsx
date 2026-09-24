@@ -22,8 +22,12 @@ export function ProtectedRoute() {
   return <Outlet />
 }
 
-export function AdminRoute() {
-  const { isAdmin, loading } = useAuth()
+type PermissionRouteProps = {
+  permission: string
+}
+
+export function PermissionRoute({ permission }: PermissionRouteProps) {
+  const { loading, can: check } = useAuth()
 
   if (loading) {
     return (
@@ -33,11 +37,16 @@ export function AdminRoute() {
     )
   }
 
-  if (!isAdmin) {
-    return <Navigate to="/" replace />
+  if (!check(permission)) {
+    return <Navigate to="/forbidden" replace />
   }
 
   return <Outlet />
+}
+
+/** @deprecated use PermissionRoute */
+export function AdminRoute() {
+  return <PermissionRoute permission="user.read" />
 }
 
 export function GuestRoute() {

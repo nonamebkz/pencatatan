@@ -1,9 +1,10 @@
 import { useState } from 'react'
 import { Link } from 'react-router-dom'
-import { ChevronDown, Settings2, UserCog, UserRound } from 'lucide-react'
+import { ChevronDown, Settings2, Shield, UserCog, UserRound } from 'lucide-react'
 
 import { LogoutButton } from '@/components/auth/LogoutButton'
 import { useAuth } from '@/contexts/AuthContext'
+import { PermRoleRead, PermUserRead, PermWaterQualityCfgUp } from '@/lib/permissions'
 import { cn } from '@/lib/utils'
 
 type UserMenuProps = {
@@ -11,10 +12,18 @@ type UserMenuProps = {
 }
 
 export function UserMenu({ layout = 'header' }: UserMenuProps) {
-  const { user } = useAuth()
+  const { user, can: check, roles } = useAuth()
   const [open, setOpen] = useState(false)
 
   if (!user) return null
+
+  const roleLabel = roles[0]?.name ?? (user.role === 'ADMIN' ? 'Administrator' : 'Pengguna')
+
+  const links = [
+    { show: check(PermUserRead), to: '/users', icon: UserCog, label: 'Kelola Pengguna' },
+    { show: check(PermRoleRead), to: '/roles', icon: Shield, label: 'Peran' },
+    { show: check(PermWaterQualityCfgUp), to: '/settings/water-quality', icon: Settings2, label: 'Konfigurasi Kualitas Air' },
+  ].filter((item) => item.show)
 
   if (layout === 'sidebar') {
     return (
@@ -26,26 +35,20 @@ export function UserMenu({ layout = 'header' }: UserMenuProps) {
           <div className="min-w-0 flex-1">
             <p className="truncate font-semibold">{user.name}</p>
             <p className="truncate text-xs text-muted-foreground">{user.email}</p>
-            <p className="mt-0.5 text-[10px] font-medium uppercase tracking-wide text-muted-foreground">
-              {user.role === 'ADMIN' ? 'Administrator' : 'Pengguna'}
-            </p>
+            <p className="mt-0.5 text-[10px] font-medium uppercase tracking-wide text-muted-foreground">{roleLabel}</p>
           </div>
         </div>
 
-        <Link
-          to="/users"
-          className="flex items-center gap-2 rounded-xl px-3 py-2.5 text-sm text-muted-foreground transition hover:bg-muted hover:text-foreground"
-        >
-          <UserCog className="size-4" />
-          Kelola Pengguna
-        </Link>
-        <Link
-          to="/settings/water-quality"
-          className="flex items-center gap-2 rounded-xl px-3 py-2.5 text-sm text-muted-foreground transition hover:bg-muted hover:text-foreground"
-        >
-          <Settings2 className="size-4" />
-          Kualitas Air
-        </Link>
+        {links.map(({ to, icon: Icon, label }) => (
+          <Link
+            key={to}
+            to={to}
+            className="flex items-center gap-2 rounded-xl px-3 py-2.5 text-sm text-muted-foreground transition hover:bg-muted hover:text-foreground"
+          >
+            <Icon className="size-4" />
+            {label}
+          </Link>
+        ))}
 
         <LogoutButton variant="outline" />
       </div>
@@ -83,24 +86,18 @@ export function UserMenu({ layout = 'header' }: UserMenuProps) {
                 <p className="truncate text-xs text-muted-foreground">{user.email}</p>
               </div>
               <div className="space-y-1 p-2">
-                <Link
-                  to="/users"
-                  role="menuitem"
-                  onClick={() => setOpen(false)}
-                  className="flex items-center gap-2 rounded-xl px-3 py-2.5 text-sm hover:bg-muted"
-                >
-                  <UserCog className="size-4" />
-                  Kelola Pengguna
-                </Link>
-                <Link
-                  to="/settings/water-quality"
-                  role="menuitem"
-                  onClick={() => setOpen(false)}
-                  className="flex items-center gap-2 rounded-xl px-3 py-2.5 text-sm hover:bg-muted"
-                >
-                  <Settings2 className="size-4" />
-                  Kualitas Air
-                </Link>
+                {links.map(({ to, icon: Icon, label }) => (
+                  <Link
+                    key={to}
+                    to={to}
+                    role="menuitem"
+                    onClick={() => setOpen(false)}
+                    className="flex items-center gap-2 rounded-xl px-3 py-2.5 text-sm hover:bg-muted"
+                  >
+                    <Icon className="size-4" />
+                    {label}
+                  </Link>
+                ))}
                 <div className="px-1 pb-1" onClick={() => setOpen(false)}>
                   <LogoutButton variant="ghost" className="w-full" />
                 </div>

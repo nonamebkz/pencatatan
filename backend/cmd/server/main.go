@@ -16,6 +16,7 @@ import (
 	"github.com/kikichan/pencatatan/backend/internal/handler"
 	"github.com/kikichan/pencatatan/backend/internal/middleware"
 	"github.com/kikichan/pencatatan/backend/internal/migrate"
+	"github.com/kikichan/pencatatan/backend/internal/model"
 	"github.com/kikichan/pencatatan/backend/internal/repository"
 	"github.com/kikichan/pencatatan/backend/internal/seed"
 )
@@ -38,18 +39,23 @@ func main() {
 	if err := seed.EnsureAdmin(context.Background(), db, cfg.AdminEmail, cfg.AdminPassword); err != nil {
 		log.Fatalf("seed admin failed: %v", err)
 	}
+	if err := seed.EnsureRBAC(context.Background(), db); err != nil {
+		log.Fatalf("seed rbac failed: %v", err)
+	}
 
 	userRepo := repository.NewUserRepository(db)
+	rbacRepo := repository.NewRBACRepository(db)
 	batchRepo := repository.NewBatchRepository(db)
 	pondRepo := repository.NewPondRepository(db)
 	waterQualityRepo := repository.NewWaterQualityRepository(db)
 	financeRepo := repository.NewFinanceRepository(db)
-
 	settingsRepo := repository.NewSettingsRepository(db)
 
 	healthHandler := handler.NewHealthHandler(db)
-	authHandler := handler.NewAuthHandler(userRepo, cfg.JWTSecret, cfg.JWTExpiry)
-	userHandler := handler.NewUserHandler(userRepo)
+	authHandler := handler.NewAuthHandler(userRepo, rbacRepo, cfg.JWTSecret, cfg.JWTExpiry)
+	userHandler := handler.NewUserHandler(userRepo, rbacRepo)
+	roleHandler := handler.NewRoleHandler(rbacRepo)
+	permissionHandler := handler.NewPermissionHandler(rbacRepo)
 	batchHandler := handler.NewBatchHandler(batchRepo)
 	pondHandler := handler.NewPondHandler(pondRepo, settingsRepo)
 	waterQualityHandler := handler.NewWaterQualityHandler(waterQualityRepo, pondRepo, settingsRepo)
@@ -74,29 +80,32 @@ func main() {
 
 	api.Post("/auth/login", authHandler.Login)
 
-	protected := api.Group("", middleware.Auth(cfg.JWTSecret))
+	protected := api.Group("", middleware.Auth(cfg.JWTSecret), middleware.LoadPermissions(rbacRepo))
 	protected.Post("/auth/logout", authHandler.Logout)
 	protected.Get("/auth/me", authHandler.Me)
 
-	protected.Get("/users", userHandler.List)
-	protected.Get("/users/:id", userHandler.Get)
-	protected.Post("/users", userHandler.Create)
-	protected.Put("/users/:id", userHandler.Update)
-	protected.Put("/users/:id/reset-password", userHandler.ResetPassword)
+	protected.Get("/users", middleware.RequirePermission(model.PermUserRead), userHandler.List)
+	protected.Get("/users/:id", middleware.RequirePermission(model.PermUserRead), userHandler.Get)
+	protected.Post("/users", middleware.RequirePermission(model.PermUserCreate), userHandler.Create)
+	protected.Put("/users/:id", middleware.RequirePermission(model.PermUserUpdate), userHandler.Update)
+	protected.Put("/users/:id/reset-password", middleware.RequirePermission(model.PermUserUpdate), userHandler.ResetPassword)
+	protected.Delete("/users/:id", middleware.RequirePermission(model.PermUserDelete), userHandler.Delete)
+
+	protected.Get("/roles", middleware.RequirePermission(model.PermRoleRead), roleHandler.List)
+	protected.Get("/roles/:id", middleware.RequirePermission(model.PermRoleRead), roleHandler.Get)
+	protected.Put("/roles/:id", middleware.RequirePermission(model.PermRoleUpdate), roleHandler.Update)
+	protected.Put("/roles/:id/permissions", middleware.RequirePermission(model.PermRoleAssignPerm), roleHandler.SetPermissions)
+
+	protected.Get("/permissions", middleware.RequirePermission(model.PermPermissionRead), permissionHandler.List)
 
 	protected.Get("/batches", batchHandler.List)
 	protected.Get("/ponds", pondHandler.List)
 	protected.Get("/ponds/:id", pondHandler.Get)
 	protected.Post("/ponds", pondHandler.Create)
 	protected.Put("/ponds/:id", pondHandler.Update)
+	protected.Delete("/ponds/:id", middleware.RequirePermission(model.PermPondDelete), pondHandler.Delete)
 
-	adminOnly := protected.Group("", middleware.AdminOnly())
-	adminOnly.Delete("/users/:id", userHandler.Delete)
-	adminOnly.Delete("/ponds/:id", pondHandler.Delete)
-	adminOnly.Delete("/water-quality-logs/:id", waterQualityHandler.Delete)
-	adminOnly.Delete("/cash-accounts/:id", financeHandler.DeleteCashAccount)
-
-	protected.Put("/water-quality/config", waterQualityHandler.UpdateConfig)
+	protected.Put("/water-quality/config", middleware.RequirePermission(model.PermWaterQualityCfgUp), waterQualityHandler.UpdateConfig)
 
 	protected.Get("/water-quality-logs/trends", waterQualityHandler.Trends)
 	protected.Get("/water-quality/config", waterQualityHandler.GetConfig)
@@ -105,6 +114,7 @@ func main() {
 	protected.Get("/water-quality-logs/:id", waterQualityHandler.Get)
 	protected.Post("/water-quality-logs", waterQualityHandler.Create)
 	protected.Put("/water-quality-logs/:id", waterQualityHandler.Update)
+	protected.Delete("/water-quality-logs/:id", middleware.RequirePermission(model.PermWaterQualityDelete), waterQualityHandler.Delete)
 
 	protected.Get("/reports/water-quality", waterQualityHandler.Report)
 	protected.Get("/dashboard", waterQualityHandler.DashboardSummary)
@@ -113,6 +123,7 @@ func main() {
 	protected.Get("/cash-accounts/:id", financeHandler.GetCashAccount)
 	protected.Post("/cash-accounts", financeHandler.CreateCashAccount)
 	protected.Put("/cash-accounts/:id", financeHandler.UpdateCashAccount)
+	protected.Delete("/cash-accounts/:id", middleware.RequirePermission(model.PermCashAccountDelete), financeHandler.DeleteCashAccount)
 	protected.Get("/finance/summary", financeHandler.Summary)
 	protected.Get("/transactions", financeHandler.ListTransactions)
 	protected.Get("/transactions/:id", financeHandler.GetTransaction)

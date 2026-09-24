@@ -26,10 +26,20 @@ export type AuthUser = {
   updatedAt: string
 }
 
-export type LoginResponse = {
+export type RoleSummary = {
+  code: string
+  name: string
+}
+
+export type AuthSession = {
+  user: AuthUser
+  permissions: string[]
+  roles: RoleSummary[]
+}
+
+export type LoginResponse = AuthSession & {
   token: string
   expiresAt: string
-  user: AuthUser
 }
 
 export async function login(email: string, password: string) {
@@ -45,5 +55,5 @@ export async function logout() {
 }
 
 export async function fetchMe() {
-  return api.get<AuthUser>('/auth/me')
+  return api.get<AuthSession>('/auth/me')
 }

@@ -1,8 +1,10 @@
 import { Link, NavLink, Outlet, useLocation } from 'react-router-dom'
-import { Droplets, Fish, LayoutDashboard, Plus, UserCog, Wallet, Waves } from 'lucide-react'
+import { Droplets, Fish, LayoutDashboard, Plus, Shield, UserCog, Wallet, Waves } from 'lucide-react'
 
 import { UserMenu } from '@/components/auth/UserMenu'
 import { MobileBottomNav } from '@/components/mobile/MobileBottomNav'
+import { useAuth } from '@/contexts/AuthContext'
+import { PermRoleRead, PermUserRead } from '@/lib/permissions'
 import { cn } from '@/lib/utils'
 
 const navItems = [
@@ -16,6 +18,9 @@ function pageTitle(pathname: string) {
   if (pathname.startsWith('/users/new')) return 'Tambah Pengguna'
   if (pathname.startsWith('/users/') && pathname.endsWith('/edit')) return 'Edit Pengguna'
   if (pathname.startsWith('/users')) return 'Pengguna'
+  if (pathname.startsWith('/roles/') && pathname.endsWith('/edit')) return 'Detail Peran'
+  if (pathname.startsWith('/roles')) return 'Peran'
+  if (pathname === '/forbidden') return 'Akses ditolak'
   if (pathname.startsWith('/finance/cash-accounts/new')) return 'Tambah Kas'
   if (pathname.startsWith('/finance/cash-accounts/') && pathname.endsWith('/edit')) return 'Ubah Kas'
   if (pathname.startsWith('/finance/cash-accounts')) return 'Akun Kas'
@@ -39,6 +44,7 @@ function pageTitle(pathname: string) {
 
 export function AppLayout() {
   const location = useLocation()
+  const { can: check } = useAuth()
   const title = pageTitle(location.pathname)
   const onPondDetail = /^\/ponds\/[^/]+$/.test(location.pathname)
   const hideQuickRecord =
@@ -51,7 +57,13 @@ export function AppLayout() {
     location.pathname === '/ponds/new' ||
     (location.pathname.startsWith('/finance/') && !location.pathname.startsWith('/finance/cash-accounts')) ||
     location.pathname.endsWith('/edit') ||
-    location.pathname.startsWith('/users')
+    location.pathname.startsWith('/users') ||
+    location.pathname.startsWith('/roles')
+
+  const accessItems = [
+    { show: check(PermUserRead), to: '/users', label: 'Pengguna', description: 'Kelola akun tim', icon: UserCog },
+    { show: check(PermRoleRead), to: '/roles', label: 'Peran', description: 'Paket permission', icon: Shield },
+  ].filter((item) => item.show)
 
   return (
     <div className="min-h-screen bg-background md:bg-[radial-gradient(circle_at_top,_oklch(0.96_0.02_155)_0%,_var(--background)_45%)]">
@@ -89,23 +101,33 @@ export function AppLayout() {
               </NavLink>
             ))}
 
-            <NavLink
-              to="/users"
-              className={({ isActive }) =>
-                cn(
-                  'flex items-start gap-3 rounded-2xl px-3 py-3 text-sm transition',
-                  isActive
-                    ? 'bg-primary text-primary-foreground shadow-sm'
-                    : 'text-muted-foreground hover:bg-muted hover:text-foreground',
-                )
-              }
-            >
-              <UserCog className="mt-0.5 size-4 shrink-0" />
-              <span>
-                <span className="block font-medium">Pengguna</span>
-                <span className="block text-xs opacity-80">Kelola akun tim</span>
-              </span>
-            </NavLink>
+            {accessItems.length > 0 && (
+              <>
+                <p className="px-3 pt-4 text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
+                  Kelola Akses
+                </p>
+                {accessItems.map(({ to, label, description, icon: Icon }) => (
+                  <NavLink
+                    key={to}
+                    to={to}
+                    className={({ isActive }) =>
+                      cn(
+                        'flex items-start gap-3 rounded-2xl px-3 py-3 text-sm transition',
+                        isActive
+                          ? 'bg-primary text-primary-foreground shadow-sm'
+                          : 'text-muted-foreground hover:bg-muted hover:text-foreground',
+                      )
+                    }
+                  >
+                    <Icon className="mt-0.5 size-4 shrink-0" />
+                    <span>
+                      <span className="block font-medium">{label}</span>
+                      <span className="block text-xs opacity-80">{description}</span>
+                    </span>
+                  </NavLink>
+                ))}
+              </>
+            )}
           </nav>
 
           <div className="mt-auto space-y-4 pt-8">

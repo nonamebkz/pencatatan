@@ -1,14 +1,28 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useState, type ReactNode } from 'react'
 
-import { clearStoredToken, fetchMe, getStoredToken, login as loginRequest, logout as logoutRequest, setStoredToken, type AuthUser } from '@/api/auth'
+import {
+  clearStoredToken,
+  fetchMe,
+  getStoredToken,
+  login as loginRequest,
+  logout as logoutRequest,
+  setStoredToken,
+  type AuthSession,
+  type AuthUser,
+  type RoleSummary,
+} from '@/api/auth'
+import { can, canAny, PermCashAccountDelete, PermPondDelete, PermUserCreate, PermUserDelete, PermUserRead, PermUserUpdate, PermWaterQualityDelete } from '@/lib/permissions'
 
 type AuthContextValue = {
   user: AuthUser | null
+  permissions: string[]
+  roles: RoleSummary[]
   loading: boolean
+  can: (code: string) => boolean
+  canAny: (codes: string[]) => boolean
+  /** @deprecated gunakan can(PermUserRead) */
   isAdmin: boolean
-  /** Semua user login — lihat seluruh pencatatan workspace (tanpa filter per user). */
   canViewAllRecords: boolean
-  /** Hanya ADMIN — hapus kolam, catatan, pengguna, kas */
   canDelete: boolean
   login: (email: string, password: string) => Promise<void>
   logout: () => Promise<void>
@@ -17,18 +31,28 @@ type AuthContextValue = {
 
 const AuthContext = createContext<AuthContextValue | null>(null)
 
+function applySession(setUser: (u: AuthUser | null) => void, setPermissions: (p: string[]) => void, setRoles: (r: RoleSummary[]) => void, session: AuthSession) {
+  setUser(session.user)
+  setPermissions(session.permissions ?? [])
+  setRoles(session.roles ?? [])
+}
+
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<AuthUser | null>(null)
+  const [permissions, setPermissions] = useState<string[]>([])
+  const [roles, setRoles] = useState<RoleSummary[]>([])
   const [loading, setLoading] = useState(true)
 
   const refreshUser = useCallback(async () => {
     const token = getStoredToken()
     if (!token) {
       setUser(null)
+      setPermissions([])
+      setRoles([])
       return
     }
     const response = await fetchMe()
-    setUser(response.data)
+    applySession(setUser, setPermissions, setRoles, response.data)
   }, [])
 
   useEffect(() => {
@@ -36,6 +60,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       .catch(() => {
         clearStoredToken()
         setUser(null)
+        setPermissions([])
+        setRoles([])
       })
       .finally(() => setLoading(false))
   }, [refreshUser])
@@ -43,27 +69,34 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const login = useCallback(async (email: string, password: string) => {
     const response = await loginRequest(email, password)
     setStoredToken(response.data.token)
-    setUser(response.data.user)
+    applySession(setUser, setPermissions, setRoles, response.data)
   }, [])
 
   const logout = useCallback(async () => {
     await logoutRequest()
     setUser(null)
+    setPermissions([])
+    setRoles([])
   }, [])
 
-  const value = useMemo(
-    () => ({
+  const value = useMemo(() => {
+    const check = (code: string) => can(permissions, code)
+    const checkAny = (codes: string[]) => canAny(permissions, codes)
+    return {
       user,
+      permissions,
+      roles,
       loading,
-      isAdmin: user?.role === 'ADMIN',
+      can: check,
+      canAny: checkAny,
+      isAdmin: check(PermUserRead),
       canViewAllRecords: Boolean(user),
-      canDelete: user?.role === 'ADMIN',
+      canDelete: checkAny([PermPondDelete, PermUserDelete, PermWaterQualityDelete, PermCashAccountDelete]),
       login,
       logout,
       refreshUser,
-    }),
-    [user, loading, login, logout, refreshUser],
-  )
+    }
+  }, [user, permissions, roles, loading, login, logout, refreshUser])
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>
 }
@@ -74,4 +107,14 @@ export function useAuth() {
     throw new Error('useAuth must be used within AuthProvider')
   }
   return context
+}
+
+export function useCanCreateUser() {
+  const { can: check } = useAuth()
+  return check(PermUserCreate)
+}
+
+export function useCanUpdateUser() {
+  const { can: check } = useAuth()
+  return check(PermUserUpdate)
 }

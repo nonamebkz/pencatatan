@@ -1,11 +1,12 @@
-# BRD v1.5 — Pencatatan Operasional Usaha
+# BRD v1.6 — Pencatatan Operasional Usaha
 
 | Field | Value |
 |---|---|
-| Versi | 1.5 |
+| Versi | 1.6 |
 | Status | Living document — selaras dengan codebase `pencatatan-usaha` |
 | Produk | Aplikasi pencatatan operasional + pengeluaran usaha |
 | Codename | `pencatatan-usaha` |
+| Changelog v1.6 | Target **RBAC berbasis permission** + struktur menu **Kelola Akses** (Users/Roles/Permissions/Audit); map transisi dari peran `ADMIN`/`USER` repo — lihat §24 |
 | Changelog v1.5 | Ambang & saran kualitas air disimpan **per kolam** (salin sekali dari template workspace); form kolam `/ponds/new` dan `/ponds/:id/edit` |
 | Changelog v1.4 | Ambang & teks saran kualitas air dikonfigurasi per workspace (bukan hardcoded); selaraskan §2, §7, §9, §15–§16, §23 |
 | Changelog v1.3 | Tambah §23 Status Implementasi; selaraskan scope auth/multi-user & modul Kualitas Air yang sudah live di repo |
@@ -44,7 +45,7 @@
 | Q8 | Kontrak cicilan → auto-generate jadwal bayar |
 | Q9 | Supplier free text di MVP |
 | Q10 | Prompt "Buat catatan consumable?" setelah beli barang |
-| Q11 | Login email + password; **tanpa register** — akun dibuat admin (role ADMIN / USER) |
+| Q11 | Login email + password; **tanpa register** — akun dibuat admin. **Repo:** peran `ADMIN` / `USER`. **Target:** RBAC permission + role paket (§24); hindari satu role `admin` untuk semua kebutuhan |
 | Q12 | Laporan MVP incremental: 3 dulu → 6 lengkap |
 | Q13 | Pembelian MVP: **multi-item** (1 transaksi, N line items) |
 | Q14 | Bagi hasil MVP: **maksimal 2 pihak** per skema |
@@ -228,7 +229,7 @@ Workspace
 | Kategori | Via line item category (pembelian) | Kategori pribadi: Makan, Transport, Belanja, Tagihan, Hiburan, Lainnya |
 | Dashboard | 4 kartu operasional + widget pakan/sewa *(+ widget kualitas air T2)* | 2 kartu: total keluar & total masuk bulan ini |
 | Laporan | 6 laporan operasional | Ringkasan sederhana (filter periode, grouped by kategori) |
-| Menu | Full menu lele template | Dashboard + Transaksi |
+| Menu | Menu operasional lele (§16, §24) + **Kelola Akses** jika punya permission `user.read` | Dashboard + Transaksi |
 | Batch/Kolam/Pakan/Sewa/Bagi Hasil/Kualitas Air | ✅ *(Kualitas Air T2)* | ❌ tidak tampil |
 
 ---
@@ -374,11 +375,14 @@ Status waktu dan pembayaran dihitung on-read, bukan disimpan sebagai single enum
 - Personal: lihat §8  
 - **Status repo:** ⚠️ workspace default hardcoded (`Usaha Lele`); switcher & personal **belum**
 
-### FR-02 Auth
+### FR-02 Auth & otorisasi
 - Login email + password
 - JWT session; logout (client + endpoint; blacklist Redis **belum**)
-- Kelola pengguna: admin CRUD user, tanpa register publik  
-- **Status repo:** ✅ login/logout/me; ✅ user management (ADMIN); ❌ Redis blacklist
+- Kelola pengguna: tanpa register publik
+- **Enforcement di backend** (deny by default); frontend hanya menyembunyikan menu/tombol untuk UX
+- **Repo:** peran enum `ADMIN` | `USER`; middleware `RequireAdmin` untuk `/users` dan aksi destruktif tertentu
+- **Target (§24):** permission `resource.action` (mis. `user.read`, `pond.delete`); role = kumpulan permission; audit log perubahan akses
+- **Status repo:** ✅ login/logout/me; ✅ user management (ADMIN); ❌ Redis blacklist; ❌ tabel role/permission & menu berbasis `can()`
 
 ### FR-03 Kas
 - Auto-create "Kas Utama" per workspace
@@ -601,10 +605,42 @@ Status waktu dan pembayaran dihitung on-read, bukan disimpan sebagai single enum
 
 ## 16. Screen Flow & Menu
 
+### 16.1 Menu operasional (workspace business — template lele)
+
+| Menu | Route | Siapa melihat (target permission) | Repo saat ini |
+|---|---|---|---|
+| Beranda | `/` | Semua user login | ✅ |
+| Keuangan | `/finance` | `finance.read` *(alias: semua USER+)* | ✅ |
+| Kolam | `/ponds` | `pond.read` | ✅ |
+| Kualitas Air | `/water-quality` | `water_quality.read` | ✅ |
+| Konfigurasi kualitas air | `/settings/water-quality` | `water_quality.config.update` | ✅ **ADMIN** only |
+| Laporan kualitas air | `/water-quality/report` | `water_quality.read` | ✅ |
+
+**Personal workspace (belum penuh):** hanya Beranda + Transaksi — lihat §8.
+
+### 16.2 Menu Kelola Akses (grup sidebar / profil)
+
+Mengikuti pola **Access Management**; visibilitas **permission**, bukan hardcode role di banyak file.
+
+| Submenu | Route target | Permission menu |
+|---|---|---|
+| Pengguna | `/users` | `user.read` |
+| Peran | `/roles` | `role.read` |
+| Permission | `/permissions` | `permission.read` |
+| Audit Log | `/audit-logs` | `audit.read` |
+
+**Repo:** hanya **Pengguna** (`/users`) tampil untuk `ADMIN` (sidebar + UserMenu). Peran, Permission, Audit **belum**.
+
+### 16.3 Halaman
+
 | # | Halaman | Catatan | Status repo |
 |---|---|---|---|
 | P-01 | Login | Email + password; tanpa register | ✅ `/login` |
-| P-02 | Pengguna (admin) | CRUD akun tim | ✅ `/users` |
+| P-02 | Pengguna | CRUD akun tim; tombol Add/Edit/Delete mengikuti `user.create` / `user.update` / `user.delete` | ✅ `/users` (**ADMIN**) |
+| P-02b | Peran | CRUD role + assign permission | ❌ |
+| P-02c | Permission | Master permission (platform) | ❌ |
+| P-02d | Audit Log | Jejak perubahan user/role/assignment | ❌ |
+| P-02e | Forbidden | Akses ditolak | ❌ (redirect saat ini) |
 | P-03 | Dashboard | Business vs Personal layout berbeda (§8); widget kualitas air | ⚠️ hanya widget kualitas air |
 | P-06 | Pembelian — Form | Multi-item | ⚠️ `/finance/purchases/new` (histori harga belum) |
 | P-17 | Laporan — Detail | Kolom §14; RPT-07 tren | ⚠️ `/water-quality/report` (WQ saja) |
@@ -711,7 +747,7 @@ Status waktu dan pembayaran dihitung on-read, bukan disimpan sebagai single enum
 
 - [raw idea.md](./raw%20idea.md) — ide awal modul lele
 - [jangka panjang.md](./jangka%20panjang.md) — visi multi-usaha + atomic
-- [TECHNICAL_SPEC.md](./TECHNICAL_SPEC.md) — spesifikasi teknis implementasi
+- [TECHNICAL_SPEC.md](./TECHNICAL_SPEC.md) — spesifikasi teknis implementasi (v1.5, §7.5 RBAC)
 
 ### Tech Stack (implementasi aktual)
 
@@ -734,7 +770,7 @@ Status waktu dan pembayaran dihitung on-read, bukan disimpan sebagai single enum
 | ID | Fitur | Catatan |
 |---|---|---|
 | IMP-AUTH | Login `/login`, JWT, `/auth/me`, `/auth/logout` | Token di localStorage; protected routes |
-| IMP-USER | User management admin | `GET/POST/PUT/DELETE /users`, reset password; role ADMIN/USER |
+| IMP-USER | User management | `GET/POST/PUT/DELETE /users`, reset password; **repo:** role `ADMIN`/`USER` — **target:** assign role + permission efektif (§24) |
 | IMP-POND | Master kolam | CRUD ponds; hapus kolam **admin only** — cascade: WQ, batch, transaksi & pembelian terkait |
 | IMP-WQ | Kualitas air | CRUD logs; hapus catatan **admin only**; validasi minimal 1 field; status + `advice` dari konfigurasi kolam |
 | IMP-WQ-CFG | Ambang & saran | JSON di `business_units`; template `GET/PUT /water-quality/config` (PUT admin); form `/ponds/new` dan `/ponds/:id/edit` |
@@ -752,7 +788,7 @@ Status waktu dan pembayaran dihitung on-read, bukan disimpan sebagai single enum
 | PART-WS | MVP-01 / FR-01 | Satu workspace seed `Usaha Lele` | CRUD workspace, switcher, personal workspace |
 | PART-FIN | MVP-03 / MVP-11 | Create pembelian multi-item, pengeluaran lain, list kas & transaksi | Histori harga, ubah/hapus pembelian, sewa, pakan, bagi hasil |
 | PART-DASH | MVP-07 / §13 | Kartu kualitas air; ringkasan keuangan di `/finance` | Kartu Total Belanja, Pakan, Sewa, Bagi Hasil di dashboard utama |
-| PART-AUTH | FR-02 spec | JWT 24h | Redis blacklist logout |
+| PART-AUTH | FR-02 spec | JWT 24h; RBAC permission + `RequirePermission` | Redis blacklist; audit log UI; `/permissions` master CRUD |
 
 ### ❌ Belum ada (masih sesuai rencana MVP asli)
 
@@ -772,3 +808,65 @@ Status waktu dan pembayaran dihitung on-read, bukan disimpan sebagai single enum
 2. **Sprint 1 sisa:** histori harga pembelian + CRUD batch. Create pembelian multi-item sudah live.
 3. **Redis + logout blacklist** (sesuai TECHNICAL_SPEC) saat deploy production.
 4. **Sisa T2:** CRUD batch di UI; field size/ownerName di form kolam.
+5. **RBAC bertahap (§24):** seed permission → map `ADMIN`/`USER` ke role paket → UI Peran + `can()` menu → audit log.
+
+---
+
+## 24. RBAC — Peran, Permission & Menu
+
+Referensi desain: permission sebagai unit otorisasi, role sebagai paket permission, **backend sumber kebenaran**, frontend untuk UX saja.
+
+### 24.1 Repo saat ini (transisi)
+
+| Peran DB/JWT | Label UI | Kemampuan utama |
+|---|---|---|
+| `ADMIN` | Administrator | CRUD `/users`; hapus kolam & catatan kualitas air; konfigurasi template kualitas air; hapus kas |
+| `USER` | Pengguna | CRUD operasional (kolam, kualitas air, keuangan) tanpa hapus destruktif & tanpa kelola user |
+
+### 24.2 Peran target (single-workspace / multi-workspace nanti)
+
+| Kode role | Tujuan | Catatan produk |
+|---|---|---|
+| `super_admin` | Platform / seed sistem | Kelola master permission; lock role sistem; **T3+** jika multi-tenant |
+| `workspace_admin` | Admin usaha (setara `org_admin`) | User + assignment role dalam workspace; konfigurasi template WQ |
+| `operator` | Pengelola harian (persona Ahmad) | Catat pembelian, kualitas air, kolam — tanpa kelola permission sistem |
+| `user_manager` | HR ringan | CRUD user + assign role **tanpa** edit master permission |
+| `auditor` | Read-only + audit | `audit.read`, `user.read`, read modul operasional |
+| `viewer` | Read-only operasional | Lihat dashboard, kolam, kualitas air, laporan — tanpa create/update/delete |
+
+**Migrasi:** seed role di atas; map `ADMIN` → `workspace_admin` (+ permission penuh workspace); map `USER` → `operator`.
+
+### 24.3 Format permission (contoh MVP → penuh)
+
+| Resource | Permission |
+|---|---|
+| User | `user.read`, `user.create`, `user.update`, `user.delete`, `user.assign_role` |
+| Role | `role.read`, `role.create`, `role.update`, `role.delete`, `role.assign_permission` |
+| Permission master | `permission.read`, `permission.create`, `permission.update`, `permission.delete` |
+| Audit | `audit.read` |
+| Kolam | `pond.read`, `pond.create`, `pond.update`, `pond.delete` |
+| Kualitas air | `water_quality.read`, `water_quality.create`, `water_quality.update`, `water_quality.delete`, `water_quality.config.read`, `water_quality.config.update` |
+| Keuangan | `finance.read`, `finance.purchase.create`, `finance.expense.create`, `cash_account.manage` *(modul belum lengkap)* |
+
+**Default policy:** deny. Endpoint protected wajib cek permission di middleware (bukan hanya cek string `ADMIN` di JWT).
+
+### 24.4 Map singkat ADMIN/USER → permission (hingga RBAC penuh live)
+
+| Aksi / menu | USER (repo) | ADMIN (repo) | Permission target |
+|---|---|---|---|
+| Menu Pengguna | ❌ | ✅ | `user.read` |
+| CRUD user | ❌ | ✅ | `user.create` / `update` / `delete` |
+| Hapus kolam / log WQ / kas | ❌ | ✅ | `pond.delete`, `water_quality.delete`, `cash_account.manage` |
+| Template WQ (`/settings/water-quality`) | ❌ | ✅ | `water_quality.config.update` |
+| Operasional harian | ✅ | ✅ | `pond.*`, `water_quality.*`, `finance.*` (read/create/update) |
+
+### 24.5 Fase implementasi
+
+| Fase | Backend | Frontend |
+|---|---|---|
+| **0 (live)** | JWT claim `role`; `RequireAdmin` | Menu Pengguna jika `isAdmin`; `canDelete` = ADMIN |
+| **1** | Tabel `roles`, `permissions`, `role_permissions`, `user_roles`; seed; `RequirePermission`; `/auth/me` + login kirim daftar permission | Helper `can('user.read')`; sidebar Kelola Akses per permission |
+| **2** | CRUD role & assignment; audit log assignment | Halaman `/roles`, form assign permission |
+| **3** | Permission CRUD (platform); cache invalidate on assignment | `/permissions`, `/audit-logs`, halaman `/forbidden` |
+
+Detail API & skema: [TECHNICAL_SPEC.md §7.5](./TECHNICAL_SPEC.md).

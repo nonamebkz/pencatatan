@@ -12,14 +12,16 @@ import (
 	"github.com/kikichan/pencatatan/backend/internal/middleware"
 	"github.com/kikichan/pencatatan/backend/internal/model"
 	"github.com/kikichan/pencatatan/backend/internal/repository"
+	"github.com/kikichan/pencatatan/backend/internal/seed"
 )
 
 type UserHandler struct {
 	repo *repository.UserRepository
+	rbac *repository.RBACRepository
 }
 
-func NewUserHandler(repo *repository.UserRepository) *UserHandler {
-	return &UserHandler{repo: repo}
+func NewUserHandler(repo *repository.UserRepository, rbac *repository.RBACRepository) *UserHandler {
+	return &UserHandler{repo: repo, rbac: rbac}
 }
 
 type userRequest struct {
@@ -92,6 +94,9 @@ func (h *UserHandler) Create(c *fiber.Ctx) error {
 	if err := h.repo.Create(c.Context(), user, hash); err != nil {
 		return httpx.Fail(c, fiber.StatusInternalServerError, "INTERNAL_ERROR", err.Error())
 	}
+	if err := seed.SyncUserRoleFromLegacy(c.Context(), h.rbac, user.ID, user.Role); err != nil {
+		return httpx.Fail(c, fiber.StatusInternalServerError, "INTERNAL_ERROR", err.Error())
+	}
 	return c.Status(fiber.StatusCreated).JSON(fiber.Map{"success": true, "data": user})
 }
 
@@ -134,6 +139,9 @@ func (h *UserHandler) Update(c *fiber.Ctx) error {
 	existing.UpdatedAt = time.Now()
 
 	if err := h.repo.Update(c.Context(), existing); err != nil {
+		return httpx.Fail(c, fiber.StatusInternalServerError, "INTERNAL_ERROR", err.Error())
+	}
+	if err := seed.SyncUserRoleFromLegacy(c.Context(), h.rbac, existing.ID, existing.Role); err != nil {
 		return httpx.Fail(c, fiber.StatusInternalServerError, "INTERNAL_ERROR", err.Error())
 	}
 	return httpx.OK(c, existing)

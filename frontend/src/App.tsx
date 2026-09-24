@@ -1,6 +1,6 @@
 import { BrowserRouter, Navigate, Route, Routes } from 'react-router-dom'
 
-import { GuestRoute, ProtectedRoute } from '@/components/auth/AuthRoutes'
+import { GuestRoute, PermissionRoute, ProtectedRoute } from '@/components/auth/AuthRoutes'
 import { AuthProvider } from '@/contexts/AuthContext'
 import { AppLayout } from '@/layouts/AppLayout'
 import { DashboardPage } from '@/pages/DashboardPage'
@@ -15,6 +15,10 @@ import { WaterQualityListPage } from '@/pages/WaterQualityListPage'
 import { WaterQualityReportPage } from '@/pages/WaterQualityReportPage'
 import { WaterQualityConfigPage } from '@/pages/WaterQualityConfigPage'
 import { FinancePage } from '@/pages/FinancePage'
+import { ForbiddenPage } from '@/pages/ForbiddenPage'
+import { RoleFormPage } from '@/pages/RoleFormPage'
+import { RoleListPage } from '@/pages/RoleListPage'
+import { PermRoleRead, PermUserRead, PermWaterQualityCfgUp } from '@/lib/permissions'
 import { OtherExpenseFormPage } from '@/pages/OtherExpenseFormPage'
 import { PurchaseDetailPage } from '@/pages/PurchaseDetailPage'
 import { TransactionDetailPage } from '@/pages/TransactionDetailPage'
@@ -52,10 +56,23 @@ function App() {
               <Route path="finance/cash-accounts" element={<CashAccountListPage />} />
               <Route path="finance/cash-accounts/new" element={<CashAccountFormPage />} />
               <Route path="finance/cash-accounts/:id/edit" element={<CashAccountFormPage />} />
-              <Route path="users" element={<UserListPage />} />
-              <Route path="users/new" element={<UserFormPage />} />
-              <Route path="users/:id/edit" element={<UserFormPage />} />
-              <Route path="settings/water-quality" element={<WaterQualityConfigPage />} />
+
+              <Route element={<PermissionRoute permission={PermUserRead} />}>
+                <Route path="users" element={<UserListPage />} />
+                <Route path="users/new" element={<UserFormPage />} />
+                <Route path="users/:id/edit" element={<UserFormPage />} />
+              </Route>
+
+              <Route element={<PermissionRoute permission={PermRoleRead} />}>
+                <Route path="roles" element={<RoleListPage />} />
+                <Route path="roles/:id/edit" element={<RoleFormPage />} />
+              </Route>
+
+              <Route element={<PermissionRoute permission={PermWaterQualityCfgUp} />}>
+                <Route path="settings/water-quality" element={<WaterQualityConfigPage />} />
+              </Route>
+
+              <Route path="forbidden" element={<ForbiddenPage />} />
             </Route>
           </Route>
 
