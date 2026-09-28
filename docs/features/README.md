@@ -31,3 +31,4 @@ Aturan lengkap: `.cursor/rules/feature-delivery.mdc`
 | [`workspace-crud.md`](./workspace-crud.md) | `done` | Tambah/ubah/hapus workspace + template lele |
 | [`workspace-template-generic.md`](./workspace-template-generic.md) | `done` | Template `generic`, registry menu, guard API |
 | [`operational-units.md`](./operational-units.md) | `done` | CRUD `operational_units` (bukan kolam) |
+| [`dashboard.md`](./dashboard.md) | `planning` | Beranda per workspace — slice DASH-* ([rencana](../superpowers/plans/2026-09-28-dashboard-implementation-plan.md)) |

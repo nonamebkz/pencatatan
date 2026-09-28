@@ -724,9 +724,12 @@ Auth: `finance.read` (kecuali sewa: `finance.rent.read`). Spesifikasi kolom: `BR
 
 ### 5.11 Dashboard
 
+Spesifikasi & rencana slice: [docs/features/dashboard.md](./docs/features/dashboard.md) · [plan](./docs/superpowers/plans/2026-09-28-dashboard-implementation-plan.md).
+
 | Method | Endpoint | Query | Response |
 |---|---|---|---|
-| GET | `/dashboard` | — | `{ waterQualitySummary[] }` (kartu keuangan §13 belum di endpoint ini) |
+| GET | `/dashboard` | `from?, to?` (rencana) | Hari ini: `{ waterQualitySummary[] }` — **hanya template `lele`** (middleware). Target: payload terpadu per `templateId` (§ dashboard.md) |
+| GET | `/finance/summary` | — | Ringkasan bulan — dipakai `/finance`, belum beranda | ✅ |
 
 **`waterQualitySummary[]` item (T2):**
 ```json
@@ -1502,4 +1505,4 @@ Ringkasan singkat — detail bisnis: [BRD §23](./BRD.md#23-status-implementasi-
 | Transaksi MVP | Pembelian + pengeluaran lain (**ubah/hapus** + audit) + **sewa**; FE daftar per hari | ⚠️ pakan, bagi hasil, histori harga ❌ — [finance-transactions.md](./docs/features/finance-transactions.md) |
 | Redis | cache + logout blacklist | ❌ |
 
-**Backlog teknis berikutnya:** personal income & menu personal penuh → template usaha non-`lele` → histori harga → pakan & bagi hasil → dashboard keuangan §13 → RBAC fase 3 (audit UI) → Redis production hardening.
+**Backlog teknis berikutnya:** dashboard slice DASH-API-UNIFY … DASH-ALERTS ([dashboard.md](./docs/features/dashboard.md)) → personal income penuh → histori harga → pakan & bagi hasil → RBAC fase 3 (audit UI) → Redis production hardening.

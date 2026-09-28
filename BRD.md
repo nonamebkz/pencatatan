@@ -455,7 +455,8 @@ Status waktu dan pembayaran dihitung on-read, bukan disimpan sebagai single enum
 
 ### FR-11 Dashboard
 - Lihat §13 Dashboard Metrics  
-- **Status repo:** ⚠️ dashboard **kualitas air** saja (stat kolam, status per kolam, belum diukur hari ini); kartu keuangan §13 **belum**
+- **Spesifikasi & rencana slice:** [docs/features/dashboard.md](./docs/features/dashboard.md), [rencana implementasi](./docs/superpowers/plans/2026-09-28-dashboard-implementation-plan.md)  
+- **Status repo:** ⚠️ slice **DASH-WQ** ✅ (kualitas air); kartu keuangan §13, personal §8, generic, sewa/peringatan — **belum** (urutan di dokumen fitur)
 
 ### FR-12 Laporan
 - Lihat §14 Report Specification  
@@ -832,7 +833,7 @@ Mengikuti pola **Access Management**; visibilitas **permission**, bukan hardcode
 | PART-POND | FR-04 | name, location, notes, status | Form UI untuk size, ownerName |
 | PART-WS | MVP-01 / FR-01 | Switcher, membership, CRUD, konsolidasi, seed personal | Form income personal; template usaha selain `lele` |
 | PART-FIN | MVP-03 / MVP-04 / MVP-11 | Pembelian multi-item, **ubah/hapus** pembelian/pengeluaran + audit, daftar ringkas per hari, kas CRUD, **sewa** (kontrak + bayar jadwal) | Histori harga, hapus bayar sewa dari arsip, pakan, bagi hasil, laporan RPT sewa |
-| PART-DASH | MVP-07 / §13 | Kartu kualitas air; ringkasan keuangan di `/finance` | Kartu Total Belanja, Pakan, Sewa, Bagi Hasil di dashboard utama |
+| PART-DASH | MVP-07 / §13 | Slice DASH-WQ ✅; ringkasan keuangan di `/finance` (bukan beranda) | Slice DASH-FIN-KPI … DASH-ALERTS — lihat [dashboard.md](./docs/features/dashboard.md) |
 | PART-AUTH | FR-02 spec | JWT 24h; RBAC fase 1–2 + access catalog; **tabel `audit_logs`** + tulis saat ubah/hapus transaksi keuangan; **ERD** `docs/database/ERD.md` | Redis blacklist; halaman baca audit (`GET /audit-logs`); CRUD master `/permissions` |
 
 ### ❌ Belum ada (masih sesuai rencana MVP asli)

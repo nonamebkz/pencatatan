@@ -87,7 +87,7 @@ Types: `frontend/src/api/workspace.ts` — `templateId` union atau string.
 
 - Mobile-first: list unit kartu + FAB; form sticky submit (selaras `pond` pages).
 - Label copy: **Unit** / **Tambah unit** (bukan Kolam).
-- Dashboard Beranda generic: tetap halaman beranda saat ini tanpa widget WQ (widget WQ hanya jika template lele — filter di `DashboardPage`).
+- Dashboard Beranda generic: shell + CTA (slice **DASH-FE-SHELL** partial); KPI keuangan + unit → slice **DASH-GENERIC** di [dashboard.md](./dashboard.md).
 
 ## Status checklist implementasi
 

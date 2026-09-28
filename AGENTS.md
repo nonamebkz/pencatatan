@@ -29,5 +29,6 @@ Dokumen ringkas untuk manusia dan AI. Aturan detail ada di `.cursor/rules/`.
 - Backend: `backend/` — Go, Fiber, MySQL
 - Frontend: `frontend/` — React, Vite, shadcn
 - **ERD database:** [`docs/database/ERD.md`](docs/database/ERD.md) — selaras `backend/internal/migrate/migrations/`; update saat migrasi baru
+- **Dashboard beranda (per workspace):** [dashboard.md](docs/features/dashboard.md) · [rencana slice](docs/superpowers/plans/2026-09-28-dashboard-implementation-plan.md)
 - **Multi-workspace / lintas usaha:** [design](docs/superpowers/specs/2026-09-28-multi-business-and-workspace-access-design.md) · [switch](docs/features/workspace-switch.md) · [akses user](docs/features/workspace-user-access.md) · [CRUD](docs/features/workspace-crud.md) · [laporan konsolidasi](docs/features/workspace-consolidated-reports.md) · [template generic](docs/features/workspace-template-generic.md) + [unit operasional](docs/features/operational-units.md)
 - **Access catalog (RBAC):** [`shared/access-catalog.json`](shared/access-catalog.json) — menu/aksi FE ↔ seed DB; visibilitas menu dari `permissions[]` `/auth/me` + `canSeeCatalogMenu`. Lihat [docs/features/access-catalog.md](docs/features/access-catalog.md). Setelah edit JSON: `make sync-access-catalog` (otomatis sebelum `backend-run`); restart backend; user yang role-nya berubah: fokus tab atau refresh.
