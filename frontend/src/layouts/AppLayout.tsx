@@ -79,7 +79,9 @@ export function AppLayout() {
   const navigate = useNavigate()
   const { can: check } = useAuth()
   const { canPageAction } = useCatalogAccess()
-  const { activeWorkspace } = useWorkspace()
+  const { activeWorkspace, workspaces, loading: workspacesLoading } = useWorkspace()
+  const showMobileWorkspaceSwitcher =
+    workspacesLoading || workspaces.length > 1
 
   const visibleMain = useMemo(() => {
     const main = visibleMainNavFromCatalog(check)
@@ -217,11 +219,18 @@ export function AppLayout() {
                 <Waves className="size-4" />
               </div>
               <div className="min-w-0 flex-1">
-                <WorkspaceSwitcher compact className="mb-1 max-w-[11rem]" />
-                <h1 className="text-lg font-semibold leading-tight">{title}</h1>
+                <p className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
+                  {activeWorkspace?.type === 'PERSONAL' ? 'Pribadi' : 'Usaha'}
+                </p>
+                <h1 className="truncate text-lg font-semibold leading-tight">{title}</h1>
               </div>
               <UserMenu layout="header" />
             </div>
+            {showMobileWorkspaceSwitcher && (
+              <div className="mt-2.5">
+                <WorkspaceSwitcher compact />
+              </div>
+            )}
           </header>
 
           <main className="flex-1 px-4 py-4 pb-mobile-nav md:px-8 md:py-8 md:pb-8">
