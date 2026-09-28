@@ -2,6 +2,8 @@
 
 **Status:** `done`
 
+**ERD:** [docs/database/ERD.md](../database/ERD.md) — tabel `cash_accounts`, FK ke `transactions`.
+
 **Katalog akses:** entri halaman `page.finance.cash_accounts` di [`shared/access-catalog.json`](../../shared/access-catalog.json) — selaras checkbox form Peran, seed DB, dan visibilitas menu Keuangan / link Akun kas (`canSeeCatalogMenu`, `canPageAction`).
 
 ## Business flow

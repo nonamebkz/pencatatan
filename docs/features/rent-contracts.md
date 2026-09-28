@@ -3,6 +3,8 @@
 > Status: `done`  
 > Tanggal: 2026-09-24
 
+**ERD:** [docs/database/ERD.md](../database/ERD.md) — `periodic_contracts`, `payment_schedules`, `contract_payments` → `transactions`.
+
 ## Ringkasan
 
 Catat komitmen sewa kolam per periode, generate jadwal cicilan otomatis (lump sum atau cicilan bulanan), dan bayar per jadwal → transaksi `RENT_PAYMENT`.

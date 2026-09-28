@@ -265,7 +265,10 @@ func (r *FinanceRepository) ListTransactions(ctx context.Context, filter Finance
 	query := `
 		SELECT t.id, t.workspace_id, t.cash_account_id, c.name, t.transaction_type, t.amount,
 		       t.transaction_date, t.description, t.business_unit_id, b.name, t.batch_id, t.category,
-		       t.created_at, t.updated_at
+		       t.created_at, t.updated_at,
+		       (SELECT COUNT(*) FROM purchase_line_items pli WHERE pli.transaction_id = t.id) AS line_item_count,
+		       (SELECT pli.item_name FROM purchase_line_items pli
+		        WHERE pli.transaction_id = t.id ORDER BY pli.created_at ASC LIMIT 1) AS first_item_name
 		FROM transactions t
 		JOIN cash_accounts c ON c.id = t.cash_account_id
 		LEFT JOIN business_units b ON b.id = t.business_unit_id
@@ -314,6 +317,10 @@ func (r *FinanceRepository) GetTransaction(ctx context.Context, workspaceID, id 
 		return nil, err
 	}
 	item.Items = items
+	item.LineItemCount = len(items)
+	if len(items) > 0 {
+		item.FirstItemName = items[0].ItemName
+	}
 	return item, nil
 }
 
@@ -439,6 +446,7 @@ func (r *FinanceRepository) CreateOtherExpense(ctx context.Context, txID string,
 }
 
 var ErrTransactionNotEditable = errors.New("jenis transaksi ini tidak dapat diubah")
+var ErrTransactionNotDeletable = errors.New("jenis transaksi ini tidak dapat dihapus")
 
 func (r *FinanceRepository) UpdatePurchase(
 	ctx context.Context,
@@ -601,6 +609,57 @@ func (r *FinanceRepository) UpdateOtherExpense(
 	return updated, nil
 }
 
+func (r *FinanceRepository) DeleteTransaction(
+	ctx context.Context,
+	audit *AuditRepository,
+	actorUserID string,
+	workspaceID, txID string,
+) error {
+	existing, err := r.GetTransaction(ctx, workspaceID, txID)
+	if err != nil {
+		return err
+	}
+	if existing == nil {
+		return sql.ErrNoRows
+	}
+	switch existing.TransactionType {
+	case model.TransactionPurchase, model.TransactionOtherExpense:
+	default:
+		return ErrTransactionNotDeletable
+	}
+
+	before := transactionAuditPayload(existing)
+
+	dbTx, err := r.db.BeginTx(ctx, nil)
+	if err != nil {
+		return err
+	}
+	defer dbTx.Rollback()
+
+	res, err := dbTx.ExecContext(ctx, `DELETE FROM transactions WHERE workspace_id = ? AND id = ?`, workspaceID, txID)
+	if err != nil {
+		return err
+	}
+	if n, _ := res.RowsAffected(); n == 0 {
+		return sql.ErrNoRows
+	}
+
+	if audit != nil {
+		if err := audit.InsertTx(ctx, dbTx, AuditWriteInput{
+			WorkspaceID: workspaceID,
+			ActorUserID: actorUserID,
+			EntityType:  model.AuditEntityTransaction,
+			EntityID:    txID,
+			EventType:   model.AuditEventDelete,
+			Changes:     map[string]any{"before": before},
+		}); err != nil {
+			return err
+		}
+	}
+
+	return dbTx.Commit()
+}
+
 func transactionAuditPayload(tx *model.Transaction) map[string]any {
 	if tx == nil {
 		return nil
@@ -750,16 +809,23 @@ func scanTransaction(rows *sql.Rows) (model.Transaction, error) {
 	var businessUnitName sql.NullString
 	var batchID sql.NullString
 	var category sql.NullString
+	var lineItemCount int
+	var firstItemName sql.NullString
 
 	err := rows.Scan(
 		&item.ID, &item.WorkspaceID, &item.CashAccountID, &item.CashAccountName, &txType, &item.Amount,
 		&txDate, &description, &businessUnitID, &businessUnitName, &batchID, &category,
 		&item.CreatedAt, &item.UpdatedAt,
+		&lineItemCount, &firstItemName,
 	)
 	if err != nil {
 		return item, err
 	}
 	applyTransactionFields(&item, txType, txDate, description, businessUnitID, businessUnitName, batchID, category)
+	item.LineItemCount = lineItemCount
+	if firstItemName.Valid {
+		item.FirstItemName = firstItemName.String
+	}
 	return item, nil
 }
 

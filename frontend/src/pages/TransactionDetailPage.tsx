@@ -1,8 +1,16 @@
 import { useEffect, useState } from 'react'
-import { Link, useParams } from 'react-router-dom'
+import { Link, useNavigate, useParams } from 'react-router-dom'
 import { Pencil } from 'lucide-react'
 
-import { getTransaction, purchaseCategoryLabels, transactionTypeLabel, type Transaction } from '@/api/finance'
+import {
+  deleteOtherExpense,
+  deletePurchase,
+  getTransaction,
+  purchaseCategoryLabels,
+  transactionTypeLabel,
+  type Transaction,
+} from '@/api/finance'
+import { DeleteOutlineButton } from '@/components/shared/DeleteButton'
 import { BackLink } from '@/components/shared/BackLink'
 import { ErrorAlert } from '@/components/shared/ErrorAlert'
 import { PageHeader } from '@/components/shared/PageHeader'
@@ -17,10 +25,12 @@ import { useCatalogAccess } from '@/hooks/useCatalogAccess'
 
 export function TransactionDetailPage() {
   const { id } = useParams()
+  const navigate = useNavigate()
   const { canPageAction } = useCatalogAccess()
   const [item, setItem] = useState<Transaction | null>(null)
   const [error, setError] = useState<string | null>(null)
   const [loading, setLoading] = useState(true)
+  const [deleting, setDeleting] = useState(false)
 
   useEffect(() => {
     if (!id) return
@@ -60,6 +70,23 @@ export function TransactionDetailPage() {
       : canEditExpense && id
         ? `/finance/expenses/${id}/edit`
         : null
+  const canDelete =
+    (isPurchase && canPageAction('page.finance.purchases', 'delete')) ||
+    (isOtherExpense && canPageAction('page.finance.expenses', 'delete'))
+
+  const handleDelete = async () => {
+    if (!id || !item) return
+    setDeleting(true)
+    setError(null)
+    try {
+      if (item.transactionType === 'PURCHASE') await deletePurchase(id)
+      else await deleteOtherExpense(id)
+      navigate('/finance')
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Gagal menghapus transaksi')
+      setDeleting(false)
+    }
+  }
 
   return (
     <PageShell className={pageLayout.detail}>
@@ -69,14 +96,28 @@ export function TransactionDetailPage() {
         title={transactionTypeLabel(item.transactionType)}
         description={`${item.transactionDate} · ${item.cashAccountName ?? 'Kas'}`}
         actions={
-          editHref
+          editHref || canDelete
             ? (
-                <Button asChild size="lg" className="w-full md:w-auto">
-                  <Link to={editHref}>
-                    <Pencil className="size-4" />
-                    Ubah catatan
-                  </Link>
-                </Button>
+                <div className="flex w-full flex-col gap-2 sm:flex-row sm:justify-end">
+                  {editHref && (
+                    <Button asChild size="lg" className="w-full md:w-auto">
+                      <Link to={editHref}>
+                        <Pencil className="size-4" />
+                        Ubah catatan
+                      </Link>
+                    </Button>
+                  )}
+                  {canDelete && (
+                    <DeleteOutlineButton
+                      className="w-full md:w-auto"
+                      disabled={deleting}
+                      confirmMessage="Hapus catatan keuangan ini? Tindakan tidak dapat dibatalkan."
+                      onConfirm={handleDelete}
+                    >
+                      {deleting ? 'Menghapus…' : 'Hapus'}
+                    </DeleteOutlineButton>
+                  )}
+                </div>
               )
             : undefined
         }

@@ -2,10 +2,11 @@
 
 | Field | Value |
 |---|---|
-| Versi | 1.10 |
+| Versi | 1.11 |
 | Status | Living document — selaras dengan codebase `pencatatan-usaha` |
 | Produk | Aplikasi pencatatan operasional + pengeluaran usaha |
 | Codename | `pencatatan-usaha` |
+| Changelog v1.11 | **Hapus** catatan keuangan (pembelian/pengeluaran lain + audit DELETE); daftar Keuangan **ringkas per hari** (accordion); **ERD** [`docs/database/ERD.md`](./docs/database/ERD.md) + [finance-transactions.md](./docs/features/finance-transactions.md) |
 | Changelog v1.10 | **Ubah catatan keuangan** (pembelian & pengeluaran lain); daftar transaksi diurutkan **tanggal terbaru dulu**; **audit trail** perubahan di tabel `audit_logs` — lihat §9 BR-G |
 | Changelog v1.9 | **MVP-04 sewa kolam** live: kontrak, jadwal cicilan, bayar → `RENT_PAYMENT` — lihat §23 `IMP-RENT`, [docs/features/rent-contracts.md](./docs/features/rent-contracts.md) |
 | Changelog v1.8 | **Menu & aksi FE** mengikuti permission efektif **role di DB** (`/auth/me` → `canSeeCatalogMenu` / `canPageAction`); permission operasional (`finance.*`, `pond.*`, `water_quality.*`) di access catalog + seed operator |
@@ -323,8 +324,10 @@ Workspace
 - BR-G1: **Pembelian** (`PURCHASE`) dan **pengeluaran lain** (`OTHER_EXPENSE`) **boleh diubah** setelah tersimpan (tanggal, kas, kolam/batch, deskripsi, baris pembelian / nominal pengeluaran). Permission: `finance.purchase.update`, `finance.expense.update`.
 - BR-G2: Transaksi **bayar sewa**, **bagi hasil**, dan jenis lain **tidak** diubah lewat form edit umum (sumber kebenaran modul asal).
 - BR-G3: Daftar transaksi di halaman Keuangan dan API `GET /transactions` diurutkan **`transaction_date` menurun**, lalu `created_at` menurun (terbaru di atas).
-- BR-G4: Setiap **update** transaksi yang boleh diubah wajib menulis **audit log** di `audit_logs`: `entity_type=transaction`, `event_type=UPDATE`, `changes_json` berisi snapshot `before` / `after` (termasuk line items untuk pembelian), `actor_user_id` = user yang menyimpan.
+- BR-G4: Setiap **update** atau **delete** transaksi yang boleh diubah wajib menulis **audit log** di `audit_logs`: `entity_type=transaction`, `event_type` = `UPDATE` atau `DELETE`, `changes_json` berisi snapshot `before` / `after` (update) atau `before` (delete), `actor_user_id` = user yang menyimpan.
 - BR-G5: Mengubah pembelian **tidak** otomatis menyelaraskan `ConsumableLot` yang sudah dibuat dari line item tersebut (penyesuaian manual jika perlu).
+- BR-G6: **Hapus** hanya untuk `PURCHASE` dan `OTHER_EXPENSE` (permission `finance.purchase.delete` / `finance.expense.delete`), dengan konfirmasi UI; tulis audit `DELETE`. Transaksi **bayar sewa** / bagi hasil **tidak** dihapus dari arsip umum (modul asal).
+- BR-G7: Halaman Keuangan menampilkan **ringkasan per hari** (`transaction_date`): total keluar hari itu + jumlah transaksi; ketuk baris hari untuk membuka **rincian** transaksi (accordion). Tujuan: ringkas di mobile, tetap bisa drill-down ke detail per transaksi.
 
 ---
 
@@ -795,7 +798,7 @@ Mengikuti pola **Access Management**; visibilitas **permission**, bukan hardcode
 | IMP-WQ-CFG | Ambang & saran | JSON di `business_units`; template `GET/PUT /water-quality/config` (PUT admin); form `/ponds/new` dan `/ponds/:id/edit` |
 | IMP-DASH-WQ | Dashboard operasional air | Ringkasan per kolam, stat, alert belum diukur hari ini |
 | IMP-UI | Layout responsive | Bottom nav mobile, halaman kolam & kualitas air |
-| IMP-FIN | Pembelian, pengeluaran, **ubah** pembelian/pengeluaran lain + audit `audit_logs`, **CRUD akun kas** | UI `/finance`, form edit, `/finance/cash-accounts/*` |
+| IMP-FIN | Pembelian, pengeluaran, **ubah/hapus** pembelian/pengeluaran lain + audit `audit_logs`, daftar **per hari**, **CRUD akun kas** | UI `/finance`, form edit, `/finance/cash-accounts/*` |
 | IMP-RENT | Kontrak sewa kolam (MVP-04) | `POST/GET /rent-contracts`, bayar jadwal; FE `/finance/rent/*`; permission `finance.rent.*` — [docs/features/rent-contracts.md](./docs/features/rent-contracts.md) |
 | IMP-OPS | Health + Docker | `GET /health`, compose MySQL + API + FE |
 
@@ -806,9 +809,9 @@ Mengikuti pola **Access Management**; visibilitas **permission**, bukan hardcode
 | PART-WQ | T2 / BR-F | CRUD, dashboard, filter, grafik tren UI, batch opsional di form log, ambang & saran per kolam | CRUD batch (hanya `GET /batches`) |
 | PART-POND | FR-04 | name, location, notes, status | Form UI untuk size, ownerName |
 | PART-WS | MVP-01 / FR-01 | Satu workspace seed `Usaha Lele` | CRUD workspace, switcher, personal workspace |
-| PART-FIN | MVP-03 / MVP-04 / MVP-11 | Pembelian multi-item, **ubah** pembelian/pengeluaran + audit, pengeluaran lain, kas CRUD, **sewa** (kontrak + bayar jadwal), urutan daftar by tanggal | Histori harga, hapus transaksi, pakan, bagi hasil, laporan RPT sewa |
+| PART-FIN | MVP-03 / MVP-04 / MVP-11 | Pembelian multi-item, **ubah/hapus** pembelian/pengeluaran + audit, daftar ringkas per hari, kas CRUD, **sewa** (kontrak + bayar jadwal) | Histori harga, hapus bayar sewa dari arsip, pakan, bagi hasil, laporan RPT sewa |
 | PART-DASH | MVP-07 / §13 | Kartu kualitas air; ringkasan keuangan di `/finance` | Kartu Total Belanja, Pakan, Sewa, Bagi Hasil di dashboard utama |
-| PART-AUTH | FR-02 spec | JWT 24h; RBAC fase 1–2 + access catalog; **tabel `audit_logs`** + tulis saat ubah transaksi keuangan | Redis blacklist; halaman baca audit (`GET /audit-logs`); CRUD master `/permissions` |
+| PART-AUTH | FR-02 spec | JWT 24h; RBAC fase 1–2 + access catalog; **tabel `audit_logs`** + tulis saat ubah/hapus transaksi keuangan; **ERD** `docs/database/ERD.md` | Redis blacklist; halaman baca audit (`GET /audit-logs`); CRUD master `/permissions` |
 
 ### ❌ Belum ada (masih sesuai rencana MVP asli)
 

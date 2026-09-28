@@ -83,6 +83,15 @@
                   "description": "Edit transaksi pembelian yang sudah tercatat",
                   "routes": ["/finance/purchases/:id/edit"],
                   "operatorDefault": true
+                },
+                {
+                  "id": "delete",
+                  "label": "Hapus pembelian",
+                  "permission": "finance.purchase.delete",
+                  "resource": "finance",
+                  "action": "purchase",
+                  "description": "Hapus transaksi pembelian (konfirmasi + audit)",
+                  "operatorDefault": true
                 }
               ]
             },
@@ -109,6 +118,15 @@
                   "action": "expense",
                   "description": "Edit transaksi pengeluaran operasional",
                   "routes": ["/finance/expenses/:id/edit"],
+                  "operatorDefault": true
+                },
+                {
+                  "id": "delete",
+                  "label": "Hapus pengeluaran lain",
+                  "permission": "finance.expense.delete",
+                  "resource": "finance",
+                  "action": "expense",
+                  "description": "Hapus transaksi pengeluaran (konfirmasi + audit)",
                   "operatorDefault": true
                 }
               ]
@@ -510,8 +528,10 @@
       "finance.read",
       "finance.purchase.create",
       "finance.purchase.update",
+      "finance.purchase.delete",
       "finance.expense.create",
       "finance.expense.update",
+      "finance.expense.delete",
       "finance.rent.read",
       "finance.rent.create",
       "finance.rent.pay",

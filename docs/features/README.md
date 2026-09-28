@@ -9,6 +9,8 @@ Setiap fitur baru yang butuh UI dan/atau API **wajib** punya dokumen di folder i
 
 Aturan lengkap: `.cursor/rules/feature-delivery.mdc`
 
+**Skema database:** [database/ERD.md](../database/ERD.md) — diagram relasi tabel (selaras migrasi SQL).
+
 **Riset domain** (sebelum spesifikasi): lihat [`../research/`](../research/) — contoh [`pond-spec-water-quality.md`](../research/pond-spec-water-quality.md) untuk kolam & kualitas air lele.
 
 ## Dokumen yang ada
@@ -17,6 +19,7 @@ Aturan lengkap: `.cursor/rules/feature-delivery.mdc`
 |------|--------|-----|
 | [`operational-reports.md`](./operational-reports.md) | `done` | RPT-01/02/03/06 — API + halaman `/finance/reports/*` |
 | [`rent-contracts.md`](./rent-contracts.md) | `done` | Kontrak sewa kolam, jadwal cicilan, bayar → `RENT_PAYMENT` |
+| [`finance-transactions.md`](./finance-transactions.md) | `done` | Pembelian & pengeluaran lain — CRUD, audit, daftar per hari |
 | [`cash-accounts.md`](./cash-accounts.md) | `done` | CRUD akun kas workspace |
 | [`access-catalog.md`](./access-catalog.md) | `done` | Menu FE ↔ permission DB |
 | [`rbac.md`](./rbac.md) | `done` | RBAC fase 1–2 |

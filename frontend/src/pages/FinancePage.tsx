@@ -8,8 +8,9 @@ import {
   type FinanceSummary,
   type Transaction,
 } from '@/api/finance'
+import { FinanceDayGroup } from '@/components/finance/FinanceDayGroup'
 import { FinanceShortcutGrid } from '@/components/finance/FinanceShortcutGrid'
-import { TransactionRow } from '@/components/finance/TransactionRow'
+import { groupTransactionsByDate } from '@/lib/finance/groupTransactionsByDate'
 import { MobileFilterPanel } from '@/components/mobile/MobileFilterPanel'
 import { CountBadge } from '@/components/shared/CountBadge'
 import { EmptyState } from '@/components/shared/EmptyState'
@@ -75,11 +76,13 @@ export function FinancePage() {
     load()
   }, [])
 
+  const dayGroups = groupTransactionsByDate(transactions)
+
   return (
     <PageShell>
       <PageHeader
         title="Keuangan"
-        description="Ringkasan bulan ini, arsip transaksi, dan menu terkait."
+        description="Ringkasan bulan ini. Arsip transaksi dikelompokkan per hari — ketuk tanggal untuk lihat rincian."
         actions={
           showPurchases ? (
             <Button asChild size="lg" className="hidden md:inline-flex">
@@ -173,8 +176,8 @@ export function FinancePage() {
           />
         ) : (
           <div className="space-y-3">
-            {transactions.map((item) => (
-              <TransactionRow key={item.id} item={item} showDetailLink />
+            {dayGroups.map((group) => (
+              <FinanceDayGroup key={group.date} group={group} />
             ))}
             {transactions.length < total && (
               <Button

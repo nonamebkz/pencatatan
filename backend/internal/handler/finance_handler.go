@@ -297,6 +297,29 @@ func (h *FinanceHandler) UpdatePurchase(c *fiber.Ctx) error {
 	return httpx.OK(c, item)
 }
 
+func (h *FinanceHandler) DeletePurchase(c *fiber.Ctx) error {
+	return h.deleteEditableTransaction(c)
+}
+
+func (h *FinanceHandler) DeleteOtherExpense(c *fiber.Ctx) error {
+	return h.deleteEditableTransaction(c)
+}
+
+func (h *FinanceHandler) deleteEditableTransaction(c *fiber.Ctx) error {
+	ws := workspaceID(c)
+	id := c.Params("id")
+	if err := h.repo.DeleteTransaction(c.Context(), h.audit, middleware.UserID(c), ws, id); err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			return httpx.Fail(c, fiber.StatusNotFound, "NOT_FOUND", "Transaksi tidak ditemukan")
+		}
+		if err == repository.ErrTransactionNotDeletable {
+			return httpx.Fail(c, fiber.StatusBadRequest, "VALIDATION_ERROR", "Transaksi ini tidak dapat dihapus dari sini")
+		}
+		return httpx.Fail(c, fiber.StatusInternalServerError, "INTERNAL_ERROR", err.Error())
+	}
+	return c.SendStatus(fiber.StatusNoContent)
+}
+
 func (h *FinanceHandler) UpdateOtherExpense(c *fiber.Ctx) error {
 	var req otherExpenseRequest
 	if err := c.BodyParser(&req); err != nil {

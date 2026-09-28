@@ -1,8 +1,9 @@
 import { useEffect, useState } from 'react'
-import { Link, useParams } from 'react-router-dom'
+import { Link, useNavigate, useParams } from 'react-router-dom'
 import { Pencil } from 'lucide-react'
 
-import { getPurchase, purchaseCategoryLabels, type Transaction } from '@/api/finance'
+import { deletePurchase, getPurchase, purchaseCategoryLabels, type Transaction } from '@/api/finance'
+import { DeleteOutlineButton } from '@/components/shared/DeleteButton'
 import { BackLink } from '@/components/shared/BackLink'
 import { ErrorAlert } from '@/components/shared/ErrorAlert'
 import { PageHeader } from '@/components/shared/PageHeader'
@@ -17,11 +18,14 @@ import { useCatalogAccess } from '@/hooks/useCatalogAccess'
 
 export function PurchaseDetailPage() {
   const { id } = useParams()
+  const navigate = useNavigate()
   const { canPageAction } = useCatalogAccess()
   const canEdit = canPageAction('page.finance.purchases', 'update')
+  const canDelete = canPageAction('page.finance.purchases', 'delete')
   const [item, setItem] = useState<Transaction | null>(null)
   const [error, setError] = useState<string | null>(null)
   const [loading, setLoading] = useState(true)
+  const [deleting, setDeleting] = useState(false)
 
   useEffect(() => {
     if (!id) return
@@ -51,6 +55,19 @@ export function PurchaseDetailPage() {
     )
   }
 
+  const handleDelete = async () => {
+    if (!id) return
+    setDeleting(true)
+    setError(null)
+    try {
+      await deletePurchase(id)
+      navigate('/finance')
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Gagal menghapus pembelian')
+      setDeleting(false)
+    }
+  }
+
   return (
     <PageShell className={pageLayout.detail}>
       <BackLink to="/finance" label="Kembali ke keuangan" />
@@ -59,14 +76,28 @@ export function PurchaseDetailPage() {
         title="Detail Pembelian"
         description={`${item.transactionDate} · ${item.cashAccountName ?? 'Kas'}`}
         actions={
-          canEdit && id
+          (canEdit || canDelete) && id
             ? (
-                <Button asChild size="lg" className="w-full md:w-auto">
-                  <Link to={`/finance/purchases/${id}/edit`}>
-                    <Pencil className="size-4" />
-                    Ubah catatan
-                  </Link>
-                </Button>
+                <div className="flex w-full flex-col gap-2 sm:flex-row sm:justify-end">
+                  {canEdit && (
+                    <Button asChild size="lg" className="w-full md:w-auto">
+                      <Link to={`/finance/purchases/${id}/edit`}>
+                        <Pencil className="size-4" />
+                        Ubah catatan
+                      </Link>
+                    </Button>
+                  )}
+                  {canDelete && (
+                    <DeleteOutlineButton
+                      className="w-full md:w-auto"
+                      disabled={deleting}
+                      confirmMessage="Hapus pembelian ini beserta semua baris nota? Tindakan tidak dapat dibatalkan."
+                      onConfirm={handleDelete}
+                    >
+                      {deleting ? 'Menghapus…' : 'Hapus'}
+                    </DeleteOutlineButton>
+                  )}
+                </div>
               )
             : undefined
         }

@@ -28,4 +28,5 @@ Dokumen ringkas untuk manusia dan AI. Aturan detail ada di `.cursor/rules/`.
 
 - Backend: `backend/` — Go, Fiber, MySQL
 - Frontend: `frontend/` — React, Vite, shadcn
+- **ERD database:** [`docs/database/ERD.md`](docs/database/ERD.md) — selaras `backend/internal/migrate/migrations/`; update saat migrasi baru
 - **Access catalog (RBAC):** [`shared/access-catalog.json`](shared/access-catalog.json) — menu/aksi FE ↔ seed DB; visibilitas menu dari `permissions[]` `/auth/me` + `canSeeCatalogMenu`. Lihat [docs/features/access-catalog.md](docs/features/access-catalog.md). Setelah edit JSON: `make sync-access-catalog` (otomatis sebelum `backend-run`); restart backend; user yang role-nya berubah: fokus tab atau refresh.

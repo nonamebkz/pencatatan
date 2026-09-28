@@ -2,6 +2,7 @@ import { Link } from 'react-router-dom'
 import { ChevronRight } from 'lucide-react'
 
 import { type Transaction, transactionTypeLabel } from '@/api/finance'
+import { transactionRowSubtitle } from '@/components/finance/transactionRowSubtitle'
 import { formatIDR } from '@/lib/format'
 import { interactive } from '@/lib/design'
 import { cn } from '@/lib/utils'
@@ -13,11 +14,7 @@ type TransactionRowProps = {
 
 export function TransactionRow({ item, showDetailLink }: TransactionRowProps) {
   const canOpenDetail = Boolean(showDetailLink)
-  const subtitle =
-    item.description ||
-    (item.transactionType === 'PURCHASE' && item.items?.length
-      ? `${item.items.length} barang`
-      : item.category || item.businessUnitName || '—')
+  const subtitle = transactionRowSubtitle(item)
 
   const inner = (
     <div

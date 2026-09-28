@@ -149,8 +149,10 @@ func main() {
 	protected.Get("/purchases/:id", financeHandler.GetPurchase)
 	protected.Post("/purchases", financeHandler.CreatePurchase)
 	protected.Put("/purchases/:id", middleware.RequirePermission(model.PermFinancePurchaseUpdate), financeHandler.UpdatePurchase)
+	protected.Delete("/purchases/:id", middleware.RequirePermission(model.PermFinancePurchaseDelete), financeHandler.DeletePurchase)
 	protected.Post("/transactions/other-expenses", financeHandler.CreateOtherExpense)
 	protected.Put("/transactions/other-expenses/:id", middleware.RequirePermission(model.PermFinanceExpenseUpdate), financeHandler.UpdateOtherExpense)
+	protected.Delete("/transactions/other-expenses/:id", middleware.RequirePermission(model.PermFinanceExpenseDelete), financeHandler.DeleteOtherExpense)
 
 	protected.Get("/rent-contracts", middleware.RequirePermission(model.PermFinanceRentRead), rentHandler.List)
 	protected.Get("/rent-contracts/:id", middleware.RequirePermission(model.PermFinanceRentRead), rentHandler.Get)

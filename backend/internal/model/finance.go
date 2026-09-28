@@ -47,6 +47,8 @@ type Transaction struct {
 	BatchID         *string         `json:"batchId,omitempty"`
 	Category        *string         `json:"category,omitempty"`
 	Items           []PurchaseLineItem `json:"items,omitempty"`
+	LineItemCount   int             `json:"lineItemCount,omitempty"`
+	FirstItemName   string          `json:"firstItemName,omitempty"`
 	CreatedAt       time.Time       `json:"createdAt"`
 	UpdatedAt       time.Time       `json:"updatedAt"`
 }

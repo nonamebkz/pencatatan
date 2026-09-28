@@ -201,7 +201,22 @@ pencatatan-usaha/
 
 ## 4. Database Schema (MariaDB)
 
-### Migration: `000001_init.up.sql`
+> **ERD kanonik (evaluasi & review skema):** [docs/database/ERD.md](./docs/database/ERD.md) — diagram Mermaid per domain, tabel per file migrasi `000001`–`000007`, catatan FK/on-delete.  
+> Cuplikan SQL di bawah ini sebagian **target/legacy**; untuk deploy live ikuti folder [`backend/internal/migrate/migrations/`](./backend/internal/migrate/migrations/).
+
+### Migrasi live (ringkas)
+
+| File | Isi utama |
+|------|-----------|
+| `000001_init` | workspace, kolam, batch, kualitas air |
+| `000002_auth` | users |
+| `000003_finance` | cash_accounts, transactions, purchase_line_items |
+| `000004_workspace_settings` | workspace_settings |
+| `000005_rbac` | permissions, roles, junction |
+| `000006_rent_contracts` | kontrak sewa, jadwal, contract_payments → transactions |
+| `000007_audit_logs` | audit_logs (tulis saat update/delete transaksi keuangan yang boleh diedit) |
+
+### Migration: `000001_init.up.sql` *(referensi; lihat file migrasi aktual)*
 
 ```sql
 -- ─── Auth ───────────────────────────────────────────
@@ -598,8 +613,10 @@ Seed migrasi `000003_finance`: **Kas Utama** default (`is_default=1`).
 | GET | `/purchases` | `?from=&to=&businessUnitId=&page=&limit=` | `[Transaction]` with items |
 | POST | `/purchases` | `{ date, cashAccountId, businessUnitId?, batchId?, description?, items[] }` — **1..N items** | `{ transaction, items[], consumablePrompts[] }` |
 | PUT | `/purchases/:id` | `finance.purchase.update` — body sama POST | `Transaction` + line items; audit `audit_logs` |
+| DELETE | `/purchases/:id` | `finance.purchase.delete` | `204`; audit `DELETE` |
 | POST | `/transactions/other-expenses` | `{ transactionDate, amount, description, … }` | `Transaction` |
 | PUT | `/transactions/other-expenses/:id` | `finance.expense.update` — body sama POST | `Transaction`; audit `audit_logs` |
+| DELETE | `/transactions/other-expenses/:id` | `finance.expense.delete` | `204`; audit `DELETE` |
 | POST | `/transactions/personal` | `{ date, amount, type: OTHER_EXPENSE\|OTHER_INCOME, category, description? }` | `Transaction` |
 
 `GET /transactions` — urutan default: `transaction_date DESC`, `created_at DESC`.
@@ -919,7 +936,7 @@ Selaras [BRD §24](./BRD.md). Prinsip: **deny by default**, enforcement di backe
 - `permissions` — `code` unique (`resource.action`), metadata dari access catalog
 - `roles` — `code` unique, `is_system`
 - `role_permissions`, `user_roles` — assignment
-- `audit_logs` — ✅ migrasi `000007`; tulis saat **update** transaksi pembelian/pengeluaran lain; UI baca log **belum** (fase 3)
+- `audit_logs` — ✅ migrasi `000007`; tulis saat **update/delete** transaksi pembelian/pengeluaran lain; UI baca log **belum** (fase 3) — lihat [ERD](./docs/database/ERD.md)
 
 Role seed live: **`workspace_admin`**, **`operator`** (role BRD lain seperti `auditor` belum).
 
@@ -1444,7 +1461,9 @@ func main() {
 
 ## 19. Referensi
 
-- [BRD.md](./BRD.md) — business requirements (v1.8 + §23–§24 RBAC)
+- [BRD.md](./BRD.md) — business requirements (§9 BR-G keuangan + §23–§24 RBAC)
+- [docs/database/ERD.md](./docs/database/ERD.md) — entity-relationship diagram (migrasi SQL)
+- [docs/features/finance-transactions.md](./docs/features/finance-transactions.md) — catatan keuangan (API, UI, audit)
 - [docs/features/access-catalog.md](./docs/features/access-catalog.md) — menu FE ↔ permission DB (`shared/access-catalog.json`)
 - [docs/features/rbac.md](./docs/features/rbac.md) — kontrak RBAC implementasi
 - [raw idea.md](./raw%20idea.md) — ide awal
@@ -1470,7 +1489,7 @@ Ringkasan singkat — detail bisnis: [BRD §23](./BRD.md#23-status-implementasi-
 | FE | Operasional + Kelola Akses (`/users`, `/roles`, `/forbidden`) | ✅ |
 | Access catalog | `shared/access-catalog.json`, `make sync-access-catalog` | ✅ |
 | Workspace | `X-Workspace-ID` default UUID | ⚠️ satu workspace seed |
-| Transaksi MVP | Pembelian + pengeluaran lain + **sewa** (kontrak & bayar jadwal) | ⚠️ pakan, bagi hasil, histori harga ❌ |
+| Transaksi MVP | Pembelian + pengeluaran lain (**ubah/hapus** + audit) + **sewa**; FE daftar per hari | ⚠️ pakan, bagi hasil, histori harga ❌ — [finance-transactions.md](./docs/features/finance-transactions.md) |
 | Redis | cache + logout blacklist | ❌ |
 
 **Backlog teknis berikutnya:** workspace CRUD + switcher → histori harga → pakan & bagi hasil → laporan RPT sewa/ringkasan dashboard → RBAC fase 3 (audit + master permission UI) → Redis production hardening.

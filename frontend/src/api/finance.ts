@@ -41,6 +41,8 @@ export type Transaction = {
   batchId?: string
   category?: string
   items?: PurchaseLineItem[]
+  lineItemCount?: number
+  firstItemName?: string
   createdAt: string
 }
 
@@ -141,6 +143,14 @@ export function createOtherExpense(body: OtherExpenseInput) {
 
 export function updateOtherExpense(id: string, body: OtherExpenseInput) {
   return api.put<Transaction>(`/transactions/other-expenses/${id}`, body)
+}
+
+export function deletePurchase(id: string) {
+  return api.delete(`/purchases/${id}`)
+}
+
+export function deleteOtherExpense(id: string) {
+  return api.delete(`/transactions/other-expenses/${id}`)
 }
 
 export const purchaseCategoryLabels: Record<PurchaseCategory, string> = {
