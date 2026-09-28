@@ -39,7 +39,49 @@ func Up(db *sql.DB) error {
 	if err := ensureBusinessUnitWaterQualityConfig(db); err != nil {
 		return fmt.Errorf("ensure water_quality_config: %w", err)
 	}
+	if err := ensureTransactionOperationalUnitID(db); err != nil {
+		return fmt.Errorf("ensure operational_unit_id: %w", err)
+	}
 
+	return nil
+}
+
+func ensureTransactionOperationalUnitID(db *sql.DB) error {
+	var count int
+	err := db.QueryRow(`
+		SELECT COUNT(*)
+		FROM information_schema.COLUMNS
+		WHERE TABLE_SCHEMA = DATABASE()
+		  AND TABLE_NAME = 'transactions'
+		  AND COLUMN_NAME = 'operational_unit_id'`).Scan(&count)
+	if err != nil {
+		return fmt.Errorf("check column: %w", err)
+	}
+	if count == 0 {
+		if _, err := db.Exec(`ALTER TABLE transactions ADD COLUMN operational_unit_id CHAR(36) NULL AFTER business_unit_id`); err != nil {
+			return fmt.Errorf("add column: %w", err)
+		}
+	}
+
+	var fkCount int
+	err = db.QueryRow(`
+		SELECT COUNT(*)
+		FROM information_schema.TABLE_CONSTRAINTS
+		WHERE TABLE_SCHEMA = DATABASE()
+		  AND TABLE_NAME = 'transactions'
+		  AND CONSTRAINT_NAME = 'fk_transactions_operational_unit'`).Scan(&fkCount)
+	if err != nil {
+		return fmt.Errorf("check fk: %w", err)
+	}
+	if fkCount == 0 {
+		_, err = db.Exec(`
+			ALTER TABLE transactions
+			ADD CONSTRAINT fk_transactions_operational_unit
+				FOREIGN KEY (operational_unit_id) REFERENCES operational_units(id) ON DELETE SET NULL`)
+		if err != nil {
+			return fmt.Errorf("add fk: %w", err)
+		}
+	}
 	return nil
 }
 

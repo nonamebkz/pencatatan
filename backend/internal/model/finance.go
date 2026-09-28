@@ -42,8 +42,10 @@ type Transaction struct {
 	Amount          float64         `json:"amount"`
 	TransactionDate string          `json:"transactionDate"`
 	Description     *string         `json:"description,omitempty"`
-	BusinessUnitID  *string         `json:"businessUnitId,omitempty"`
-	BusinessUnitName string         `json:"businessUnitName,omitempty"`
+	BusinessUnitID       *string `json:"businessUnitId,omitempty"`
+	BusinessUnitName     string  `json:"businessUnitName,omitempty"`
+	OperationalUnitID    *string `json:"operationalUnitId,omitempty"`
+	OperationalUnitName  string  `json:"operationalUnitName,omitempty"`
 	BatchID         *string         `json:"batchId,omitempty"`
 	Category        *string         `json:"category,omitempty"`
 	Items           []PurchaseLineItem `json:"items,omitempty"`

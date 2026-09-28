@@ -1,6 +1,6 @@
 import { useMemo, useState } from 'react'
 import { Link } from 'react-router-dom'
-import { ChevronDown, Settings2, Shield, UserCog, UserRound } from 'lucide-react'
+import { Building2, ChevronDown, Settings2, Shield, UserCog, UserRound } from 'lucide-react'
 
 import { LogoutButton } from '@/components/auth/LogoutButton'
 import { useAuth } from '@/contexts/AuthContext'
@@ -33,6 +33,13 @@ export function UserMenu({ layout = 'header' }: UserMenuProps) {
         to: '/settings/water-quality',
         icon: Settings2,
         label: 'Konfigurasi Kualitas Air',
+      })
+    }
+    if (canViewPageId('page.workspaces.list')) {
+      access.push({
+        to: '/settings/workspaces',
+        icon: Building2,
+        label: 'Kelola Workspace',
       })
     }
     return access

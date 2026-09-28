@@ -16,6 +16,10 @@ export const PermCashAccountRead = 'cash_account.read'
 export const PermCashAccountCreate = 'cash_account.create'
 export const PermCashAccountUpdate = 'cash_account.update'
 export const PermCashAccountDelete = 'cash_account.delete'
+export const PermWorkspaceRead = 'workspace.read'
+export const PermWorkspaceCreate = 'workspace.create'
+export const PermWorkspaceUpdate = 'workspace.update'
+export const PermWorkspaceDelete = 'workspace.delete'
 
 export function can(permissions: readonly string[] | undefined, code: string): boolean {
   if (!permissions?.length) return false

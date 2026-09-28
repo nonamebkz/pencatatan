@@ -1,8 +1,10 @@
-import { NavLink, Outlet, useLocation } from 'react-router-dom'
-import { useMemo } from 'react'
-import { Droplets, Fish, LayoutDashboard, Shield, UserCog, Wallet, Waves, type LucideIcon } from 'lucide-react'
+import { NavLink, Outlet, useLocation, useNavigate } from 'react-router-dom'
+import { useEffect, useMemo } from 'react'
+import { Building2, Droplets, Fish, LayoutDashboard, Shield, UserCog, Wallet, Waves, type LucideIcon } from 'lucide-react'
 
 import { UserMenu } from '@/components/auth/UserMenu'
+import { WorkspaceSwitcher } from '@/components/workspace/WorkspaceSwitcher'
+import { useWorkspace } from '@/contexts/WorkspaceContext'
 import { MobileBottomNav } from '@/components/mobile/MobileBottomNav'
 import { useAuth } from '@/contexts/AuthContext'
 import { useCatalogAccess } from '@/hooks/useCatalogAccess'
@@ -12,6 +14,7 @@ import {
   visibleAccessNavFromCatalog,
   visibleMainNavFromCatalog,
 } from '@/lib/access-catalog'
+import { filterMainNavForWorkspace, isRouteBlockedForWorkspace } from '@/templates/registry'
 import { cn } from '@/lib/utils'
 
 const NAV_ICONS: Record<string, LucideIcon> = {
@@ -21,6 +24,7 @@ const NAV_ICONS: Record<string, LucideIcon> = {
   Droplets,
   UserCog,
   Shield,
+  Building2,
 }
 
 function pageTitle(pathname: string, navLabels: { path: string; label: string; end?: boolean }[]) {
@@ -44,6 +48,7 @@ function pageTitle(pathname: string, navLabels: { path: string; label: string; e
   if (pathname === '/finance/reports/price-history') return 'Histori Harga'
   if (pathname === '/finance/reports/rent') return 'Laporan Sewa'
   if (pathname === '/finance/reports/summary') return 'Ringkasan Operasional'
+  if (pathname === '/finance/reports/consolidated-summary') return 'Ringkasan Semua Usaha'
   if (pathname.startsWith('/finance/reports')) return 'Laporan'
   if (pathname.startsWith('/finance')) return 'Keuangan'
   if (pathname === '/ponds/new') return 'Tambah Kolam'
@@ -58,16 +63,34 @@ function pageTitle(pathname: string, navLabels: { path: string; label: string; e
   if (pathname.includes('/finance/purchases/') && pathname.endsWith('/edit')) return 'Ubah Pembelian'
   if (pathname.includes('/finance/expenses/') && pathname.endsWith('/edit')) return 'Ubah Pengeluaran'
   if (pathname.startsWith('/settings/water-quality')) return 'Konfigurasi Kualitas Air'
+  if (pathname === '/settings/workspaces/new') return 'Tambah Workspace'
+  if (pathname.startsWith('/settings/workspaces/') && pathname.endsWith('/edit')) return 'Ubah Workspace'
+  if (pathname.startsWith('/settings/workspaces')) return 'Workspace'
+  if (pathname === '/operational-units/new') return 'Tambah Unit'
+  if (/^\/operational-units\/[^/]+\/edit$/.test(pathname)) return 'Ubah Unit'
+  if (/^\/operational-units\/[^/]+$/.test(pathname)) return 'Detail Unit'
+  if (pathname.startsWith('/operational-units')) return 'Unit'
   const item = navLabels.find((nav) => (nav.end ? pathname === nav.path : pathname.startsWith(nav.path)))
   return item?.label ?? 'Budidaya Lele'
 }
 
 export function AppLayout() {
   const location = useLocation()
+  const navigate = useNavigate()
   const { can: check } = useAuth()
   const { canPageAction } = useCatalogAccess()
+  const { activeWorkspace } = useWorkspace()
 
-  const visibleMain = useMemo(() => visibleMainNavFromCatalog(check), [check])
+  const visibleMain = useMemo(() => {
+    const main = visibleMainNavFromCatalog(check)
+    return filterMainNavForWorkspace(main, activeWorkspace)
+  }, [check, activeWorkspace])
+
+  useEffect(() => {
+    if (isRouteBlockedForWorkspace(location.pathname, activeWorkspace)) {
+      navigate('/', { replace: true })
+    }
+  }, [activeWorkspace, location.pathname, navigate])
   const navItems = useMemo(
     () =>
       visibleMain.map((item) => ({
@@ -124,8 +147,10 @@ export function AppLayout() {
               <Waves className="size-5" />
             </div>
             <p className="text-xs font-semibold uppercase tracking-[0.18em] text-primary">Pencatatan Usaha</p>
-            <h1 className="mt-1 text-xl font-semibold leading-tight">Budidaya Lele</h1>
-            <p className="mt-1 text-xs text-muted-foreground">Monitoring kualitas air harian</p>
+            <WorkspaceSwitcher className="mt-3" />
+            <p className="mt-2 text-xs text-muted-foreground">
+              {activeWorkspace?.type === 'PERSONAL' ? 'Catatan keuangan pribadi' : 'Operasional usaha'}
+            </p>
           </div>
 
           <nav className="space-y-1">
@@ -192,9 +217,7 @@ export function AppLayout() {
                 <Waves className="size-4" />
               </div>
               <div className="min-w-0 flex-1">
-                <p className="text-[10px] font-medium uppercase tracking-wider text-muted-foreground">
-                  Budidaya Lele
-                </p>
+                <WorkspaceSwitcher compact className="mb-1 max-w-[11rem]" />
                 <h1 className="text-lg font-semibold leading-tight">{title}</h1>
               </div>
               <UserMenu layout="header" />

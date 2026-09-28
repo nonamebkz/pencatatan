@@ -62,7 +62,7 @@ Jika logic > ~15 baris dan bukan sekadar validasi, pindah ke service.
 ## Keamanan & data
 
 - Jangan log password, token, atau isi JWT.
-- **Lihat data**: semua user login melihat **seluruh** pencatatan workspace (tidak filter per `userId`). List endpoint pakai `workspace_id` saja.
+- **Lihat data**: scoped `workspace_id` dari header; user hanya boleh workspace di **`user_workspaces`** (lihat [workspace-user-access.md](../../docs/features/workspace-user-access.md)). Bukan filter per `userId` pada baris transaksi — semua user dengan akses workspace yang sama melihat data workspace itu.
 - **ADMIN**: akses penuh termasuk DELETE. **USER**: create/update + lihat semua; tanpa DELETE (kolam, catatan, pengguna, kas). Ikuti pola `adminOnly` di `main.go`.
 - Parameter query untuk filter: parse di helper (`parseFinanceFilter`, `parseWaterQualityFilter`), validasi tipe/range sebelum SQL.
 

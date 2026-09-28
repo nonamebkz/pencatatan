@@ -13,14 +13,15 @@ import (
 )
 
 type AuthHandler struct {
-	users     *repository.UserRepository
-	rbac      *repository.RBACRepository
-	jwtSecret string
-	jwtExpiry time.Duration
+	users      *repository.UserRepository
+	rbac       *repository.RBACRepository
+	workspaces *repository.WorkspaceRepository
+	jwtSecret  string
+	jwtExpiry  time.Duration
 }
 
-func NewAuthHandler(users *repository.UserRepository, rbac *repository.RBACRepository, jwtSecret string, jwtExpiry time.Duration) *AuthHandler {
-	return &AuthHandler{users: users, rbac: rbac, jwtSecret: jwtSecret, jwtExpiry: jwtExpiry}
+func NewAuthHandler(users *repository.UserRepository, rbac *repository.RBACRepository, workspaces *repository.WorkspaceRepository, jwtSecret string, jwtExpiry time.Duration) *AuthHandler {
+	return &AuthHandler{users: users, rbac: rbac, workspaces: workspaces, jwtSecret: jwtSecret, jwtExpiry: jwtExpiry}
 }
 
 type loginRequest struct {
@@ -93,9 +94,19 @@ func (h *AuthHandler) buildSessionPayload(c *fiber.Ctx, user *model.User) (fiber
 	if err != nil {
 		return nil, err
 	}
+	workspaceIDs, err := h.workspaces.ListIDsForUser(c.Context(), user.ID)
+	if err != nil {
+		return nil, err
+	}
+	defaultWorkspaceID, err := h.workspaces.DefaultWorkspaceIDForUser(c.Context(), user.ID)
+	if err != nil {
+		return nil, err
+	}
 	return fiber.Map{
-		"user":        user,
-		"permissions": perms,
-		"roles":       roles,
+		"user":               user,
+		"permissions":        perms,
+		"roles":              roles,
+		"workspaceIds":       workspaceIDs,
+		"defaultWorkspaceId": defaultWorkspaceID,
 	}, nil
 }

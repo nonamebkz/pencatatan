@@ -1,4 +1,5 @@
 import { api } from '@/api/client'
+import { clearStoredWorkspaceId } from '@/lib/workspace-storage'
 
 const TOKEN_KEY = 'pencatatan_token'
 
@@ -52,6 +53,7 @@ export async function logout() {
     await api.post<{ message: string }>('/auth/logout', {})
   } finally {
     clearStoredToken()
+    clearStoredWorkspaceId()
   }
 }
 

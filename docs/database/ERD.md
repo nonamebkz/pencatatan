@@ -5,7 +5,7 @@ Setiap start API, `migrate.Up` menjalankan ulang semua `.up.sql` (idempotent: `C
 
 **MySQL 8.4** · charset `utf8mb4` · PK umumnya `CHAR(36)` (UUID).
 
-Aturan bisnis transaksi & audit: [BRD §9 BR-G](../../BRD.md) · kontrak API/UI: [docs/features/finance-transactions.md](../features/finance-transactions.md).
+Aturan bisnis transaksi & audit: [BRD §9 BR-G](../../BRD.md) · workspace: [BRD §9 BR-H](../../BRD.md) · kontrak: [finance-transactions.md](../features/finance-transactions.md), [workspace-user-access.md](../features/workspace-user-access.md).
 
 ---
 
@@ -20,6 +20,10 @@ Aturan bisnis transaksi & audit: [BRD §9 BR-G](../../BRD.md) · kontrak API/UI:
 | `000005_rbac` | `permissions`, `roles`, `role_permissions`, `user_roles` |
 | `000006_rent_contracts` | `periodic_contracts`, `payment_schedules`, `contract_payments` |
 | `000007_audit_logs` | `audit_logs` |
+| `000008_personal_workspace` | seed workspace `PERSONAL` + akun kas pribadi |
+| `000009_user_workspaces` | `user_workspaces` — membership user ↔ workspace |
+| `000010_operational_units` | `operational_units` — master unit template `generic` |
+| *(runtime)* `ensureTransactionOperationalUnitID` | kolom `transactions.operational_unit_id` + FK jika belum ada |
 | *(runtime)* `migrate.ensureBusinessUnitWaterQualityConfig` | kolom `business_units.water_quality_config` (JSON) jika belum ada |
 
 **Belum ada migrasi** (hanya di BRD / `TECHNICAL_SPEC` §4 target): `consumable_lots`, `distribution_schemes`, `distribution_records`.
@@ -176,6 +180,8 @@ erDiagram
 ```mermaid
 erDiagram
     users ||--o{ user_roles : has
+    users ||--o{ user_workspaces : may_access
+    workspaces ||--o{ user_workspaces : grants
     roles ||--o{ user_roles : assigned
     roles ||--o{ role_permissions : grants
     permissions ||--o{ role_permissions : included
@@ -205,6 +211,12 @@ erDiagram
         char36 id PK
         char36 user_id FK
         char36 role_id FK
+    }
+
+    user_workspaces {
+        char36 user_id PK_FK
+        char36 workspace_id PK_FK
+        datetime created_at
     }
 
     role_permissions {
@@ -238,6 +250,7 @@ erDiagram
 | `transactions` | `cash_accounts` | RESTRICT | Hapus kas hanya jika tidak ada transaksi |
 | `business_units` | `transactions` | CASCADE (kolam) | Hapus kolam = hapus transaksi terkait kolam |
 | `workspaces` | `audit_logs` | CASCADE | Hapus workspace = hapus jejak audit workspace |
+| `users` / `workspaces` | `user_workspaces` | CASCADE | Cabut user atau workspace = hapus baris membership |
 
 ---
 

@@ -3,7 +3,8 @@ import { useNavigate, useParams } from 'react-router-dom'
 import { KeyRound, Save, Trash2 } from 'lucide-react'
 
 import { listRoles } from '@/api/roles'
-import { createUser, deleteUser, getUser, resetUserPassword, updateUser } from '@/api/users'
+import { createUser, deleteUser, getUser, resetUserPassword, setUserWorkspaces, updateUser } from '@/api/users'
+import { listAllWorkspaces, type Workspace } from '@/api/workspace'
 import { SelectField, TextField } from '@/components/shared/Field'
 import { BackLink } from '@/components/shared/BackLink'
 import { ErrorAlert } from '@/components/shared/ErrorAlert'
@@ -16,7 +17,8 @@ import { Button } from '@/components/ui/button'
 import { Skeleton } from '@/components/ui/skeleton'
 import { useAuth } from '@/contexts/AuthContext'
 import { useCatalogAccess } from '@/hooks/useCatalogAccess'
-import { pageLayout } from '@/lib/design'
+import { pageLayout, statusTone } from '@/lib/design'
+import { cn } from '@/lib/utils'
 
 export function UserFormPage() {
   const navigate = useNavigate()
@@ -24,6 +26,7 @@ export function UserFormPage() {
   const { user: currentUser } = useAuth()
   const { canPageAction } = useCatalogAccess()
   const canDeleteUser = canPageAction('page.users.list', 'delete')
+  const canAssignWorkspace = canPageAction('page.users.list', 'assign_workspace')
   const isEdit = Boolean(id)
 
   const [name, setName] = useState('')
@@ -36,6 +39,8 @@ export function UserFormPage() {
   const [error, setError] = useState<string | null>(null)
   const [loading, setLoading] = useState(true)
   const [submitting, setSubmitting] = useState(false)
+  const [workspaceCatalog, setWorkspaceCatalog] = useState<Workspace[]>([])
+  const [selectedWorkspaceIds, setSelectedWorkspaceIds] = useState<string[]>([])
 
   useEffect(() => {
     listRoles()
@@ -54,6 +59,22 @@ export function UserFormPage() {
   }, [isEdit])
 
   useEffect(() => {
+    if (!canAssignWorkspace) return
+    listAllWorkspaces()
+      .then((response) => setWorkspaceCatalog(response.data ?? []))
+      .catch(() => {
+        /* read-only fallback dari data user */
+      })
+  }, [canAssignWorkspace])
+
+  useEffect(() => {
+    if (isEdit || workspaceCatalog.length === 0 || selectedWorkspaceIds.length > 0) return
+    setSelectedWorkspaceIds(
+      workspaceCatalog.filter((w) => w.type === 'BUSINESS').map((w) => w.id),
+    )
+  }, [isEdit, workspaceCatalog, selectedWorkspaceIds.length])
+
+  useEffect(() => {
     if (!isEdit || !id) {
       setLoading(false)
       return
@@ -66,6 +87,10 @@ export function UserFormPage() {
         setEmail(user.email)
         setRoleId(user.roleIds[0] ?? '')
         setIsActive(user.isActive)
+        setSelectedWorkspaceIds(user.workspaceIds ?? [])
+        if (user.workspaces?.length && workspaceCatalog.length === 0) {
+          setWorkspaceCatalog(user.workspaces)
+        }
       })
       .catch((err) => setError(err instanceof Error ? err.message : 'Gagal memuat pengguna'))
       .finally(() => setLoading(false))
@@ -77,17 +102,25 @@ export function UserFormPage() {
       setError('Pilih peran untuk pengguna')
       return
     }
+    if (canAssignWorkspace && selectedWorkspaceIds.length === 0) {
+      setError('Pilih minimal satu workspace')
+      return
+    }
     setSubmitting(true)
     setError(null)
     try {
-      const body = { name, email, roleIds: [roleId], isActive }
+      const workspaceIds = canAssignWorkspace ? selectedWorkspaceIds : undefined
+      const body = { name, email, roleIds: [roleId], isActive, workspaceIds }
       if (isEdit && id) {
         await updateUser(id, body)
+        if (canAssignWorkspace) {
+          await setUserWorkspaces(id, selectedWorkspaceIds)
+        }
         if (newPassword) {
           await resetUserPassword(id, newPassword)
         }
       } else {
-        await createUser({ ...body, password })
+        await createUser({ ...body, password, workspaceIds: workspaceIds ?? [] })
       }
       navigate('/users')
     } catch (err) {
@@ -168,6 +201,50 @@ export function UserFormPage() {
           <InfoCallout>
             Permission efektif mengikuti peran yang dipilih. Ubah detail permission di menu Peran.
           </InfoCallout>
+
+          {canAssignWorkspace && workspaceCatalog.length > 0 && (
+            <div className="space-y-3 rounded-2xl border border-border p-4">
+              <p className="text-sm font-medium">Akses workspace</p>
+              <p className="text-xs text-muted-foreground">
+                Pengguna hanya bisa membuka workspace yang dicentang di switcher aplikasi.
+              </p>
+              <ul className="space-y-2">
+                {workspaceCatalog.map((ws) => {
+                  const checked = selectedWorkspaceIds.includes(ws.id)
+                  return (
+                    <li key={ws.id}>
+                      <label
+                        className={cn(
+                          'flex min-h-11 cursor-pointer items-center gap-3 rounded-xl border px-3 py-2 transition',
+                          checked ? 'border-primary bg-primary/5' : 'border-border',
+                        )}
+                      >
+                        <input
+                          type="checkbox"
+                          className="size-4 shrink-0 rounded border-input"
+                          checked={checked}
+                          onChange={() => {
+                            setSelectedWorkspaceIds((prev) =>
+                              checked ? prev.filter((x) => x !== ws.id) : [...prev, ws.id],
+                            )
+                          }}
+                        />
+                        <span className="min-w-0 flex-1 text-sm font-medium">{ws.name}</span>
+                        <span
+                          className={cn(
+                            'shrink-0 rounded-full px-2.5 py-0.5 text-xs font-medium',
+                            ws.type === 'PERSONAL' ? statusTone.muted : statusTone.success,
+                          )}
+                        >
+                          {ws.type === 'PERSONAL' ? 'Pribadi' : 'Usaha'}
+                        </span>
+                      </label>
+                    </li>
+                  )
+                })}
+              </ul>
+            </div>
+          )}
 
           {!isEdit ? (
             <TextField

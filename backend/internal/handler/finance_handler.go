@@ -14,15 +14,21 @@ import (
 	"github.com/kikichan/pencatatan/backend/internal/middleware"
 	"github.com/kikichan/pencatatan/backend/internal/model"
 	"github.com/kikichan/pencatatan/backend/internal/repository"
+	"github.com/kikichan/pencatatan/backend/internal/workspacetemplate"
 )
 
 type FinanceHandler struct {
-	repo  *repository.FinanceRepository
-	audit *repository.AuditRepository
+	repo    *repository.FinanceRepository
+	audit   *repository.AuditRepository
+	opUnits *repository.OperationalUnitRepository
 }
 
-func NewFinanceHandler(repo *repository.FinanceRepository, audit *repository.AuditRepository) *FinanceHandler {
-	return &FinanceHandler{repo: repo, audit: audit}
+func NewFinanceHandler(
+	repo *repository.FinanceRepository,
+	audit *repository.AuditRepository,
+	opUnits *repository.OperationalUnitRepository,
+) *FinanceHandler {
+	return &FinanceHandler{repo: repo, audit: audit, opUnits: opUnits}
 }
 
 type purchaseItemRequest struct {
@@ -39,9 +45,10 @@ type purchaseRequest struct {
 	CashAccountID   *string               `json:"cashAccountId"`
 	TransactionDate string                `json:"transactionDate"`
 	Description     *string               `json:"description"`
-	BusinessUnitID  *string               `json:"businessUnitId"`
-	BatchID         *string               `json:"batchId"`
-	Items           []purchaseItemRequest `json:"items"`
+	BusinessUnitID      *string               `json:"businessUnitId"`
+	OperationalUnitID   *string               `json:"operationalUnitId"`
+	BatchID             *string               `json:"batchId"`
+	Items               []purchaseItemRequest `json:"items"`
 }
 
 type cashAccountRequest struct {
@@ -415,15 +422,72 @@ func (h *FinanceHandler) buildPurchaseInput(c *fiber.Ctx, req purchaseRequest) (
 		})
 	}
 
+	businessUnitID, operationalUnitID, batchID, err := h.resolvePurchaseUnitLinks(c, req.BusinessUnitID, req.OperationalUnitID, req.BatchID)
+	if err != nil {
+		return repository.CreatePurchaseInput{}, err
+	}
+
 	return repository.CreatePurchaseInput{
-		WorkspaceID:     ws,
-		CashAccountID:   cashAccountID,
-		TransactionDate: txDate,
-		Description:     req.Description,
-		BusinessUnitID:  req.BusinessUnitID,
-		BatchID:         req.BatchID,
-		Items:           items,
+		WorkspaceID:       ws,
+		CashAccountID:     cashAccountID,
+		TransactionDate:   txDate,
+		Description:       req.Description,
+		BusinessUnitID:    businessUnitID,
+		OperationalUnitID: operationalUnitID,
+		BatchID:           batchID,
+		Items:             items,
 	}, nil
+}
+
+func (h *FinanceHandler) resolvePurchaseUnitLinks(
+	c *fiber.Ctx,
+	businessUnitID *string,
+	operationalUnitID *string,
+	batchID *string,
+) (*string, *string, *string, error) {
+	template := workspaceTemplateID(c)
+	ws := workspaceID(c)
+
+	hasPond := businessUnitID != nil && strings.TrimSpace(*businessUnitID) != ""
+	hasUnit := operationalUnitID != nil && strings.TrimSpace(*operationalUnitID) != ""
+	hasBatch := batchID != nil && strings.TrimSpace(*batchID) != ""
+
+	switch template {
+	case workspacetemplate.TemplateGeneric:
+		if hasPond || hasBatch {
+			return nil, nil, nil, fmt.Errorf("kolam/batch tidak berlaku untuk workspace ini")
+		}
+		if !hasUnit {
+			return nil, nil, nil, nil
+		}
+		id := strings.TrimSpace(*operationalUnitID)
+		unit, err := h.opUnits.GetByID(c.Context(), ws, id)
+		if err != nil {
+			return nil, nil, nil, fmt.Errorf("unit tidak valid")
+		}
+		if unit == nil {
+			return nil, nil, nil, fmt.Errorf("unit tidak ditemukan")
+		}
+		if unit.Status != model.OperationalUnitActive {
+			return nil, nil, nil, fmt.Errorf("unit tidak aktif")
+		}
+		return nil, &id, nil, nil
+	default:
+		if hasUnit {
+			return nil, nil, nil, fmt.Errorf("unit operasional tidak berlaku untuk workspace ini")
+		}
+		var bu *string
+		if hasPond {
+			v := strings.TrimSpace(*businessUnitID)
+			bu = &v
+		}
+		var batch *string
+		if hasBatch {
+			v := strings.TrimSpace(*batchID)
+			batch = &v
+		}
+		return bu, nil, batch, nil
+	}
 }
 
 func (h *FinanceHandler) resolveCashAccount(c *fiber.Ctx, id *string) (string, error) {

@@ -3,6 +3,7 @@ package repository
 import (
 	"context"
 	"database/sql"
+	"fmt"
 	"strings"
 	"time"
 
@@ -298,4 +299,219 @@ func (r *ReportRepository) transactionsByType(ctx context.Context, workspaceID s
 		out = append(out, row)
 	}
 	return out, rows.Err()
+}
+
+func (r *ReportRepository) ConsolidatedOperationalSummary(ctx context.Context, workspaceIDs []string, from, to time.Time) (*model.ConsolidatedOperationalSummaryReport, error) {
+	if len(workspaceIDs) == 0 {
+		return &model.ConsolidatedOperationalSummaryReport{
+			PeriodFrom: from.Format("2006-01-02"),
+			PeriodTo:   to.Format("2006-01-02"),
+		}, nil
+	}
+
+	ph := inPlaceholders(len(workspaceIDs))
+	idArgs := toSlice(workspaceIDs)
+
+	var purchases, rent, profitShare sql.NullFloat64
+	txArgs := append(idArgs, from, to)
+	err := r.db.QueryRowContext(ctx, fmt.Sprintf(`
+		SELECT
+			COALESCE(SUM(CASE WHEN transaction_type = 'PURCHASE' THEN amount END), 0),
+			COALESCE(SUM(CASE WHEN transaction_type = 'RENT_PAYMENT' THEN amount END), 0),
+			COALESCE(SUM(CASE WHEN transaction_type = 'PROFIT_SHARE_PAYOUT' THEN amount END), 0)
+		FROM transactions
+		WHERE workspace_id IN (%s) AND transaction_date >= ? AND transaction_date <= ?`, ph),
+		txArgs...,
+	).Scan(&purchases, &rent, &profitShare)
+	if err != nil {
+		return nil, err
+	}
+
+	feedArgs := append(idArgs, from, to)
+	var feed sql.NullFloat64
+	err = r.db.QueryRowContext(ctx, fmt.Sprintf(`
+		SELECT COALESCE(SUM(pli.total_price), 0)
+		FROM purchase_line_items pli
+		INNER JOIN transactions t ON t.id = pli.transaction_id
+		WHERE t.workspace_id IN (%s) AND t.transaction_type = 'PURCHASE'
+		  AND pli.category = 'FEED'
+		  AND t.transaction_date >= ? AND t.transaction_date <= ?`, ph),
+		feedArgs...,
+	).Scan(&feed)
+	if err != nil {
+		return nil, err
+	}
+
+	topCats, err := r.topPurchaseCategoriesMulti(ctx, workspaceIDs, from, to)
+	if err != nil {
+		return nil, err
+	}
+	byType, err := r.transactionsByTypeMulti(ctx, workspaceIDs, from, to)
+	if err != nil {
+		return nil, err
+	}
+	byWS, err := r.operationalSummaryByWorkspace(ctx, workspaceIDs, from, to)
+	if err != nil {
+		return nil, err
+	}
+
+	report := &model.ConsolidatedOperationalSummaryReport{
+		PeriodFrom:            from.Format("2006-01-02"),
+		PeriodTo:              to.Format("2006-01-02"),
+		WorkspaceIDs:          workspaceIDs,
+		TopPurchaseCategories: topCats,
+		ByTransactionType:     byType,
+		ByWorkspace:           byWS,
+	}
+	if purchases.Valid {
+		report.TotalPurchases = financesvc.RoundMoney(purchases.Float64)
+	}
+	if feed.Valid {
+		report.TotalFeed = financesvc.RoundMoney(feed.Float64)
+	}
+	if rent.Valid {
+		report.TotalRentPaid = financesvc.RoundMoney(rent.Float64)
+	}
+	if profitShare.Valid {
+		report.TotalProfitSharePaid = financesvc.RoundMoney(profitShare.Float64)
+	}
+	report.GrandTotalOperational = financesvc.RoundMoney(
+		report.TotalPurchases + report.TotalRentPaid + report.TotalProfitSharePaid,
+	)
+	return report, nil
+}
+
+func (r *ReportRepository) topPurchaseCategoriesMulti(ctx context.Context, workspaceIDs []string, from, to time.Time) ([]model.CategoryAmount, error) {
+	ph := inPlaceholders(len(workspaceIDs))
+	args := append(toSlice(workspaceIDs), from, to)
+	rows, err := r.db.QueryContext(ctx, fmt.Sprintf(`
+		SELECT pli.category, COALESCE(SUM(pli.total_price), 0) AS amount
+		FROM purchase_line_items pli
+		INNER JOIN transactions t ON t.id = pli.transaction_id
+		WHERE t.workspace_id IN (%s) AND t.transaction_type = 'PURCHASE'
+		  AND t.transaction_date >= ? AND t.transaction_date <= ?
+		GROUP BY pli.category
+		ORDER BY amount DESC
+		LIMIT 5`, ph), args...)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	out := make([]model.CategoryAmount, 0)
+	for rows.Next() {
+		var row model.CategoryAmount
+		if err := rows.Scan(&row.Category, &row.Amount); err != nil {
+			return nil, err
+		}
+		row.Amount = financesvc.RoundMoney(row.Amount)
+		out = append(out, row)
+	}
+	return out, rows.Err()
+}
+
+func (r *ReportRepository) transactionsByTypeMulti(ctx context.Context, workspaceIDs []string, from, to time.Time) ([]model.TransactionTypeSummary, error) {
+	ph := inPlaceholders(len(workspaceIDs))
+	args := append(toSlice(workspaceIDs), from, to)
+	rows, err := r.db.QueryContext(ctx, fmt.Sprintf(`
+		SELECT transaction_type, COUNT(*), COALESCE(SUM(amount), 0)
+		FROM transactions
+		WHERE workspace_id IN (%s) AND transaction_date >= ? AND transaction_date <= ?
+		GROUP BY transaction_type
+		ORDER BY SUM(amount) DESC`, ph), args...)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	out := make([]model.TransactionTypeSummary, 0)
+	for rows.Next() {
+		var row model.TransactionTypeSummary
+		if err := rows.Scan(&row.TransactionType, &row.Count, &row.TotalAmount); err != nil {
+			return nil, err
+		}
+		row.TotalAmount = financesvc.RoundMoney(row.TotalAmount)
+		out = append(out, row)
+	}
+	return out, rows.Err()
+}
+
+func (r *ReportRepository) operationalSummaryByWorkspace(ctx context.Context, workspaceIDs []string, from, to time.Time) ([]model.WorkspaceOperationalSummary, error) {
+	ph := inPlaceholders(len(workspaceIDs))
+	wsArgs := append([]any{from, to}, toSlice(workspaceIDs)...)
+	rows, err := r.db.QueryContext(ctx, fmt.Sprintf(`
+		SELECT w.id, w.name,
+			COALESCE(SUM(CASE WHEN t.transaction_type = 'PURCHASE' THEN t.amount END), 0),
+			COALESCE(SUM(CASE WHEN t.transaction_type = 'RENT_PAYMENT' THEN t.amount END), 0),
+			COALESCE(SUM(CASE WHEN t.transaction_type = 'PROFIT_SHARE_PAYOUT' THEN t.amount END), 0)
+		FROM workspaces w
+		LEFT JOIN transactions t ON t.workspace_id = w.id
+			AND t.transaction_date >= ? AND t.transaction_date <= ?
+		WHERE w.id IN (%s)
+		GROUP BY w.id, w.name
+		ORDER BY w.name ASC`, ph), wsArgs...)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	out := make([]model.WorkspaceOperationalSummary, 0, len(workspaceIDs))
+	for rows.Next() {
+		var row model.WorkspaceOperationalSummary
+		var purchases, rent, profitShare float64
+		if err := rows.Scan(&row.WorkspaceID, &row.WorkspaceName, &purchases, &rent, &profitShare); err != nil {
+			return nil, err
+		}
+		row.TotalPurchases = financesvc.RoundMoney(purchases)
+		row.TotalRentPaid = financesvc.RoundMoney(rent)
+		row.TotalProfitSharePaid = financesvc.RoundMoney(profitShare)
+		row.GrandTotalOperational = financesvc.RoundMoney(purchases + rent + profitShare)
+		out = append(out, row)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+
+	feedRows, err := r.db.QueryContext(ctx, fmt.Sprintf(`
+		SELECT t.workspace_id, COALESCE(SUM(pli.total_price), 0)
+		FROM purchase_line_items pli
+		INNER JOIN transactions t ON t.id = pli.transaction_id
+		WHERE t.workspace_id IN (%s) AND t.transaction_type = 'PURCHASE'
+		  AND pli.category = 'FEED'
+		  AND t.transaction_date >= ? AND t.transaction_date <= ?
+		GROUP BY t.workspace_id`, ph), append(toSlice(workspaceIDs), from, to)...)
+	if err != nil {
+		return nil, err
+	}
+	defer feedRows.Close()
+	feedByWS := map[string]float64{}
+	for feedRows.Next() {
+		var id string
+		var amount float64
+		if err := feedRows.Scan(&id, &amount); err != nil {
+			return nil, err
+		}
+		feedByWS[id] = financesvc.RoundMoney(amount)
+	}
+	for i := range out {
+		out[i].TotalFeed = feedByWS[out[i].WorkspaceID]
+	}
+	return out, feedRows.Err()
+}
+
+func inPlaceholders(n int) string {
+	if n <= 0 {
+		return ""
+	}
+	parts := make([]string, n)
+	for i := range parts {
+		parts[i] = "?"
+	}
+	return strings.Join(parts, ",")
+}
+
+func toSlice(ids []string) []any {
+	out := make([]any, len(ids))
+	for i, id := range ids {
+		out[i] = id
+	}
+	return out
 }

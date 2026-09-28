@@ -1,0 +1,11 @@
+INSERT INTO workspaces (id, name, type, template_id)
+SELECT '00000000-0000-4000-8000-000000000002', 'Keuangan Pribadi', 'PERSONAL', 'personal'
+WHERE NOT EXISTS (
+    SELECT 1 FROM workspaces WHERE id = '00000000-0000-4000-8000-000000000002'
+);
+
+INSERT INTO cash_accounts (id, workspace_id, name, is_default)
+SELECT '00000000-0000-4000-8000-000000000003', '00000000-0000-4000-8000-000000000002', 'Kas Pribadi', 1
+WHERE NOT EXISTS (
+    SELECT 1 FROM cash_accounts WHERE id = '00000000-0000-4000-8000-000000000003'
+);

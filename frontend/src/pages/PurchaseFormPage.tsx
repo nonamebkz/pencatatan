@@ -21,7 +21,10 @@ import { PanelCard } from '@/components/shared/PanelCard'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Select } from '@/components/ui/select'
+import { listOperationalUnits, type OperationalUnit } from '@/api/operational-units'
+import { useWorkspace } from '@/contexts/WorkspaceContext'
 import { useCashAccountAndPonds } from '@/hooks/useCashAccountAndPonds'
+import { TEMPLATE_GENERIC } from '@/templates/registry'
 import { pageLayout } from '@/lib/design'
 import { formatIDR, todayISO } from '@/lib/format'
 
@@ -43,10 +46,16 @@ export function PurchaseFormPage() {
   const location = useLocation()
   const { id } = useParams()
   const isEdit = Boolean(id && location.pathname.endsWith('/edit'))
-  const { accounts, ponds, cashAccountId, setCashAccountId, accountsError } = useCashAccountAndPonds()
+  const { activeWorkspace } = useWorkspace()
+  const isGenericWorkspace = activeWorkspace?.templateId === TEMPLATE_GENERIC
+  const { accounts, ponds, cashAccountId, setCashAccountId, accountsError } = useCashAccountAndPonds({
+    loadPonds: !isGenericWorkspace,
+  })
+  const [operationalUnits, setOperationalUnits] = useState<OperationalUnit[]>([])
   const [transactionDate, setTransactionDate] = useState(todayISO())
   const [description, setDescription] = useState('')
   const [businessUnitId, setBusinessUnitId] = useState('')
+  const [operationalUnitId, setOperationalUnitId] = useState('')
   const [lines, setLines] = useState<LineDraft[]>([emptyLine()])
   const [error, setError] = useState<string | null>(null)
   const [loading, setLoading] = useState(isEdit)
@@ -61,6 +70,7 @@ export function PurchaseFormPage() {
         setTransactionDate(item.transactionDate)
         setDescription(item.description ?? '')
         setBusinessUnitId(item.businessUnitId ?? '')
+        setOperationalUnitId(item.operationalUnitId ?? '')
         if (item.cashAccountId) setCashAccountId(item.cashAccountId)
         setLines(
           (item.items ?? []).map((line) => ({
@@ -78,6 +88,13 @@ export function PurchaseFormPage() {
       .catch((err) => setError(err instanceof Error ? err.message : 'Gagal memuat pembelian'))
       .finally(() => setLoading(false))
   }, [id, isEdit, setCashAccountId])
+
+  useEffect(() => {
+    if (!isGenericWorkspace) return
+    listOperationalUnits('ACTIVE')
+      .then((response) => setOperationalUnits(response.data ?? []))
+      .catch(() => setOperationalUnits([]))
+  }, [isGenericWorkspace])
 
   const total = useMemo(
     () => lines.reduce((sum, line) => sum + line.qty * line.unitPrice, 0),
@@ -98,7 +115,8 @@ export function PurchaseFormPage() {
         cashAccountId: cashAccountId || undefined,
         transactionDate,
         description: description || undefined,
-        businessUnitId: businessUnitId || undefined,
+        businessUnitId: isGenericWorkspace ? undefined : businessUnitId || undefined,
+        operationalUnitId: isGenericWorkspace ? operationalUnitId || undefined : undefined,
         items: lines.map(({ key: _key, ...item }) => item),
       }
       if (isEdit && id) {
@@ -162,19 +180,35 @@ export function PurchaseFormPage() {
                 ))}
               </SelectField>
             </div>
-            <SelectField
-              label="Kolam (opsional)"
-              id="pond"
-              value={businessUnitId}
-              onChange={(e) => setBusinessUnitId(e.target.value)}
-            >
-              <option value="">Tidak terkait kolam</option>
-              {ponds.map((pond) => (
-                <option key={pond.id} value={pond.id}>
-                  {pond.name}
-                </option>
-              ))}
-            </SelectField>
+            {isGenericWorkspace ? (
+              <SelectField
+                label="Unit (opsional)"
+                id="operational-unit"
+                value={operationalUnitId}
+                onChange={(e) => setOperationalUnitId(e.target.value)}
+              >
+                <option value="">Tidak terkait unit</option>
+                {operationalUnits.map((unit) => (
+                  <option key={unit.id} value={unit.id}>
+                    {unit.name}
+                  </option>
+                ))}
+              </SelectField>
+            ) : (
+              <SelectField
+                label="Kolam (opsional)"
+                id="pond"
+                value={businessUnitId}
+                onChange={(e) => setBusinessUnitId(e.target.value)}
+              >
+                <option value="">Tidak terkait kolam</option>
+                {ponds.map((pond) => (
+                  <option key={pond.id} value={pond.id}>
+                    {pond.name}
+                  </option>
+                ))}
+              </SelectField>
+            )}
             <TextareaField
               label="Catatan transaksi"
               id="description"

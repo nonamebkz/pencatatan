@@ -1,4 +1,6 @@
-import { BarChart3, FileText, History, PieChart, Waves } from 'lucide-react'
+import { BarChart3, Building2, FileText, History, PieChart, Waves } from 'lucide-react'
+
+import { useWorkspace } from '@/contexts/WorkspaceContext'
 
 import { MobileSectionHeader } from '@/components/mobile/MobileSectionHeader'
 import { BackLink } from '@/components/shared/BackLink'
@@ -33,15 +35,30 @@ const financeReports = [
     description: 'Agregat pengeluaran dan kategori',
     icon: PieChart,
   },
+  {
+    slug: 'consolidated-summary',
+    title: 'Ringkasan semua usaha',
+    description: 'Gabungan workspace usaha yang Anda akses',
+    icon: Building2,
+    consolidated: true,
+  },
 ]
 
 export function ReportsHubPage() {
   const { canPageAction, canViewPageId } = useCatalogAccess()
+  const { workspaces } = useWorkspace()
   const canFinance = canPageAction('page.finance.home', 'read')
   const canRent = canPageAction('page.finance.rent', 'read')
   const canWqReport = canViewPageId('page.water_quality.report')
+  const businessWorkspaceCount = workspaces.filter((w) => w.type === 'BUSINESS').length
 
-  const visible = financeReports.filter((c) => (c.rent ? canRent : canFinance))
+  const visible = financeReports.filter((c) => {
+    if (c.rent) return canRent
+    if ('consolidated' in c && c.consolidated) {
+      return canFinance && businessWorkspaceCount >= 1
+    }
+    return canFinance
+  })
 
   return (
     <PageShell>

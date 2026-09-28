@@ -3,6 +3,7 @@ import { BrowserRouter, Navigate, Route, Routes } from 'react-router-dom'
 import { GuestRoute, PermissionRoute, ProtectedRoute } from '@/components/auth/AuthRoutes'
 import { AuthProvider } from '@/contexts/AuthContext'
 import { AppLayout } from '@/layouts/AppLayout'
+import { WorkspaceShell } from '@/layouts/WorkspaceShell'
 import { DashboardPage } from '@/pages/DashboardPage'
 import { LoginPage } from '@/pages/LoginPage'
 import { PondDetailPage } from '@/pages/PondDetailPage'
@@ -18,7 +19,16 @@ import { FinancePage } from '@/pages/FinancePage'
 import { ForbiddenPage } from '@/pages/ForbiddenPage'
 import { RoleFormPage } from '@/pages/RoleFormPage'
 import { RoleListPage } from '@/pages/RoleListPage'
-import { PermCashAccountCreate, PermCashAccountRead, PermCashAccountUpdate, PermRoleCreate, PermRoleRead, PermUserRead, PermWaterQualityCfgUp } from '@/lib/permissions'
+import {
+  PermCashAccountCreate,
+  PermCashAccountRead,
+  PermCashAccountUpdate,
+  PermRoleCreate,
+  PermRoleRead,
+  PermUserRead,
+  PermWaterQualityCfgUp,
+  PermWorkspaceRead,
+} from '@/lib/permissions'
 import { OtherExpenseFormPage } from '@/pages/OtherExpenseFormPage'
 import { PurchaseDetailPage } from '@/pages/PurchaseDetailPage'
 import { TransactionDetailPage } from '@/pages/TransactionDetailPage'
@@ -34,6 +44,12 @@ import { PurchaseReportPage } from '@/pages/PurchaseReportPage'
 import { PriceHistoryReportPage } from '@/pages/PriceHistoryReportPage'
 import { RentReportPage } from '@/pages/RentReportPage'
 import { OperationalSummaryReportPage } from '@/pages/OperationalSummaryReportPage'
+import { ConsolidatedSummaryReportPage } from '@/pages/ConsolidatedSummaryReportPage'
+import { WorkspaceListPage } from '@/pages/WorkspaceListPage'
+import { WorkspaceFormPage } from '@/pages/WorkspaceFormPage'
+import { OperationalUnitListPage } from '@/pages/OperationalUnitListPage'
+import { OperationalUnitFormPage } from '@/pages/OperationalUnitFormPage'
+import { OperationalUnitDetailPage } from '@/pages/OperationalUnitDetailPage'
 
 function App() {
   return (
@@ -45,12 +61,17 @@ function App() {
           </Route>
 
           <Route element={<ProtectedRoute />}>
-            <Route element={<AppLayout />}>
+            <Route element={<WorkspaceShell />}>
+              <Route element={<AppLayout />}>
               <Route index element={<DashboardPage />} />
               <Route path="ponds" element={<PondListPage />} />
               <Route path="ponds/new" element={<PondFormPage />} />
               <Route path="ponds/:id/edit" element={<PondFormPage />} />
               <Route path="ponds/:id" element={<PondDetailPage />} />
+              <Route path="operational-units" element={<OperationalUnitListPage />} />
+              <Route path="operational-units/new" element={<OperationalUnitFormPage />} />
+              <Route path="operational-units/:id/edit" element={<OperationalUnitFormPage />} />
+              <Route path="operational-units/:id" element={<OperationalUnitDetailPage />} />
               <Route path="water-quality" element={<WaterQualityListPage />} />
               <Route path="water-quality/report" element={<WaterQualityReportPage />} />
               <Route path="water-quality/new" element={<WaterQualityFormPage />} />
@@ -62,6 +83,7 @@ function App() {
                 <Route path="finance/reports/purchases" element={<PurchaseReportPage />} />
                 <Route path="finance/reports/price-history" element={<PriceHistoryReportPage />} />
                 <Route path="finance/reports/summary" element={<OperationalSummaryReportPage />} />
+                <Route path="finance/reports/consolidated-summary" element={<ConsolidatedSummaryReportPage />} />
               </Route>
               <Route element={<PermissionRoute permission="finance.rent.read" />}>
                 <Route path="finance/reports/rent" element={<RentReportPage />} />
@@ -110,7 +132,14 @@ function App() {
                 <Route path="settings/water-quality" element={<WaterQualityConfigPage />} />
               </Route>
 
+              <Route element={<PermissionRoute permission={PermWorkspaceRead} />}>
+                <Route path="settings/workspaces" element={<WorkspaceListPage />} />
+                <Route path="settings/workspaces/new" element={<WorkspaceFormPage />} />
+                <Route path="settings/workspaces/:id/edit" element={<WorkspaceFormPage />} />
+              </Route>
+
               <Route path="forbidden" element={<ForbiddenPage />} />
+              </Route>
             </Route>
           </Route>
 

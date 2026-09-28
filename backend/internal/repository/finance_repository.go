@@ -264,7 +264,8 @@ func (r *FinanceRepository) ListTransactions(ctx context.Context, filter Finance
 
 	query := `
 		SELECT t.id, t.workspace_id, t.cash_account_id, c.name, t.transaction_type, t.amount,
-		       t.transaction_date, t.description, t.business_unit_id, b.name, t.batch_id, t.category,
+		       t.transaction_date, t.description, t.business_unit_id, b.name,
+		       t.operational_unit_id, ou.name, t.batch_id, t.category,
 		       t.created_at, t.updated_at,
 		       (SELECT COUNT(*) FROM purchase_line_items pli WHERE pli.transaction_id = t.id) AS line_item_count,
 		       (SELECT pli.item_name FROM purchase_line_items pli
@@ -272,6 +273,7 @@ func (r *FinanceRepository) ListTransactions(ctx context.Context, filter Finance
 		FROM transactions t
 		JOIN cash_accounts c ON c.id = t.cash_account_id
 		LEFT JOIN business_units b ON b.id = t.business_unit_id
+		LEFT JOIN operational_units ou ON ou.id = t.operational_unit_id
 	` + where + `
 		ORDER BY t.transaction_date DESC, t.created_at DESC
 		LIMIT ? OFFSET ?`
@@ -297,11 +299,13 @@ func (r *FinanceRepository) ListTransactions(ctx context.Context, filter Finance
 func (r *FinanceRepository) GetTransaction(ctx context.Context, workspaceID, id string) (*model.Transaction, error) {
 	row := r.db.QueryRowContext(ctx, `
 		SELECT t.id, t.workspace_id, t.cash_account_id, c.name, t.transaction_type, t.amount,
-		       t.transaction_date, t.description, t.business_unit_id, b.name, t.batch_id, t.category,
+		       t.transaction_date, t.description, t.business_unit_id, b.name,
+		       t.operational_unit_id, ou.name, t.batch_id, t.category,
 		       t.created_at, t.updated_at
 		FROM transactions t
 		JOIN cash_accounts c ON c.id = t.cash_account_id
 		LEFT JOIN business_units b ON b.id = t.business_unit_id
+		LEFT JOIN operational_units ou ON ou.id = t.operational_unit_id
 		WHERE t.workspace_id = ? AND t.id = ?`, workspaceID, id)
 
 	item, err := scanTransactionRow(row)
@@ -352,9 +356,10 @@ type CreatePurchaseInput struct {
 	CashAccountID   string
 	TransactionDate time.Time
 	Description     *string
-	BusinessUnitID  *string
-	BatchID         *string
-	Items           []CreatePurchaseItemInput
+	BusinessUnitID      *string
+	OperationalUnitID   *string
+	BatchID             *string
+	Items               []CreatePurchaseItemInput
 }
 
 type CreatePurchaseItemInput struct {
@@ -385,10 +390,10 @@ func (r *FinanceRepository) CreatePurchase(ctx context.Context, txID string, inp
 	_, err = tx.ExecContext(ctx, `
 		INSERT INTO transactions (
 			id, workspace_id, cash_account_id, transaction_type, amount, transaction_date,
-			description, business_unit_id, batch_id, created_at, updated_at
-		) VALUES (?, ?, ?, 'PURCHASE', ?, ?, ?, ?, ?, ?, ?)`,
+			description, business_unit_id, operational_unit_id, batch_id, created_at, updated_at
+		) VALUES (?, ?, ?, 'PURCHASE', ?, ?, ?, ?, ?, ?, ?, ?)`,
 		txID, input.WorkspaceID, input.CashAccountID, total, input.TransactionDate,
-		input.Description, input.BusinessUnitID, input.BatchID, now, now,
+		input.Description, input.BusinessUnitID, input.OperationalUnitID, input.BatchID, now, now,
 	)
 	if err != nil {
 		return nil, err
@@ -485,10 +490,10 @@ func (r *FinanceRepository) UpdatePurchase(
 	_, err = dbTx.ExecContext(ctx, `
 		UPDATE transactions
 		SET cash_account_id = ?, amount = ?, transaction_date = ?, description = ?,
-		    business_unit_id = ?, batch_id = ?, updated_at = ?
+		    business_unit_id = ?, operational_unit_id = ?, batch_id = ?, updated_at = ?
 		WHERE workspace_id = ? AND id = ?`,
 		input.CashAccountID, total, input.TransactionDate, input.Description,
-		input.BusinessUnitID, input.BatchID, now, input.WorkspaceID, txID,
+		input.BusinessUnitID, input.OperationalUnitID, input.BatchID, now, input.WorkspaceID, txID,
 	)
 	if err != nil {
 		return nil, err
@@ -697,11 +702,13 @@ func transactionAuditPayload(tx *model.Transaction) map[string]any {
 func (r *FinanceRepository) getTransactionTx(ctx context.Context, dbTx *sql.Tx, workspaceID, id string) (*model.Transaction, error) {
 	row := dbTx.QueryRowContext(ctx, `
 		SELECT t.id, t.workspace_id, t.cash_account_id, c.name, t.transaction_type, t.amount,
-		       t.transaction_date, t.description, t.business_unit_id, b.name, t.batch_id, t.category,
+		       t.transaction_date, t.description, t.business_unit_id, b.name,
+		       t.operational_unit_id, ou.name, t.batch_id, t.category,
 		       t.created_at, t.updated_at
 		FROM transactions t
 		JOIN cash_accounts c ON c.id = t.cash_account_id
 		LEFT JOIN business_units b ON b.id = t.business_unit_id
+		LEFT JOIN operational_units ou ON ou.id = t.operational_unit_id
 		WHERE t.workspace_id = ? AND t.id = ?`, workspaceID, id)
 
 	item, err := scanTransactionRow(row)
@@ -807,6 +814,8 @@ func scanTransaction(rows *sql.Rows) (model.Transaction, error) {
 	var description sql.NullString
 	var businessUnitID sql.NullString
 	var businessUnitName sql.NullString
+	var operationalUnitID sql.NullString
+	var operationalUnitName sql.NullString
 	var batchID sql.NullString
 	var category sql.NullString
 	var lineItemCount int
@@ -814,14 +823,15 @@ func scanTransaction(rows *sql.Rows) (model.Transaction, error) {
 
 	err := rows.Scan(
 		&item.ID, &item.WorkspaceID, &item.CashAccountID, &item.CashAccountName, &txType, &item.Amount,
-		&txDate, &description, &businessUnitID, &businessUnitName, &batchID, &category,
+		&txDate, &description, &businessUnitID, &businessUnitName,
+		&operationalUnitID, &operationalUnitName, &batchID, &category,
 		&item.CreatedAt, &item.UpdatedAt,
 		&lineItemCount, &firstItemName,
 	)
 	if err != nil {
 		return item, err
 	}
-	applyTransactionFields(&item, txType, txDate, description, businessUnitID, businessUnitName, batchID, category)
+	applyTransactionFields(&item, txType, txDate, description, businessUnitID, businessUnitName, operationalUnitID, operationalUnitName, batchID, category)
 	item.LineItemCount = lineItemCount
 	if firstItemName.Valid {
 		item.FirstItemName = firstItemName.String
@@ -836,18 +846,21 @@ func scanTransactionRow(row *sql.Row) (*model.Transaction, error) {
 	var description sql.NullString
 	var businessUnitID sql.NullString
 	var businessUnitName sql.NullString
+	var operationalUnitID sql.NullString
+	var operationalUnitName sql.NullString
 	var batchID sql.NullString
 	var category sql.NullString
 
 	err := row.Scan(
 		&item.ID, &item.WorkspaceID, &item.CashAccountID, &item.CashAccountName, &txType, &item.Amount,
-		&txDate, &description, &businessUnitID, &businessUnitName, &batchID, &category,
+		&txDate, &description, &businessUnitID, &businessUnitName,
+		&operationalUnitID, &operationalUnitName, &batchID, &category,
 		&item.CreatedAt, &item.UpdatedAt,
 	)
 	if err != nil {
 		return nil, err
 	}
-	applyTransactionFields(&item, txType, txDate, description, businessUnitID, businessUnitName, batchID, category)
+	applyTransactionFields(&item, txType, txDate, description, businessUnitID, businessUnitName, operationalUnitID, operationalUnitName, batchID, category)
 	return &item, nil
 }
 
@@ -858,6 +871,8 @@ func applyTransactionFields(
 	description sql.NullString,
 	businessUnitID sql.NullString,
 	businessUnitName sql.NullString,
+	operationalUnitID sql.NullString,
+	operationalUnitName sql.NullString,
 	batchID sql.NullString,
 	category sql.NullString,
 ) {
@@ -873,6 +888,13 @@ func applyTransactionFields(
 	}
 	if businessUnitName.Valid {
 		item.BusinessUnitName = businessUnitName.String
+	}
+	if operationalUnitID.Valid {
+		value := operationalUnitID.String
+		item.OperationalUnitID = &value
+	}
+	if operationalUnitName.Valid {
+		item.OperationalUnitName = operationalUnitName.String
 	}
 	if batchID.Valid {
 		value := batchID.String

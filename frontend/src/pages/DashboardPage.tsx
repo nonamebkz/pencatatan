@@ -19,7 +19,9 @@ import { ErrorAlert } from '@/components/shared/ErrorAlert'
 import { PageShell } from '@/components/shared/PageShell'
 import { Button } from '@/components/ui/button'
 import { Skeleton } from '@/components/ui/skeleton'
+import { useWorkspace } from '@/contexts/WorkspaceContext'
 import { useCatalogAccess } from '@/hooks/useCatalogAccess'
+import { isLeleTemplate } from '@/templates/registry'
 import { alertInline, skeleton } from '@/lib/design'
 import { cn } from '@/lib/utils'
 import heroImage from '@/assets/hero.png'
@@ -32,6 +34,8 @@ function greetingForHour(hour: number) {
 }
 
 export function DashboardPage() {
+  const { activeWorkspace } = useWorkspace()
+  const showLeleDashboard = isLeleTemplate(activeWorkspace)
   const { canPageAction, canViewPageId } = useCatalogAccess()
   const canManagePonds = canViewPageId('page.ponds.list')
   const canRecordWQ = canPageAction('page.water_quality.form', 'create')
@@ -47,20 +51,23 @@ export function DashboardPage() {
     setError(null)
 
     try {
-      const [dashboardResponse, healthResponse] = await Promise.all([
-        getDashboardSummary(),
-        fetchHealth().catch(() => null),
-      ])
-
-      setSummaries(dashboardResponse.data.waterQualitySummary ?? [])
+      const healthResponse = await fetchHealth().catch(() => null)
       setSystemOk(healthResponse?.success ?? null)
+
+      if (!showLeleDashboard) {
+        setSummaries([])
+        return
+      }
+
+      const dashboardResponse = await getDashboardSummary()
+      setSummaries(dashboardResponse.data.waterQualitySummary ?? [])
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Gagal memuat dashboard')
     } finally {
       setLoading(false)
       setRefreshing(false)
     }
-  }, [])
+  }, [showLeleDashboard])
 
   useEffect(() => {
     void loadDashboard()
@@ -102,7 +109,9 @@ export function DashboardPage() {
             </div>
             <h2 className="text-2xl font-semibold tracking-tight md:text-4xl">{greeting}</h2>
             <p className="hidden max-w-xl text-sm text-muted-foreground sm:block md:text-base">
-              Pantau ammonia, pH, dan catatan observasi kolam lele setiap hari.
+              {showLeleDashboard
+                ? 'Pantau ammonia, pH, dan catatan observasi kolam lele setiap hari.'
+                : 'Catat pembelian dan pengeluaran usaha dari menu Keuangan.'}
             </p>
 
             <div className="hidden flex-wrap gap-3 md:flex">
@@ -132,6 +141,7 @@ export function DashboardPage() {
 
       {error && <ErrorAlert>{error}</ErrorAlert>}
 
+      {showLeleDashboard && (
       <section className="grid grid-cols-2 gap-3 md:gap-4 xl:grid-cols-4">
         {loading ? (
           Array.from({ length: 4 }).map((_, index) => (
@@ -163,8 +173,9 @@ export function DashboardPage() {
           </>
         )}
       </section>
+      )}
 
-      {!loading && stats.pendingToday > 0 && canRecordWQ && (
+      {showLeleDashboard && !loading && stats.pendingToday > 0 && canRecordWQ && (
         <Link to="/water-quality/new" className={alertInline.warningLink}>
           <div className="flex items-start gap-3">
             <AlertTriangle className="mt-0.5 size-5 shrink-0" />
@@ -177,6 +188,7 @@ export function DashboardPage() {
         </Link>
       )}
 
+      {showLeleDashboard && (
       <section className="space-y-4">
         <MobileSectionHeader
           title="Status Kolam"
@@ -223,6 +235,20 @@ export function DashboardPage() {
           </div>
         )}
       </section>
+      )}
+
+      {!showLeleDashboard && (
+        <EmptyState
+          icon={Fish}
+          title="Beranda usaha umum"
+          description="Gunakan menu Keuangan untuk transaksi dan Unit untuk master lokasi/cabang."
+          action={
+            <Button asChild className="w-full sm:w-auto">
+              <Link to="/finance">Buka Keuangan</Link>
+            </Button>
+          }
+        />
+      )}
     </PageShell>
   )
 }

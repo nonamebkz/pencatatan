@@ -11,3 +11,10 @@ func workspaceID(c *fiber.Ctx) string {
 	}
 	return model.DefaultWorkspaceID
 }
+
+func workspaceTemplateID(c *fiber.Ctx) string {
+	if value, ok := c.Locals("workspaceTemplateId").(string); ok && value != "" {
+		return value
+	}
+	return "lele"
+}

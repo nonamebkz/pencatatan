@@ -16,6 +16,14 @@ func (h *UserHandler) userPayload(ctx context.Context, user *model.User) (fiber.
 	if err != nil {
 		return nil, err
 	}
+	workspaceIDs, err := h.workspaces.ListIDsForUser(ctx, user.ID)
+	if err != nil {
+		return nil, err
+	}
+	workspaces, err := h.workspaces.ListForUser(ctx, user.ID)
+	if err != nil {
+		return nil, err
+	}
 	return fiber.Map{
 		"id":        user.ID,
 		"email":     user.Email,
@@ -24,8 +32,10 @@ func (h *UserHandler) userPayload(ctx context.Context, user *model.User) (fiber.
 		"isActive":  user.IsActive,
 		"createdAt": user.CreatedAt,
 		"updatedAt": user.UpdatedAt,
-		"roleIds":   roleIDs,
-		"roles":     roles,
+		"roleIds":      roleIDs,
+		"roles":        roles,
+		"workspaceIds": workspaceIDs,
+		"workspaces":   workspaces,
 	}, nil
 }
 

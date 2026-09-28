@@ -35,6 +35,21 @@ export type PriceHistoryFooter = {
   lastPrice: number
 }
 
+export type WorkspaceOperationalSummary = {
+  workspaceId: string
+  workspaceName: string
+  totalPurchases: number
+  totalFeed: number
+  totalRentPaid: number
+  totalProfitSharePaid: number
+  grandTotalOperational: number
+}
+
+export type ConsolidatedOperationalSummaryReport = OperationalSummaryReport & {
+  workspaceIds: string[]
+  byWorkspace: WorkspaceOperationalSummary[]
+}
+
 export type OperationalSummaryReport = {
   periodFrom: string
   periodTo: string
@@ -95,5 +110,16 @@ export function getRentReport(params?: { timeStatus?: string; paymentStatus?: st
 export function getOperationalSummaryReport(params?: { from?: string; to?: string }) {
   return api.get<OperationalSummaryReport>(
     withQuery('/reports/summary', { from: params?.from, to: params?.to }),
+  )
+}
+
+export function getConsolidatedSummaryReport(params?: { from?: string; to?: string; workspaceIds?: string[] }) {
+  return api.get<ConsolidatedOperationalSummaryReport>(
+    withQuery('/reports/consolidated/summary', {
+      from: params?.from,
+      to: params?.to,
+      workspaceIds: params?.workspaceIds?.join(','),
+    }),
+    { workspace: false },
   )
 }

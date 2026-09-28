@@ -19,6 +19,7 @@ import (
 	"github.com/kikichan/pencatatan/backend/internal/model"
 	"github.com/kikichan/pencatatan/backend/internal/repository"
 	"github.com/kikichan/pencatatan/backend/internal/seed"
+	"github.com/kikichan/pencatatan/backend/internal/workspacetemplate"
 )
 
 func main() {
@@ -53,18 +54,22 @@ func main() {
 	rentRepo := repository.NewRentRepository(db)
 	reportRepo := repository.NewReportRepository(db)
 	settingsRepo := repository.NewSettingsRepository(db)
+	workspaceRepo := repository.NewWorkspaceRepository(db)
+	opUnitRepo := repository.NewOperationalUnitRepository(db)
 
 	healthHandler := handler.NewHealthHandler(db)
-	authHandler := handler.NewAuthHandler(userRepo, rbacRepo, cfg.JWTSecret, cfg.JWTExpiry)
-	userHandler := handler.NewUserHandler(userRepo, rbacRepo)
+	authHandler := handler.NewAuthHandler(userRepo, rbacRepo, workspaceRepo, cfg.JWTSecret, cfg.JWTExpiry)
+	userHandler := handler.NewUserHandler(userRepo, rbacRepo, workspaceRepo)
 	roleHandler := handler.NewRoleHandler(rbacRepo)
 	permissionHandler := handler.NewPermissionHandler(rbacRepo)
 	batchHandler := handler.NewBatchHandler(batchRepo)
 	pondHandler := handler.NewPondHandler(pondRepo, settingsRepo)
 	waterQualityHandler := handler.NewWaterQualityHandler(waterQualityRepo, pondRepo, settingsRepo)
-	financeHandler := handler.NewFinanceHandler(financeRepo, auditRepo)
+	financeHandler := handler.NewFinanceHandler(financeRepo, auditRepo, opUnitRepo)
+	opUnitHandler := handler.NewOperationalUnitHandler(opUnitRepo)
 	rentHandler := handler.NewRentHandler(rentRepo, financeRepo)
-	reportHandler := handler.NewReportHandler(reportRepo, rentRepo)
+	reportHandler := handler.NewReportHandler(reportRepo, rentRepo, workspaceRepo)
+	workspaceHandler := handler.NewWorkspaceHandler(workspaceRepo, settingsRepo, financeRepo)
 
 	app := fiber.New(fiber.Config{
 		AppName:      "pencatatan-api",
@@ -85,9 +90,21 @@ func main() {
 
 	api.Post("/auth/login", authHandler.Login)
 
-	protected := api.Group("", middleware.Auth(cfg.JWTSecret), middleware.LoadPermissions(rbacRepo))
+	protected := api.Group(
+		"",
+		middleware.Auth(cfg.JWTSecret),
+		middleware.LoadPermissions(rbacRepo),
+		middleware.ValidateWorkspace(workspaceRepo),
+		middleware.RequireWorkspaceMembership(workspaceRepo),
+	)
 	protected.Post("/auth/logout", authHandler.Logout)
 	protected.Get("/auth/me", authHandler.Me)
+
+	protected.Get("/workspaces", workspaceHandler.List)
+	protected.Get("/workspaces/all", middleware.RequireAnyPermission(model.PermUserAssignWorkspace, model.PermWorkspaceRead), workspaceHandler.ListAll)
+	protected.Post("/workspaces", middleware.RequirePermission(model.PermWorkspaceCreate), workspaceHandler.Create)
+	protected.Put("/workspaces/:id", middleware.RequirePermission(model.PermWorkspaceUpdate), workspaceHandler.Update)
+	protected.Delete("/workspaces/:id", middleware.RequirePermission(model.PermWorkspaceDelete), workspaceHandler.Delete)
 
 	protected.Get("/users", middleware.RequirePermission(model.PermUserRead), userHandler.List)
 	protected.Get("/users/:id", middleware.RequirePermission(model.PermUserRead), userHandler.Get)
@@ -95,6 +112,7 @@ func main() {
 	protected.Put("/users/:id", middleware.RequirePermission(model.PermUserUpdate), userHandler.Update)
 	protected.Put("/users/:id/reset-password", middleware.RequirePermission(model.PermUserUpdate), userHandler.ResetPassword)
 	protected.Put("/users/:id/roles", middleware.RequirePermission(model.PermUserAssignRole), userHandler.SetRoles)
+	protected.Put("/users/:id/workspaces", middleware.RequirePermission(model.PermUserAssignWorkspace), userHandler.SetWorkspaces)
 	protected.Delete("/users/:id", middleware.RequirePermission(model.PermUserDelete), userHandler.Delete)
 
 	protected.Get("/roles", middleware.RequirePermission(model.PermRoleRead), roleHandler.List)
@@ -111,31 +129,41 @@ func main() {
 		model.PermRoleAssignPerm,
 	), permissionHandler.List)
 
-	protected.Get("/batches", batchHandler.List)
-	protected.Get("/ponds", pondHandler.List)
-	protected.Get("/ponds/:id", pondHandler.Get)
-	protected.Post("/ponds", pondHandler.Create)
-	protected.Put("/ponds/:id", pondHandler.Update)
-	protected.Delete("/ponds/:id", middleware.RequirePermission(model.PermPondDelete), pondHandler.Delete)
+	leleOnly := middleware.RequireWorkspaceTemplate(workspacetemplate.TemplateLele)
+	genericOnly := middleware.RequireWorkspaceTemplate(workspacetemplate.TemplateGeneric)
 
-	protected.Put("/water-quality/config", middleware.RequirePermission(model.PermWaterQualityCfgUp), waterQualityHandler.UpdateConfig)
+	protected.Get("/batches", leleOnly, batchHandler.List)
+	protected.Get("/ponds", leleOnly, pondHandler.List)
+	protected.Get("/ponds/:id", leleOnly, pondHandler.Get)
+	protected.Post("/ponds", leleOnly, pondHandler.Create)
+	protected.Put("/ponds/:id", leleOnly, pondHandler.Update)
+	protected.Delete("/ponds/:id", leleOnly, middleware.RequirePermission(model.PermPondDelete), pondHandler.Delete)
 
-	protected.Get("/water-quality-logs/trends", waterQualityHandler.Trends)
-	protected.Get("/water-quality/config", waterQualityHandler.GetConfig)
-	protected.Post("/water-quality/evaluate", waterQualityHandler.EvaluateMeasurements)
-	protected.Get("/water-quality-logs", waterQualityHandler.List)
-	protected.Get("/water-quality-logs/:id", waterQualityHandler.Get)
-	protected.Post("/water-quality-logs", waterQualityHandler.Create)
-	protected.Put("/water-quality-logs/:id", waterQualityHandler.Update)
-	protected.Delete("/water-quality-logs/:id", middleware.RequirePermission(model.PermWaterQualityDelete), waterQualityHandler.Delete)
+	protected.Put("/water-quality/config", leleOnly, middleware.RequirePermission(model.PermWaterQualityCfgUp), waterQualityHandler.UpdateConfig)
 
-	protected.Get("/reports/water-quality", waterQualityHandler.Report)
+	protected.Get("/water-quality-logs/trends", leleOnly, waterQualityHandler.Trends)
+	protected.Get("/water-quality/config", leleOnly, waterQualityHandler.GetConfig)
+	protected.Post("/water-quality/evaluate", leleOnly, waterQualityHandler.EvaluateMeasurements)
+	protected.Get("/water-quality-logs", leleOnly, waterQualityHandler.List)
+	protected.Get("/water-quality-logs/:id", leleOnly, waterQualityHandler.Get)
+	protected.Post("/water-quality-logs", leleOnly, waterQualityHandler.Create)
+	protected.Put("/water-quality-logs/:id", leleOnly, waterQualityHandler.Update)
+	protected.Delete("/water-quality-logs/:id", leleOnly, middleware.RequirePermission(model.PermWaterQualityDelete), waterQualityHandler.Delete)
+
+	protected.Get("/reports/water-quality", leleOnly, waterQualityHandler.Report)
 	protected.Get("/reports/purchases", middleware.RequirePermission("finance.read"), reportHandler.Purchases)
 	protected.Get("/reports/price-history", middleware.RequirePermission("finance.read"), reportHandler.PriceHistory)
 	protected.Get("/reports/price-history/items", middleware.RequirePermission("finance.read"), reportHandler.PriceHistoryItems)
-	protected.Get("/reports/rent", middleware.RequirePermission("finance.rent.read"), reportHandler.Rent)
+	protected.Get("/reports/rent", leleOnly, middleware.RequirePermission("finance.rent.read"), reportHandler.Rent)
 	protected.Get("/reports/summary", middleware.RequirePermission("finance.read"), reportHandler.Summary)
-	protected.Get("/dashboard", waterQualityHandler.DashboardSummary)
+	protected.Get("/reports/consolidated/summary", middleware.RequirePermission("finance.read"), reportHandler.ConsolidatedSummary)
+	protected.Get("/dashboard", leleOnly, waterQualityHandler.DashboardSummary)
+
+	protected.Get("/operational-units", genericOnly, middleware.RequirePermission(model.PermOperationalUnitRead), opUnitHandler.List)
+	protected.Get("/operational-units/:id", genericOnly, middleware.RequirePermission(model.PermOperationalUnitRead), opUnitHandler.Get)
+	protected.Post("/operational-units", genericOnly, middleware.RequirePermission(model.PermOperationalUnitCreate), opUnitHandler.Create)
+	protected.Put("/operational-units/:id", genericOnly, middleware.RequirePermission(model.PermOperationalUnitUpdate), opUnitHandler.Update)
+	protected.Delete("/operational-units/:id", genericOnly, middleware.RequirePermission(model.PermOperationalUnitDelete), opUnitHandler.Delete)
 
 	protected.Get("/cash-accounts", middleware.RequirePermission(model.PermCashAccountRead), financeHandler.ListCashAccounts)
 	protected.Get("/cash-accounts/:id", middleware.RequirePermission(model.PermCashAccountRead), financeHandler.GetCashAccount)
@@ -154,10 +182,10 @@ func main() {
 	protected.Put("/transactions/other-expenses/:id", middleware.RequirePermission(model.PermFinanceExpenseUpdate), financeHandler.UpdateOtherExpense)
 	protected.Delete("/transactions/other-expenses/:id", middleware.RequirePermission(model.PermFinanceExpenseDelete), financeHandler.DeleteOtherExpense)
 
-	protected.Get("/rent-contracts", middleware.RequirePermission(model.PermFinanceRentRead), rentHandler.List)
-	protected.Get("/rent-contracts/:id", middleware.RequirePermission(model.PermFinanceRentRead), rentHandler.Get)
-	protected.Post("/rent-contracts", middleware.RequirePermission(model.PermFinanceRentCreate), rentHandler.Create)
-	protected.Post("/rent-contracts/schedules/:scheduleId/pay", middleware.RequirePermission(model.PermFinanceRentPay), rentHandler.PaySchedule)
+	protected.Get("/rent-contracts", leleOnly, middleware.RequirePermission(model.PermFinanceRentRead), rentHandler.List)
+	protected.Get("/rent-contracts/:id", leleOnly, middleware.RequirePermission(model.PermFinanceRentRead), rentHandler.Get)
+	protected.Post("/rent-contracts", leleOnly, middleware.RequirePermission(model.PermFinanceRentCreate), rentHandler.Create)
+	protected.Post("/rent-contracts/schedules/:scheduleId/pay", leleOnly, middleware.RequirePermission(model.PermFinanceRentPay), rentHandler.PaySchedule)
 
 	log.Printf("server listening on :%s", cfg.Port)
 	if err := app.Listen(":" + cfg.Port); err != nil {

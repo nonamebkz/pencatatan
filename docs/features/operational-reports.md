@@ -71,6 +71,14 @@ Query: `from`, `to` (opsional)
 
 Response `data`: kartu §13 yang tersedia + `topPurchaseCategories[]`, `byTransactionType[]`, `grandTotalOperational`.
 
+### GET `/reports/consolidated/summary`
+
+Query: `from`, `to` (opsional); `workspaceIds` (comma-separated, subset workspace `BUSINESS` yang user boleh akses).
+
+Tanpa header `X-Workspace-ID`. Permission: `finance.read`.
+
+Response `data`: `ConsolidatedOperationalSummaryReport` — total gabungan + `byWorkspace[]` + breakdown kategori/tipe. Lihat [workspace-consolidated-reports.md](./workspace-consolidated-reports.md).
+
 ## Frontend contract
 
 | Route | Halaman | Permission |
@@ -80,6 +88,7 @@ Response `data`: kartu §13 yang tersedia + `topPurchaseCategories[]`, `byTransa
 | `/finance/reports/price-history` | `PriceHistoryReportPage` | `finance.read` |
 | `/finance/reports/rent` | `RentReportPage` | `finance.read` + `finance.rent.read` untuk data sewa |
 | `/finance/reports/summary` | `OperationalSummaryReportPage` | `finance.read` |
+| `/finance/reports/consolidated-summary` | `ConsolidatedSummaryReportPage` | `finance.read` |
 
 API: `frontend/src/api/reports.ts`
 

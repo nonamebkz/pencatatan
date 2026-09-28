@@ -1,5 +1,6 @@
 import { getApiBase } from '@/api/config'
 import { clearStoredToken, getStoredToken } from '@/api/auth'
+import { clearStoredWorkspaceId, resolveWorkspaceId } from '@/lib/workspace-storage'
 
 export type ApiError = {
   code: string
@@ -15,6 +16,8 @@ export type ApiResponse<T> = {
 
 type RequestOptions = RequestInit & {
   auth?: boolean
+  /** Kirim header X-Workspace-ID (default true jika auth). */
+  workspace?: boolean
 }
 
 async function request<T>(path: string, init?: RequestOptions): Promise<ApiResponse<T>> {
@@ -27,7 +30,10 @@ async function request<T>(path: string, init?: RequestOptions): Promise<ApiRespo
   if (useAuth) {
     const token = getStoredToken()
     if (token) headers.Authorization = `Bearer ${token}`
-    headers['X-Workspace-ID'] = '00000000-0000-4000-8000-000000000001'
+    const useWorkspace = init?.workspace !== false
+    if (useWorkspace) {
+      headers['X-Workspace-ID'] = resolveWorkspaceId()
+    }
   }
 
   const response = await fetch(`${getApiBase()}${path}`, {
@@ -51,6 +57,12 @@ async function request<T>(path: string, init?: RequestOptions): Promise<ApiRespo
       clearStoredToken()
       if (window.location.pathname !== '/login') {
         window.location.href = '/login'
+      }
+    }
+    if (response.status === 403 && payload.error?.code === 'WORKSPACE_FORBIDDEN') {
+      clearStoredWorkspaceId()
+      if (window.location.pathname !== '/login') {
+        window.location.href = '/'
       }
     }
     throw new Error(payload.error?.message ?? 'Permintaan gagal')

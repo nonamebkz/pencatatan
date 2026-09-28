@@ -38,6 +38,8 @@ export type Transaction = {
   description?: string
   businessUnitId?: string
   businessUnitName?: string
+  operationalUnitId?: string
+  operationalUnitName?: string
   batchId?: string
   category?: string
   items?: PurchaseLineItem[]
@@ -68,6 +70,7 @@ export type PurchaseInput = {
   transactionDate: string
   description?: string
   businessUnitId?: string
+  operationalUnitId?: string
   batchId?: string
   items: PurchaseItemInput[]
 }

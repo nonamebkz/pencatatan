@@ -3,8 +3,13 @@ import { useEffect, useState } from 'react'
 import { listCashAccounts, type CashAccount } from '@/api/finance'
 import { listPonds, type Pond } from '@/api/water-quality'
 
+type Options = {
+  loadPonds?: boolean
+}
+
 /** Muat kas default + daftar kolam aktif untuk form keuangan. */
-export function useCashAccountAndPonds() {
+export function useCashAccountAndPonds(options: Options = {}) {
+  const loadPonds = options.loadPonds !== false
   const [accounts, setAccounts] = useState<CashAccount[]>([])
   const [ponds, setPonds] = useState<Pond[]>([])
   const [cashAccountId, setCashAccountId] = useState('')
@@ -21,10 +26,12 @@ export function useCashAccountAndPonds() {
       .catch((err) => {
         setAccountsError(err instanceof Error ? err.message : 'Gagal memuat akun kas')
       })
-    listPonds('ACTIVE')
-      .then((response) => setPonds(response.data))
-      .catch(() => undefined)
-  }, [])
+    if (loadPonds) {
+      listPonds('ACTIVE')
+        .then((response) => setPonds(response.data))
+        .catch(() => undefined)
+    }
+  }, [loadPonds])
 
   return { accounts, ponds, cashAccountId, setCashAccountId, accountsError }
 }

@@ -8,7 +8,9 @@
 
 Mengganti otorisasi hardcode `ADMIN`/`USER` dengan **permission** (`resource.action`), role sebagai paket permission, menu **Kelola Akses** di frontend. Kolom `users.role` tetap untuk JWT transisi; assignment di `user_roles`.
 
-Out of scope MVP slice: audit log UI, CRUD master permission (definisi permission via **access catalog**), multi-tenant scope.
+Out of scope MVP slice: audit log UI, CRUD master permission (definisi permission via **access catalog**), multi-tenant scope organisasi terpisah.
+
+**Akses workspace per user** (membership, bukan permission per workspace): [workspace-user-access.md](./workspace-user-access.md) — permission `user.assign_workspace`.
 
 **Access catalog:** [`shared/access-catalog.json`](../../shared/access-catalog.json) — [access-catalog.md](./access-catalog.md).
 
@@ -61,6 +63,8 @@ Base: `/api/v1`. Auth: Bearer JWT.
 | PUT | `/users/:id`, reset-password | `user.update` |
 | DELETE | `/users/:id` | `user.delete` |
 | PUT | `/users/:id/roles` | `user.assign_role` |
+| PUT | `/users/:id/workspaces` | `user.assign_workspace` |
+| POST/PUT/DELETE | `/workspaces`, `/workspaces/:id` | `workspace.create` / `workspace.update` / `workspace.delete` — lihat [workspace-crud.md](./workspace-crud.md) |
 
 ### Roles
 

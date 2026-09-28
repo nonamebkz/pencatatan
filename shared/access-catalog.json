@@ -53,7 +53,8 @@
                     "/finance/reports",
                     "/finance/reports/purchases",
                     "/finance/reports/price-history",
-                    "/finance/reports/summary"
+                    "/finance/reports/summary",
+                    "/finance/reports/consolidated-summary"
                   ],
                   "operatorDefault": true
                 }
@@ -284,6 +285,74 @@
           ]
         },
         {
+          "id": "nav.operational_units",
+          "label": "Unit",
+          "description": "Master unit operasional (template usaha umum)",
+          "path": "/operational-units",
+          "icon": "Building2",
+          "pages": [
+            {
+              "id": "page.operational_units.list",
+              "label": "Daftar unit",
+              "path": "/operational-units",
+              "actions": [
+                {
+                  "id": "read",
+                  "label": "Lihat daftar unit",
+                  "permission": "operational_unit.read",
+                  "resource": "operational_unit",
+                  "action": "read",
+                  "description": "Menu unit & daftar master",
+                  "routes": ["/operational-units"],
+                  "operatorDefault": true
+                }
+              ]
+            },
+            {
+              "id": "page.operational_units.form",
+              "label": "Tambah / ubah unit",
+              "path": "/operational-units",
+              "actions": [
+                {
+                  "id": "create",
+                  "label": "Tambah unit",
+                  "permission": "operational_unit.create",
+                  "resource": "operational_unit",
+                  "action": "create",
+                  "description": "Form tambah unit",
+                  "routes": ["/operational-units/new"],
+                  "operatorDefault": true
+                },
+                {
+                  "id": "update",
+                  "label": "Ubah unit",
+                  "permission": "operational_unit.update",
+                  "resource": "operational_unit",
+                  "action": "update",
+                  "description": "Form edit unit",
+                  "routes": ["/operational-units/:id/edit"],
+                  "operatorDefault": true
+                }
+              ]
+            },
+            {
+              "id": "page.operational_units.detail",
+              "label": "Detail unit",
+              "path": "/operational-units/:id",
+              "actions": [
+                {
+                  "id": "delete",
+                  "label": "Hapus unit",
+                  "permission": "operational_unit.delete",
+                  "resource": "operational_unit",
+                  "action": "delete",
+                  "description": "Hapus unit dari UI"
+                }
+              ]
+            }
+          ]
+        },
+        {
           "id": "nav.water_quality",
           "label": "Kualitas Air",
           "description": "Catatan observasi",
@@ -437,6 +506,64 @@
                   "resource": "user",
                   "action": "assign_role",
                   "description": "Pilih role RBAC di form pengguna"
+                },
+                {
+                  "id": "assign_workspace",
+                  "label": "Atur akses workspace",
+                  "permission": "user.assign_workspace",
+                  "resource": "user",
+                  "action": "assign_workspace",
+                  "description": "Centang workspace yang boleh diakses pengguna",
+                  "routes": ["/users/new", "/users/:id/edit"]
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "id": "nav.workspaces",
+          "label": "Workspace",
+          "description": "Tambah & kelola usaha",
+          "path": "/settings/workspaces",
+          "icon": "Building2",
+          "menuPermission": "workspace.read",
+          "pages": [
+            {
+              "id": "page.workspaces.list",
+              "label": "Daftar workspace",
+              "path": "/settings/workspaces",
+              "actions": [
+                {
+                  "id": "read",
+                  "label": "Lihat workspace",
+                  "permission": "workspace.read",
+                  "resource": "workspace",
+                  "action": "read",
+                  "description": "Daftar semua workspace",
+                  "routes": ["/settings/workspaces", "/settings/workspaces/:id/edit"]
+                },
+                {
+                  "id": "create",
+                  "label": "Tambah workspace",
+                  "permission": "workspace.create",
+                  "resource": "workspace",
+                  "action": "create",
+                  "description": "Buat workspace usaha/pribadi",
+                  "routes": ["/settings/workspaces/new"]
+                },
+                {
+                  "id": "update",
+                  "label": "Ubah nama workspace",
+                  "permission": "workspace.update",
+                  "resource": "workspace",
+                  "action": "update"
+                },
+                {
+                  "id": "delete",
+                  "label": "Hapus workspace",
+                  "permission": "workspace.delete",
+                  "resource": "workspace",
+                  "action": "delete"
                 }
               ]
             }
@@ -543,7 +670,10 @@
       "pond.update",
       "water_quality.read",
       "water_quality.create",
-      "water_quality.update"
+      "water_quality.update",
+      "operational_unit.read",
+      "operational_unit.create",
+      "operational_unit.update"
     ]
   }
 }

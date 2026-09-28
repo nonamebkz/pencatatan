@@ -1,6 +1,7 @@
 package handler
 
 import (
+	"context"
 	"database/sql"
 	"strings"
 	"time"
@@ -16,12 +17,13 @@ import (
 )
 
 type UserHandler struct {
-	repo *repository.UserRepository
-	rbac *repository.RBACRepository
+	repo       *repository.UserRepository
+	rbac       *repository.RBACRepository
+	workspaces *repository.WorkspaceRepository
 }
 
-func NewUserHandler(repo *repository.UserRepository, rbac *repository.RBACRepository) *UserHandler {
-	return &UserHandler{repo: repo, rbac: rbac}
+func NewUserHandler(repo *repository.UserRepository, rbac *repository.RBACRepository, workspaces *repository.WorkspaceRepository) *UserHandler {
+	return &UserHandler{repo: repo, rbac: rbac, workspaces: workspaces}
 }
 
 type userRequest struct {
@@ -30,7 +32,12 @@ type userRequest struct {
 	Role     string   `json:"role"`
 	RoleIDs  []string `json:"roleIds"`
 	IsActive *bool    `json:"isActive"`
-	Password string   `json:"password"`
+	Password      string   `json:"password"`
+	WorkspaceIDs  []string `json:"workspaceIds"`
+}
+
+type userWorkspacesRequest struct {
+	WorkspaceIDs []string `json:"workspaceIds"`
 }
 
 type resetPasswordRequest struct {
@@ -118,6 +125,9 @@ func (h *UserHandler) Create(c *fiber.Ctx) error {
 	}
 	if err := seed.SyncUserRoles(c.Context(), h.rbac, h.repo, user.ID, roleIDs); err != nil {
 		return httpx.Fail(c, fiber.StatusInternalServerError, "INTERNAL_ERROR", err.Error())
+	}
+	if err := h.applyWorkspaceIDs(c.Context(), user.ID, req.WorkspaceIDs); err != nil {
+		return httpx.Fail(c, fiber.StatusBadRequest, "VALIDATION_ERROR", err.Error())
 	}
 
 	created, err := h.repo.GetByID(c.Context(), user.ID)
@@ -218,6 +228,47 @@ func (h *UserHandler) SetRoles(c *fiber.Ctx) error {
 		return httpx.Fail(c, fiber.StatusInternalServerError, "INTERNAL_ERROR", err.Error())
 	}
 	return httpx.OK(c, payload)
+}
+
+func (h *UserHandler) SetWorkspaces(c *fiber.Ctx) error {
+	var req userWorkspacesRequest
+	if err := c.BodyParser(&req); err != nil {
+		return httpx.Fail(c, fiber.StatusBadRequest, "VALIDATION_ERROR", "Payload tidak valid")
+	}
+	userID := c.Params("id")
+	user, err := h.repo.GetByID(c.Context(), userID)
+	if err != nil {
+		return httpx.Fail(c, fiber.StatusInternalServerError, "INTERNAL_ERROR", err.Error())
+	}
+	if user == nil {
+		return httpx.Fail(c, fiber.StatusNotFound, "NOT_FOUND", "Pengguna tidak ditemukan")
+	}
+	if err := h.workspaces.SetUserWorkspaces(c.Context(), userID, req.WorkspaceIDs); err != nil {
+		return httpx.Fail(c, fiber.StatusBadRequest, "VALIDATION_ERROR", err.Error())
+	}
+	payload, err := h.userPayload(c.Context(), user)
+	if err != nil {
+		return httpx.Fail(c, fiber.StatusInternalServerError, "INTERNAL_ERROR", err.Error())
+	}
+	return httpx.OK(c, payload)
+}
+
+func (h *UserHandler) applyWorkspaceIDs(ctx context.Context, userID string, workspaceIDs []string) error {
+	ids := workspaceIDs
+	if len(ids) == 0 {
+		business, err := h.workspaces.ListBusinessIDs(ctx)
+		if err != nil {
+			return err
+		}
+		ids = business
+		if len(ids) == 0 {
+			ids, err = h.workspaces.ListAllIDs(ctx)
+			if err != nil {
+				return err
+			}
+		}
+	}
+	return h.workspaces.SetUserWorkspaces(ctx, userID, ids)
 }
 
 func (h *UserHandler) resolveRoleIDs(c *fiber.Ctx, req userRequest) ([]string, error) {

@@ -1,5 +1,6 @@
 import { api } from '@/api/client'
 import type { RoleSummary } from '@/api/auth'
+import type { Workspace } from '@/api/workspace'
 
 export type UserRole = 'ADMIN' | 'USER'
 
@@ -13,12 +14,15 @@ export type UserRecord = {
   updatedAt: string
   roleIds: string[]
   roles: RoleSummary[]
+  workspaceIds: string[]
+  workspaces?: Workspace[]
 }
 
 export type UserInput = {
   email: string
   name: string
   roleIds: string[]
+  workspaceIds?: string[]
   isActive: boolean
   password?: string
 }
@@ -41,6 +45,10 @@ export function updateUser(id: string, body: Omit<UserInput, 'password'>) {
 
 export function setUserRoles(id: string, roleIds: string[]) {
   return api.put<UserRecord>(`/users/${id}/roles`, { roleIds })
+}
+
+export function setUserWorkspaces(id: string, workspaceIds: string[]) {
+  return api.put<UserRecord>(`/users/${id}/workspaces`, { workspaceIds })
 }
 
 export function resetUserPassword(id: string, password: string) {

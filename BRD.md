@@ -1,11 +1,13 @@
-# BRD v1.8 — Pencatatan Operasional Usaha
+# BRD v1.13 — Pencatatan Operasional Usaha
 
 | Field | Value |
 |---|---|
-| Versi | 1.11 |
+| Versi | 1.13 |
 | Status | Living document — selaras dengan codebase `pencatatan-usaha` |
 | Produk | Aplikasi pencatatan operasional + pengeluaran usaha |
 | Codename | `pencatatan-usaha` |
+| Changelog v1.13 | **Lintas bisnis (MVP-01 slice):** membership `user_workspaces`, laporan konsolidasi usaha, CRUD workspace + menu Kelola Workspace — [workspace-user-access.md](./docs/features/workspace-user-access.md), [workspace-consolidated-reports.md](./docs/features/workspace-consolidated-reports.md), [workspace-crud.md](./docs/features/workspace-crud.md), [design](./docs/superpowers/specs/2026-09-28-multi-business-and-workspace-access-design.md) |
+| Changelog v1.12 | Rencana akses workspace + desain lintas bisnis (sekarang diimplementasi di v1.13) |
 | Changelog v1.11 | **Hapus** catatan keuangan (pembelian/pengeluaran lain + audit DELETE); daftar Keuangan **ringkas per hari** (accordion); **ERD** [`docs/database/ERD.md`](./docs/database/ERD.md) + [finance-transactions.md](./docs/features/finance-transactions.md) |
 | Changelog v1.10 | **Ubah catatan keuangan** (pembelian & pengeluaran lain); daftar transaksi diurutkan **tanggal terbaru dulu**; **audit trail** perubahan di tabel `audit_logs` — lihat §9 BR-G |
 | Changelog v1.9 | **MVP-04 sewa kolam** live: kontrak, jadwal cicilan, bayar → `RENT_PAYMENT` — lihat §23 `IMP-RENT`, [docs/features/rent-contracts.md](./docs/features/rent-contracts.md) |
@@ -32,7 +34,7 @@
 
 **Bukan scope MVP (tetap):** akuntansi penuh, revenue otomatis, **pendaftaran mandiri (register)**, export, reminder push, offline.
 
-**Sudah diimplementasi di repo (slice awal, lihat §23):** login JWT, kelola pengguna (admin), master kolam, kualitas air (log, ambang & saran per kolam, dashboard), pembelian + pengeluaran lain + **kontrak sewa & bayar jadwal**, UI web responsive. Pakan, bagi hasil, dan multi-workspace penuh **belum**.
+**Sudah diimplementasi di repo (slice awal, lihat §23):** login JWT, kelola pengguna (admin), **multi-workspace** (switch, membership, CRUD usaha, laporan gabungan), master kolam, kualitas air, pembelian + pengeluaran lain + sewa, UI responsive. Pakan, bagi hasil, income personal penuh **belum**.
 
 ---
 
@@ -167,7 +169,7 @@ Workspace
 
 | ID | Fitur | Status repo |
 |---|---|---|
-| MVP-01 | Multi-workspace (usaha + personal) | ❌ |
+| MVP-01 | Multi-workspace (usaha + personal) | ⚠️ switch, membership, CRUD, konsolidasi ✅; menu/form **personal** (income) ❌ |
 | MVP-02 | Master kolam (BusinessUnit) | ✅ |
 | MVP-03 | Pembelian barang multi-item + histori harga | ⚠️ (create multi-item live; histori harga belum) |
 | MVP-04 | Kontrak sewa + jadwal cicilan auto-generate | ✅ (create + bayar jadwal; tanpa edit/hapus kontrak & RPT sewa) |
@@ -329,6 +331,18 @@ Workspace
 - BR-G6: **Hapus** hanya untuk `PURCHASE` dan `OTHER_EXPENSE` (permission `finance.purchase.delete` / `finance.expense.delete`), dengan konfirmasi UI; tulis audit `DELETE`. Transaksi **bayar sewa** / bagi hasil **tidak** dihapus dari arsip umum (modul asal).
 - BR-G7: Halaman Keuangan menampilkan **ringkasan per hari** (`transaction_date`): total keluar hari itu + jumlah transaksi; ketuk baris hari untuk membuka **rincian** transaksi (accordion). Tujuan: ringkas di mobile, tetap bisa drill-down ke detail per transaksi.
 
+### BR-H: Workspace & akses pengguna
+
+- BR-H1: Setiap user hanya boleh membuka workspace yang terdaftar di **`user_workspaces`** (assign oleh admin).
+- BR-H2: `GET /workspaces` dan switcher UI menampilkan **subset** membership; bukan semua workspace di instalasi.
+- BR-H3: Request API dengan `X-Workspace-ID` di luar membership → **403** `WORKSPACE_FORBIDDEN`.
+- BR-H4: Assignment workspace di kelola di **form pengguna**; permission `user.assign_workspace` (selaras RBAC §24).
+- BR-H5: User aktif wajib punya **minimal satu** workspace ter-assign.
+- BR-H6: Laporan keuangan **konsolidasi lintas usaha** hanya menjumlah workspace `BUSINESS` yang user punya akses; workspace **personal tidak ikut** total gabungan usaha.
+- BR-H7: CRUD workspace usaha: template **`lele`** (kolam, WQ, sewa); pembuat otomatis dapat membership; hapus workspace usaha **terakhir** di sistem ditolak.
+
+Kontrak teknis: [workspace-user-access.md](./docs/features/workspace-user-access.md) · [workspace-consolidated-reports.md](./docs/features/workspace-consolidated-reports.md) · [workspace-crud.md](./docs/features/workspace-crud.md).
+
 ---
 
 ## 10. State Machines
@@ -387,8 +401,9 @@ Status waktu dan pembayaran dihitung on-read, bukan disimpan sebagai single enum
 ### FR-01 Workspace
 - CRUD workspace (business / personal)
 - Switcher di header; semua data scoped ke workspace aktif
+- **Akses per user:** admin assign workspace mana yang boleh diakses (BR-H)
 - Personal: lihat §8  
-- **Status repo:** ⚠️ workspace default hardcoded (`Usaha Lele`); switcher & personal **belum**
+- **Status repo:** ✅ switcher, membership, CRUD workspace (`workspace.*`), laporan konsolidasi usaha
 
 ### FR-02 Auth & otorisasi
 - Login email + password
@@ -645,11 +660,12 @@ Mengikuti pola **Access Management**; visibilitas **permission**, bukan hardcode
 | Submenu | Route target | Permission menu | Repo |
 |---|---|---|---|
 | Pengguna | `/users` | `user.read` | ✅ |
+| Workspace | `/settings/workspaces` | `workspace.read` | ✅ |
 | Peran | `/roles` | `role.read` | ✅ |
 | Permission | `/permissions` | `permission.read` | ❌ (hanya API list; definisi via access catalog) |
 | Audit Log | `/audit-logs` | `audit.read` | ❌ |
 
-**Repo:** Pengguna & Peran di sidebar jika punya permission; definisi checkbox permission di form peran mengikuti **access catalog**, bukan halaman `/permissions`.
+**Repo:** Pengguna, Workspace, & Peran di sidebar jika punya permission; definisi checkbox permission di form peran mengikuti **access catalog**, bukan halaman `/permissions`.
 
 ### 16.3 Halaman
 
@@ -661,6 +677,8 @@ Mengikuti pola **Access Management**; visibilitas **permission**, bukan hardcode
 | P-02c | Permission | Master permission (platform) | ❌ (seed dari JSON) |
 | P-02d | Audit Log | Jejak perubahan user/role/assignment | ❌ |
 | P-02e | Forbidden | Akses ditolak | ✅ `/forbidden` |
+| P-02f | Workspace | CRUD workspace usaha; template `lele` | ✅ `/settings/workspaces` |
+| P-02g | Laporan konsolidasi | Ringkasan gabungan workspace BUSINESS user | ✅ `/finance/reports/consolidated-summary` |
 | P-03 | Dashboard | Business vs Personal layout berbeda (§8); widget kualitas air | ⚠️ hanya widget kualitas air |
 | P-06 | Pembelian — Form | Multi-item | ⚠️ `/finance/purchases/new` (histori harga belum) |
 | P-17 | Laporan — Detail | Kolom §14; RPT-07 tren | ⚠️ `/water-quality/report` (WQ saja) |
@@ -732,7 +750,7 @@ Mengikuti pola **Access Management**; visibilitas **permission**, bukan hardcode
 
 | Sprint | DoD rencana | Status aktual |
 |---|---|---|
-| **0 — Foundation** | Login → workspace switch → health check | ⚠️ Login ✅; health ✅; workspace switch ❌ |
+| **0 — Foundation** | Login → workspace switch → health check | ✅ |
 | **1 — Master + Transaksi** | Multi-item purchase + histori harga + personal | ⚠️ pembelian + pengeluaran lain; histori harga & personal ❌ |
 | **2 — Pakan + Sewa + Lap 1–3** | Lifecycle + kontrak + dashboard keuangan + RPT 01,04,06 | ❌ |
 | **3 — Bagi Hasil + Lap 4–6 + Polish** | Distribution + all reports + QA | ❌ |
@@ -747,7 +765,8 @@ Mengikuti pola **Access Management**; visibilitas **permission**, bukan hardcode
 
 - [x] Login + logout
 - [x] Kelola pengguna (admin, tanpa register)
-- [ ] Multi-workspace (business + personal) dengan menu berbeda
+- [x] Multi-workspace (business + personal) — switch, membership, CRUD usaha, laporan konsolidasi
+- [ ] Menu & transaksi **personal** penuh (`OTHER_INCOME`, dll.)
 - [x] CRUD kolam
 - [ ] Histori harga normalized (pembelian multi-item create sudah ada di `/finance`)
 - [ ] Consumable: from purchase + manual + lifecycle
@@ -767,8 +786,10 @@ Mengikuti pola **Access Management**; visibilitas **permission**, bukan hardcode
 
 - [raw idea.md](./raw%20idea.md) — ide awal modul lele
 - [jangka panjang.md](./jangka%20panjang.md) — visi multi-usaha + atomic
-- [TECHNICAL_SPEC.md](./TECHNICAL_SPEC.md) — spesifikasi teknis implementasi (v1.9, §5.7 sewa + §7.5 RBAC)
+- [TECHNICAL_SPEC.md](./TECHNICAL_SPEC.md) — spesifikasi teknis (§5 API, §7.5 RBAC, §20 status)
 - [docs/features/rent-contracts.md](./docs/features/rent-contracts.md) — kontrak sewa MVP-04
+- [docs/features/workspace-switch.md](./docs/features/workspace-switch.md) · [workspace-user-access.md](./docs/features/workspace-user-access.md) · [workspace-crud.md](./docs/features/workspace-crud.md) · [workspace-consolidated-reports.md](./docs/features/workspace-consolidated-reports.md) — multi-workspace & lintas usaha
+- [docs/superpowers/specs/2026-09-28-multi-business-and-workspace-access-design.md](./docs/superpowers/specs/2026-09-28-multi-business-and-workspace-access-design.md) — desain lintas bisnis
 
 ### Tech Stack (implementasi aktual)
 
@@ -801,6 +822,7 @@ Mengikuti pola **Access Management**; visibilitas **permission**, bukan hardcode
 | IMP-FIN | Pembelian, pengeluaran, **ubah/hapus** pembelian/pengeluaran lain + audit `audit_logs`, daftar **per hari**, **CRUD akun kas** | UI `/finance`, form edit, `/finance/cash-accounts/*` |
 | IMP-RENT | Kontrak sewa kolam (MVP-04) | `POST/GET /rent-contracts`, bayar jadwal; FE `/finance/rent/*`; permission `finance.rent.*` — [docs/features/rent-contracts.md](./docs/features/rent-contracts.md) |
 | IMP-OPS | Health + Docker | `GET /health`, compose MySQL + API + FE |
+| IMP-WS | Multi-workspace lintas usaha | Switcher, `user_workspaces`, assign di form pengguna, `GET /reports/consolidated/summary`, CRUD `workspace.*`, `/settings/workspaces` — lihat docs/features/workspace-*.md |
 
 ### ⚠️ Sebagian (gap ke BRD)
 
@@ -808,7 +830,7 @@ Mengikuti pola **Access Management**; visibilitas **permission**, bukan hardcode
 |---|---|---|---|
 | PART-WQ | T2 / BR-F | CRUD, dashboard, filter, grafik tren UI, batch opsional di form log, ambang & saran per kolam | CRUD batch (hanya `GET /batches`) |
 | PART-POND | FR-04 | name, location, notes, status | Form UI untuk size, ownerName |
-| PART-WS | MVP-01 / FR-01 | Satu workspace seed `Usaha Lele` | CRUD workspace, switcher, personal workspace |
+| PART-WS | MVP-01 / FR-01 | Switcher, membership, CRUD, konsolidasi, seed personal | Form income personal; template usaha selain `lele` |
 | PART-FIN | MVP-03 / MVP-04 / MVP-11 | Pembelian multi-item, **ubah/hapus** pembelian/pengeluaran + audit, daftar ringkas per hari, kas CRUD, **sewa** (kontrak + bayar jadwal) | Histori harga, hapus bayar sewa dari arsip, pakan, bagi hasil, laporan RPT sewa |
 | PART-DASH | MVP-07 / §13 | Kartu kualitas air; ringkasan keuangan di `/finance` | Kartu Total Belanja, Pakan, Sewa, Bagi Hasil di dashboard utama |
 | PART-AUTH | FR-02 spec | JWT 24h; RBAC fase 1–2 + access catalog; **tabel `audit_logs`** + tulis saat ubah/hapus transaksi keuangan; **ERD** `docs/database/ERD.md` | Redis blacklist; halaman baca audit (`GET /audit-logs`); CRUD master `/permissions` |
@@ -821,12 +843,10 @@ Mengikuti pola **Access Management**; visibilitas **permission**, bukan hardcode
 | MVP-06 | Bagi hasil 2 pihak |
 | MVP-08 | Laporan RPT-01 s/d RPT-06 + RPT-P |
 | MVP-09 | CRUD batch di UI (`GET /batches` + pilihan di form log sudah ada) |
-| MVP-01 | Multi-workspace penuh + menu personal |
-
 ### Prioritas suggested (backlog BRD)
 
-1. **Sprint 0 sisa:** workspace switcher + seed personal (placeholder).
-2. **Sprint 1 sisa:** histori harga pembelian + CRUD batch. Pembelian multi-item & sewa kontrak sudah live.
+1. **Sprint 0:** selesai (login, health, workspace switch + membership + CRUD).
+2. **Sprint 1 sisa:** histori harga pembelian + CRUD batch; **menu/transaksi personal** penuh. Pembelian multi-item & sewa kontrak sudah live.
 3. **Redis + logout blacklist** (sesuai TECHNICAL_SPEC) saat deploy production.
 4. **Sisa T2:** CRUD batch di UI; field size/ownerName di form kolam.
 5. **RBAC fase 3 (§24):** audit log + master permission UI (definisi permission tetap dari access catalog).
@@ -875,7 +895,8 @@ Dokumen teknis: [docs/features/access-catalog.md](./docs/features/access-catalog
 
 | Resource | Permission |
 |---|---|
-| User | `user.read`, `user.create`, `user.update`, `user.delete`, `user.assign_role` |
+| User | `user.read`, `user.create`, `user.update`, `user.delete`, `user.assign_role`, `user.assign_workspace` |
+| Workspace | `workspace.read`, `workspace.create`, `workspace.update`, `workspace.delete` |
 | Role | `role.read`, `role.create`, `role.update`, `role.delete`, `role.assign_permission` |
 | Permission master | `permission.read`, `permission.create`, `permission.update`, `permission.delete` |
 | Audit | `audit.read` |

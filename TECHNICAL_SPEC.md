@@ -2,9 +2,9 @@
 
 | Field | Value |
 |---|---|
-| Versi | 1.7 |
-| Status | Living document — selaras BRD v1.8 & codebase |
-| BRD Reference | [BRD.md](./BRD.md) v1.8 |
+| Versi | 1.8 |
+| Status | Living document — selaras BRD v1.13 & codebase |
+| BRD Reference | [BRD.md](./BRD.md) v1.13 |
 | Arsitektur | React SPA + Go REST API + MySQL 8 (Redis rencana) |
 
 ---
@@ -569,12 +569,17 @@ Filter: `actor_user_id`, `entity_type`, `event_type`, `date_from`, `date_to`. St
 
 ### 5.2 Workspace
 
-| Method | Endpoint | Body / Query | Response |
-|---|---|---|---|
-| GET | `/workspaces` | — | `[Workspace]` |
-| POST | `/workspaces` | `{ name, type, templateId? }` | `Workspace` + auto CashAccount |
-| PUT | `/workspaces/:id` | `{ name }` | `Workspace` |
-| DELETE | `/workspaces/:id` | — | `204` |
+| Method | Endpoint | Body / Query | Response | Status repo |
+|---|---|---|---|---|
+| GET | `/workspaces` | — | `[Workspace]` membership user | ✅ |
+| GET | `/workspaces/all` | — | semua workspace | ✅ `user.assign_workspace` atau `workspace.read` |
+| POST | `/workspaces` | `{ name, type, templateId? }` (`lele` \| `generic` \| `personal`) | `Workspace` + auto CashAccount | ✅ [workspace-crud.md](./docs/features/workspace-crud.md), [workspace-template-generic.md](./docs/features/workspace-template-generic.md) |
+| PUT | `/workspaces/:id` | `{ name }` | `Workspace` | ✅ |
+| DELETE | `/workspaces/:id` | — | `204` | ✅ |
+| PUT | `/users/:id/workspaces` | `{ workspaceIds: string[] }` | user + `workspaceIds` | ✅ |
+| GET/POST/PUT/DELETE | `/operational-units` | CRUD unit | template `generic` only | ✅ [operational-units.md](./docs/features/operational-units.md) |
+
+Middleware: `ValidateWorkspace` + `RequireWorkspaceMembership` (`WORKSPACE_FORBIDDEN`). Route workspace CRUD & laporan konsolidasi tidak wajib header workspace. Detail: [workspace-switch.md](./docs/features/workspace-switch.md), [workspace-user-access.md](./docs/features/workspace-user-access.md), [workspace-crud.md](./docs/features/workspace-crud.md), [workspace-consolidated-reports.md](./docs/features/workspace-consolidated-reports.md). Desain: [design lintas bisnis](./docs/superpowers/specs/2026-09-28-multi-business-and-workspace-access-design.md).
 
 ### 5.3 BusinessUnit (Kolam)
 
@@ -712,6 +717,7 @@ Auth: `finance.read` (kecuali sewa: `finance.rent.read`). Spesifikasi kolom: `BR
 | GET | `/reports/feed` | `from, to, status?` | `{ lots[], avgDurationDays }` | ❌ (belum ada `consumable_lots`) |
 | GET | `/reports/distribution` | `from, to, paymentStatus?` | `{ records[], totalPaid, totalUnpaid }` | ❌ |
 | GET | `/reports/summary` | `from?, to?` | `OperationalSummaryReport` (kartu §13 + top kategori + per type) | ✅ |
+| GET | `/reports/consolidated/summary` | `from?, to?, workspaceIds?` | `ConsolidatedOperationalSummaryReport` — BUSINESS membership user; tanpa header workspace | ✅ [workspace-consolidated-reports.md](./docs/features/workspace-consolidated-reports.md) |
 | GET | `/reports/water-quality` | `from, to, businessUnitId?, days=7\|30` | `{ logs[], trends, notMeasuredToday[] }` | ✅ |
 
 **Frontend:** `/finance/reports` (hub), `/finance/reports/purchases`, `price-history`, `rent`, `summary` — lihat `docs/features/operational-reports.md`.
@@ -960,7 +966,7 @@ Permission operasional (catalog + seed; **guard API** sebagian masih JWT-only un
 5. Setelah admin ubah role user: user tersebut **fokus ulang tab** atau refresh → `GET /auth/me` memuat permission baru.
 
 - **Operasional:** `visibleMainNavFromCatalog(can)` — Beranda, Keuangan, Kolam, Kualitas Air (filtered)
-- **Kelola Akses:** `visibleAccessNavFromCatalog(can)` — Pengguna, Peran
+- **Kelola Akses:** `visibleAccessNavFromCatalog(can)` — Pengguna, Workspace (`workspace.read`), Peran
 - **User menu:** link access nav + config WQ jika `canViewPageId('page.water_quality.config')`
 - **Guard route:** `PermissionRoute` + entri `routes` di catalog (`App.tsx`)
 
@@ -1419,15 +1425,15 @@ func main() {
 - [x] fetch client + JWT interceptor
 - [x] React Router + ProtectedRoute + AdminRoute *(target: PermissionRoute + `/forbidden` — §7.5)*
 - [x] LoginPage + AppLayout + User management pages
-- [ ] WorkspaceSwitcher
+- [x] WorkspaceSwitcher
 
-**DoD:** Login → JWT → `/health` → dashboard shell. ⚠️ workspace switch belum.
+**DoD:** Login → JWT → `/health` → dashboard shell + switch workspace. ✅
 
 ### Sprint 1 — Master Data + Transaksi
 
-**Backend:** [ ] Workspace CRUD · [x] Pond CRUD · [x] Batch list (`GET /batches`) · [x] Purchase create/list · [x] Other expense create · [x] **Rent** kontrak + bayar jadwal · [ ] Personal expense · [ ] Workspace middleware penuh · [ ] Histori harga
+**Backend:** [x] Workspace (list, membership, CRUD, konsolidasi) · [x] Pond CRUD · [x] Batch list (`GET /batches`) · [x] Purchase create/list · [x] Other expense create · [x] **Rent** kontrak + bayar jadwal · [ ] Personal expense · [ ] Histori harga
 
-**Frontend:** [ ] WorkspaceSwitcher · [x] Pond pages · [x] `/finance` + form pembelian & pengeluaran lain · [x] `/finance/rent/*` · [ ] Personal
+**Frontend:** [x] WorkspaceSwitcher · [x] Pond pages · [x] `/finance` + form pembelian & pengeluaran lain · [x] `/finance/rent/*` · [ ] Personal (income + form khusus)
 
 ### Sprint 2 — Pakan + Sewa + Laporan 1
 
@@ -1464,6 +1470,10 @@ func main() {
 - [BRD.md](./BRD.md) — business requirements (§9 BR-G keuangan + §23–§24 RBAC)
 - [docs/database/ERD.md](./docs/database/ERD.md) — entity-relationship diagram (migrasi SQL)
 - [docs/features/finance-transactions.md](./docs/features/finance-transactions.md) — catatan keuangan (API, UI, audit)
+- [docs/features/workspace-user-access.md](./docs/features/workspace-user-access.md) — membership user ↔ workspace
+- [docs/superpowers/specs/2026-09-28-multi-business-and-workspace-access-design.md](./docs/superpowers/specs/2026-09-28-multi-business-and-workspace-access-design.md) — lintas bisnis & konsolidasi
+- [docs/features/workspace-crud.md](./docs/features/workspace-crud.md) — CRUD workspace
+- [docs/features/workspace-consolidated-reports.md](./docs/features/workspace-consolidated-reports.md) — laporan gabungan usaha
 - [docs/features/access-catalog.md](./docs/features/access-catalog.md) — menu FE ↔ permission DB (`shared/access-catalog.json`)
 - [docs/features/rbac.md](./docs/features/rbac.md) — kontrak RBAC implementasi
 - [raw idea.md](./raw%20idea.md) — ide awal
@@ -1486,10 +1496,10 @@ Ringkasan singkat — detail bisnis: [BRD §23](./BRD.md#23-status-implementasi-
 | Kolam | `/ponds`, `/ponds/:id` | ✅ |
 | Batch | `GET /batches` | ✅ list only |
 | Kualitas air | `/water-quality-logs`, `/water-quality/config`, `/dashboard`, `/reports/water-quality` | ✅ |
-| FE | Operasional + Kelola Akses (`/users`, `/roles`, `/forbidden`) | ✅ |
+| FE | Operasional + Kelola Akses (`/users`, `/settings/workspaces`, `/roles`, `/forbidden`) + laporan konsolidasi | ✅ |
 | Access catalog | `shared/access-catalog.json`, `make sync-access-catalog` | ✅ |
-| Workspace | `X-Workspace-ID` default UUID | ⚠️ satu workspace seed |
+| Workspace | switcher, membership, CRUD (`lele`/`generic`), konsolidasi, `/settings/workspaces` | ✅ [workspace-user-access.md](./docs/features/workspace-user-access.md), [workspace-crud.md](./docs/features/workspace-crud.md), [workspace-template-generic.md](./docs/features/workspace-template-generic.md), [operational-units.md](./docs/features/operational-units.md) |
 | Transaksi MVP | Pembelian + pengeluaran lain (**ubah/hapus** + audit) + **sewa**; FE daftar per hari | ⚠️ pakan, bagi hasil, histori harga ❌ — [finance-transactions.md](./docs/features/finance-transactions.md) |
 | Redis | cache + logout blacklist | ❌ |
 
-**Backlog teknis berikutnya:** workspace CRUD + switcher → histori harga → pakan & bagi hasil → laporan RPT sewa/ringkasan dashboard → RBAC fase 3 (audit + master permission UI) → Redis production hardening.
+**Backlog teknis berikutnya:** personal income & menu personal penuh → template usaha non-`lele` → histori harga → pakan & bagi hasil → dashboard keuangan §13 → RBAC fase 3 (audit UI) → Redis production hardening.

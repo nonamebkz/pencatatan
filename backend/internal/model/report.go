@@ -60,3 +60,27 @@ type OperationalSummaryReport struct {
 	ByTransactionType     []TransactionTypeSummary `json:"byTransactionType"`
 	GrandTotalOperational float64                  `json:"grandTotalOperational"`
 }
+
+type WorkspaceOperationalSummary struct {
+	WorkspaceID           string  `json:"workspaceId"`
+	WorkspaceName         string  `json:"workspaceName"`
+	TotalPurchases        float64 `json:"totalPurchases"`
+	TotalFeed             float64 `json:"totalFeed"`
+	TotalRentPaid         float64 `json:"totalRentPaid"`
+	TotalProfitSharePaid  float64 `json:"totalProfitSharePaid"`
+	GrandTotalOperational float64 `json:"grandTotalOperational"`
+}
+
+type ConsolidatedOperationalSummaryReport struct {
+	PeriodFrom            string                        `json:"periodFrom"`
+	PeriodTo              string                        `json:"periodTo"`
+	WorkspaceIDs          []string                      `json:"workspaceIds"`
+	TotalPurchases        float64                       `json:"totalPurchases"`
+	TotalFeed             float64                       `json:"totalFeed"`
+	TotalRentPaid         float64                       `json:"totalRentPaid"`
+	TotalProfitSharePaid  float64                       `json:"totalProfitSharePaid"`
+	TopPurchaseCategories []CategoryAmount              `json:"topPurchaseCategories"`
+	ByTransactionType     []TransactionTypeSummary      `json:"byTransactionType"`
+	ByWorkspace           []WorkspaceOperationalSummary `json:"byWorkspace"`
+	GrandTotalOperational float64                       `json:"grandTotalOperational"`
+}
