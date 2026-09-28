@@ -550,7 +550,7 @@ Role sistem: `workspace_admin`, `operator` (`backend/internal/seed/rbac.go`). Fo
 |---|---|---|
 | GET | `/audit-logs` | `audit.read` |
 
-Filter: `actor_user_id`, `entity_type`, `event_type`, `date_from`, `date_to`. Status repo: ❌
+Filter: `actor_user_id`, `entity_type`, `event_type`, `date_from`, `date_to`. Status repo: ⚠️ tabel + insert on finance update; endpoint GET **belum**
 
 ### 5.2 Workspace
 
@@ -597,7 +597,12 @@ Seed migrasi `000003_finance`: **Kas Utama** default (`is_default=1`).
 |---|---|---|---|
 | GET | `/purchases` | `?from=&to=&businessUnitId=&page=&limit=` | `[Transaction]` with items |
 | POST | `/purchases` | `{ date, cashAccountId, businessUnitId?, batchId?, description?, items[] }` — **1..N items** | `{ transaction, items[], consumablePrompts[] }` |
+| PUT | `/purchases/:id` | `finance.purchase.update` — body sama POST | `Transaction` + line items; audit `audit_logs` |
+| POST | `/transactions/other-expenses` | `{ transactionDate, amount, description, … }` | `Transaction` |
+| PUT | `/transactions/other-expenses/:id` | `finance.expense.update` — body sama POST | `Transaction`; audit `audit_logs` |
 | POST | `/transactions/personal` | `{ date, amount, type: OTHER_EXPENSE\|OTHER_INCOME, category, description? }` | `Transaction` |
+
+`GET /transactions` — urutan default: `transaction_date DESC`, `created_at DESC`.
 
 **PurchaseItem request:**
 ```json
@@ -914,7 +919,7 @@ Selaras [BRD §24](./BRD.md). Prinsip: **deny by default**, enforcement di backe
 - `permissions` — `code` unique (`resource.action`), metadata dari access catalog
 - `roles` — `code` unique, `is_system`
 - `role_permissions`, `user_roles` — assignment
-- `audit_logs` — **belum** (fase 3)
+- `audit_logs` — ✅ migrasi `000007`; tulis saat **update** transaksi pembelian/pengeluaran lain; UI baca log **belum** (fase 3)
 
 Role seed live: **`workspace_admin`**, **`operator`** (role BRD lain seperti `auditor` belum).
 

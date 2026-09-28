@@ -2,10 +2,11 @@
 
 | Field | Value |
 |---|---|
-| Versi | 1.9 |
+| Versi | 1.10 |
 | Status | Living document — selaras dengan codebase `pencatatan-usaha` |
 | Produk | Aplikasi pencatatan operasional + pengeluaran usaha |
 | Codename | `pencatatan-usaha` |
+| Changelog v1.10 | **Ubah catatan keuangan** (pembelian & pengeluaran lain); daftar transaksi diurutkan **tanggal terbaru dulu**; **audit trail** perubahan di tabel `audit_logs` — lihat §9 BR-G |
 | Changelog v1.9 | **MVP-04 sewa kolam** live: kontrak, jadwal cicilan, bayar → `RENT_PAYMENT` — lihat §23 `IMP-RENT`, [docs/features/rent-contracts.md](./docs/features/rent-contracts.md) |
 | Changelog v1.8 | **Menu & aksi FE** mengikuti permission efektif **role di DB** (`/auth/me` → `canSeeCatalogMenu` / `canPageAction`); permission operasional (`finance.*`, `pond.*`, `water_quality.*`) di access catalog + seed operator |
 | Changelog v1.7 | **Katalog akses** [`shared/access-catalog.json`](./shared/access-catalog.json) — menu/halaman/aksi FE ↔ seed permission DB; RBAC fase 1–2 live; kas CRUD + permission granular |
@@ -317,6 +318,14 @@ Workspace
 - BR-F11: "Belum diukur hari ini" = tidak ada log dengan `measured_at` date = today (timezone Asia/Jakarta) untuk kolam aktif tersebut.
 - BR-F12: Saat status bukan `NORMAL`, respons log, ringkasan dashboard, laporan, dan `POST /water-quality/evaluate` menyertakan `advice[]` (judul + langkah) dari teks **kolam** yang dicatat. Evaluate wajib `businessUnitId`. Template diubah admin di `/settings/water-quality`. Ambang kolam diubah di form `/ponds/new` dan `/ponds/:id/edit`.
 
+### BR-G: Catatan Keuangan (Transaksi)
+
+- BR-G1: **Pembelian** (`PURCHASE`) dan **pengeluaran lain** (`OTHER_EXPENSE`) **boleh diubah** setelah tersimpan (tanggal, kas, kolam/batch, deskripsi, baris pembelian / nominal pengeluaran). Permission: `finance.purchase.update`, `finance.expense.update`.
+- BR-G2: Transaksi **bayar sewa**, **bagi hasil**, dan jenis lain **tidak** diubah lewat form edit umum (sumber kebenaran modul asal).
+- BR-G3: Daftar transaksi di halaman Keuangan dan API `GET /transactions` diurutkan **`transaction_date` menurun**, lalu `created_at` menurun (terbaru di atas).
+- BR-G4: Setiap **update** transaksi yang boleh diubah wajib menulis **audit log** di `audit_logs`: `entity_type=transaction`, `event_type=UPDATE`, `changes_json` berisi snapshot `before` / `after` (termasuk line items untuk pembelian), `actor_user_id` = user yang menyimpan.
+- BR-G5: Mengubah pembelian **tidak** otomatis menyelaraskan `ConsumableLot` yang sudah dibuat dari line item tersebut (penyesuaian manual jika perlu).
+
 ---
 
 ## 10. State Machines
@@ -401,6 +410,7 @@ Status waktu dan pembayaran dihitung on-read, bukan disimpan sebagai single enum
 - Form multi-item: tanggal, kas, kolam/batch opsional, daftar barang (add/remove row)
 - Per item: nama, kategori, qty, satuan, harga satuan, supplier
 - Simpan → 1 Transaction + N PurchaseLineItem
+- **Ubah** pembelian yang sudah ada (form edit + audit trail §9 BR-G)
 - Prompt per line item kategori FEED/MEDICINE: "Buat catatan consumable?"
 
 ### FR-06 Histori Harga
@@ -785,7 +795,7 @@ Mengikuti pola **Access Management**; visibilitas **permission**, bukan hardcode
 | IMP-WQ-CFG | Ambang & saran | JSON di `business_units`; template `GET/PUT /water-quality/config` (PUT admin); form `/ponds/new` dan `/ponds/:id/edit` |
 | IMP-DASH-WQ | Dashboard operasional air | Ringkasan per kolam, stat, alert belum diukur hari ini |
 | IMP-UI | Layout responsive | Bottom nav mobile, halaman kolam & kualitas air |
-| IMP-FIN | Pembelian, pengeluaran, **CRUD akun kas** | UI `/finance`, `/finance/cash-accounts/*` |
+| IMP-FIN | Pembelian, pengeluaran, **ubah** pembelian/pengeluaran lain + audit `audit_logs`, **CRUD akun kas** | UI `/finance`, form edit, `/finance/cash-accounts/*` |
 | IMP-RENT | Kontrak sewa kolam (MVP-04) | `POST/GET /rent-contracts`, bayar jadwal; FE `/finance/rent/*`; permission `finance.rent.*` — [docs/features/rent-contracts.md](./docs/features/rent-contracts.md) |
 | IMP-OPS | Health + Docker | `GET /health`, compose MySQL + API + FE |
 
@@ -796,9 +806,9 @@ Mengikuti pola **Access Management**; visibilitas **permission**, bukan hardcode
 | PART-WQ | T2 / BR-F | CRUD, dashboard, filter, grafik tren UI, batch opsional di form log, ambang & saran per kolam | CRUD batch (hanya `GET /batches`) |
 | PART-POND | FR-04 | name, location, notes, status | Form UI untuk size, ownerName |
 | PART-WS | MVP-01 / FR-01 | Satu workspace seed `Usaha Lele` | CRUD workspace, switcher, personal workspace |
-| PART-FIN | MVP-03 / MVP-04 / MVP-11 | Pembelian multi-item, pengeluaran lain, kas CRUD, **sewa** (kontrak + bayar jadwal) | Histori harga, ubah/hapus pembelian, pakan, bagi hasil, laporan RPT sewa |
+| PART-FIN | MVP-03 / MVP-04 / MVP-11 | Pembelian multi-item, **ubah** pembelian/pengeluaran + audit, pengeluaran lain, kas CRUD, **sewa** (kontrak + bayar jadwal), urutan daftar by tanggal | Histori harga, hapus transaksi, pakan, bagi hasil, laporan RPT sewa |
 | PART-DASH | MVP-07 / §13 | Kartu kualitas air; ringkasan keuangan di `/finance` | Kartu Total Belanja, Pakan, Sewa, Bagi Hasil di dashboard utama |
-| PART-AUTH | FR-02 spec | JWT 24h; RBAC fase 1–2 + access catalog | Redis blacklist; audit log UI; CRUD master `/permissions` |
+| PART-AUTH | FR-02 spec | JWT 24h; RBAC fase 1–2 + access catalog; **tabel `audit_logs`** + tulis saat ubah transaksi keuangan | Redis blacklist; halaman baca audit (`GET /audit-logs`); CRUD master `/permissions` |
 
 ### ❌ Belum ada (masih sesuai rencana MVP asli)
 

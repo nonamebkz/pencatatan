@@ -55,6 +55,8 @@ function pageTitle(pathname: string, navLabels: { path: string; label: string; e
   if (pathname.includes('/water-quality/') && pathname.endsWith('/edit')) return 'Edit Catatan'
   if (/^\/water-quality\/[^/]+$/.test(pathname)) return 'Detail Catatan'
   if (pathname.startsWith('/finance/transactions/')) return 'Detail Transaksi'
+  if (pathname.includes('/finance/purchases/') && pathname.endsWith('/edit')) return 'Ubah Pembelian'
+  if (pathname.includes('/finance/expenses/') && pathname.endsWith('/edit')) return 'Ubah Pengeluaran'
   if (pathname.startsWith('/settings/water-quality')) return 'Konfigurasi Kualitas Air'
   const item = navLabels.find((nav) => (nav.end ? pathname === nav.path : pathname.startsWith(nav.path)))
   return item?.label ?? 'Budidaya Lele'

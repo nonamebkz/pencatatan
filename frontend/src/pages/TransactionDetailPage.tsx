@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react'
 import { Link, useParams } from 'react-router-dom'
+import { Pencil } from 'lucide-react'
 
 import { getTransaction, purchaseCategoryLabels, transactionTypeLabel, type Transaction } from '@/api/finance'
 import { BackLink } from '@/components/shared/BackLink'
@@ -12,9 +13,11 @@ import { Skeleton } from '@/components/ui/skeleton'
 import { pageLayout, skeleton } from '@/lib/design'
 import { formatIDR } from '@/lib/format'
 import { cn } from '@/lib/utils'
+import { useCatalogAccess } from '@/hooks/useCatalogAccess'
 
 export function TransactionDetailPage() {
   const { id } = useParams()
+  const { canPageAction } = useCatalogAccess()
   const [item, setItem] = useState<Transaction | null>(null)
   const [error, setError] = useState<string | null>(null)
   const [loading, setLoading] = useState(true)
@@ -48,6 +51,15 @@ export function TransactionDetailPage() {
   }
 
   const isPurchase = item.transactionType === 'PURCHASE'
+  const isOtherExpense = item.transactionType === 'OTHER_EXPENSE'
+  const canEditPurchase = isPurchase && canPageAction('page.finance.purchases', 'update')
+  const canEditExpense = isOtherExpense && canPageAction('page.finance.expenses', 'update')
+  const editHref =
+    canEditPurchase && id
+      ? `/finance/purchases/${id}/edit`
+      : canEditExpense && id
+        ? `/finance/expenses/${id}/edit`
+        : null
 
   return (
     <PageShell className={pageLayout.detail}>
@@ -56,6 +68,18 @@ export function TransactionDetailPage() {
       <PageHeader
         title={transactionTypeLabel(item.transactionType)}
         description={`${item.transactionDate} · ${item.cashAccountName ?? 'Kas'}`}
+        actions={
+          editHref
+            ? (
+                <Button asChild size="lg" className="w-full md:w-auto">
+                  <Link to={editHref}>
+                    <Pencil className="size-4" />
+                    Ubah catatan
+                  </Link>
+                </Button>
+              )
+            : undefined
+        }
       />
 
       <PanelCard contentClassName="space-y-3 p-4 text-sm">

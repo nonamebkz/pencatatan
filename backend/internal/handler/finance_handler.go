@@ -2,6 +2,7 @@ package handler
 
 import (
 	"database/sql"
+	"errors"
 	"fmt"
 	"strconv"
 	"strings"
@@ -10,16 +11,18 @@ import (
 	"github.com/gofiber/fiber/v2"
 	"github.com/google/uuid"
 	"github.com/kikichan/pencatatan/backend/internal/httpx"
+	"github.com/kikichan/pencatatan/backend/internal/middleware"
 	"github.com/kikichan/pencatatan/backend/internal/model"
 	"github.com/kikichan/pencatatan/backend/internal/repository"
 )
 
 type FinanceHandler struct {
-	repo *repository.FinanceRepository
+	repo  *repository.FinanceRepository
+	audit *repository.AuditRepository
 }
 
-func NewFinanceHandler(repo *repository.FinanceRepository) *FinanceHandler {
-	return &FinanceHandler{repo: repo}
+func NewFinanceHandler(repo *repository.FinanceRepository, audit *repository.AuditRepository) *FinanceHandler {
+	return &FinanceHandler{repo: repo, audit: audit}
 }
 
 type purchaseItemRequest struct {
@@ -268,6 +271,75 @@ func (h *FinanceHandler) CreateOtherExpense(c *fiber.Ctx) error {
 		return httpx.Fail(c, fiber.StatusInternalServerError, "INTERNAL_ERROR", err.Error())
 	}
 	return c.Status(fiber.StatusCreated).JSON(fiber.Map{"success": true, "data": item})
+}
+
+func (h *FinanceHandler) UpdatePurchase(c *fiber.Ctx) error {
+	var req purchaseRequest
+	if err := c.BodyParser(&req); err != nil {
+		return httpx.Fail(c, fiber.StatusBadRequest, "VALIDATION_ERROR", "Payload tidak valid")
+	}
+
+	input, err := h.buildPurchaseInput(c, req)
+	if err != nil {
+		return httpx.Fail(c, fiber.StatusBadRequest, "VALIDATION_ERROR", err.Error())
+	}
+
+	item, err := h.repo.UpdatePurchase(c.Context(), h.audit, middleware.UserID(c), c.Params("id"), input)
+	if err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			return httpx.Fail(c, fiber.StatusNotFound, "NOT_FOUND", "Pembelian tidak ditemukan")
+		}
+		if err == repository.ErrTransactionNotEditable {
+			return httpx.Fail(c, fiber.StatusBadRequest, "VALIDATION_ERROR", "Transaksi ini tidak dapat diubah")
+		}
+		return httpx.Fail(c, fiber.StatusInternalServerError, "INTERNAL_ERROR", err.Error())
+	}
+	return httpx.OK(c, item)
+}
+
+func (h *FinanceHandler) UpdateOtherExpense(c *fiber.Ctx) error {
+	var req otherExpenseRequest
+	if err := c.BodyParser(&req); err != nil {
+		return httpx.Fail(c, fiber.StatusBadRequest, "VALIDATION_ERROR", "Payload tidak valid")
+	}
+
+	ws := workspaceID(c)
+	txDate, err := parseDate(req.TransactionDate)
+	if err != nil {
+		return httpx.Fail(c, fiber.StatusBadRequest, "VALIDATION_ERROR", "Tanggal transaksi tidak valid")
+	}
+	if strings.TrimSpace(req.Description) == "" {
+		return httpx.Fail(c, fiber.StatusBadRequest, "VALIDATION_ERROR", "Deskripsi wajib diisi")
+	}
+	if req.Amount <= 0 {
+		return httpx.Fail(c, fiber.StatusBadRequest, "VALIDATION_ERROR", "Nominal harus lebih dari 0")
+	}
+
+	cashAccountID, err := h.resolveCashAccount(c, req.CashAccountID)
+	if err != nil {
+		return httpx.Fail(c, fiber.StatusBadRequest, "VALIDATION_ERROR", err.Error())
+	}
+
+	item, err := h.repo.UpdateOtherExpense(c.Context(), h.audit, middleware.UserID(c), c.Params("id"), repository.CreateOtherExpenseInput{
+		WorkspaceID:     ws,
+		CashAccountID:   cashAccountID,
+		TransactionDate: txDate,
+		Amount:          req.Amount,
+		Description:     strings.TrimSpace(req.Description),
+		Category:        req.Category,
+		BusinessUnitID:  req.BusinessUnitID,
+		BatchID:         req.BatchID,
+	})
+	if err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			return httpx.Fail(c, fiber.StatusNotFound, "NOT_FOUND", "Pengeluaran tidak ditemukan")
+		}
+		if err == repository.ErrTransactionNotEditable {
+			return httpx.Fail(c, fiber.StatusBadRequest, "VALIDATION_ERROR", "Transaksi ini tidak dapat diubah")
+		}
+		return httpx.Fail(c, fiber.StatusInternalServerError, "INTERNAL_ERROR", err.Error())
+	}
+	return httpx.OK(c, item)
 }
 
 func (h *FinanceHandler) buildPurchaseInput(c *fiber.Ctx, req purchaseRequest) (repository.CreatePurchaseInput, error) {

@@ -131,8 +131,16 @@ export function createPurchase(body: PurchaseInput) {
   return api.post<Transaction>('/purchases', body)
 }
 
+export function updatePurchase(id: string, body: PurchaseInput) {
+  return api.put<Transaction>(`/purchases/${id}`, body)
+}
+
 export function createOtherExpense(body: OtherExpenseInput) {
   return api.post<Transaction>('/transactions/other-expenses', body)
+}
+
+export function updateOtherExpense(id: string, body: OtherExpenseInput) {
+  return api.put<Transaction>(`/transactions/other-expenses/${id}`, body)
 }
 
 export const purchaseCategoryLabels: Record<PurchaseCategory, string> = {

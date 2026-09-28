@@ -438,6 +438,261 @@ func (r *FinanceRepository) CreateOtherExpense(ctx context.Context, txID string,
 	return r.GetTransaction(ctx, input.WorkspaceID, txID)
 }
 
+var ErrTransactionNotEditable = errors.New("jenis transaksi ini tidak dapat diubah")
+
+func (r *FinanceRepository) UpdatePurchase(
+	ctx context.Context,
+	audit *AuditRepository,
+	actorUserID string,
+	txID string,
+	input CreatePurchaseInput,
+) (*model.Transaction, error) {
+	existing, err := r.GetTransaction(ctx, input.WorkspaceID, txID)
+	if err != nil {
+		return nil, err
+	}
+	if existing == nil {
+		return nil, sql.ErrNoRows
+	}
+	if existing.TransactionType != model.TransactionPurchase {
+		return nil, ErrTransactionNotEditable
+	}
+
+	before := transactionAuditPayload(existing)
+
+	var total float64
+	for _, item := range input.Items {
+		lineTotal := financesvc.RoundMoney(item.Qty * item.UnitPrice)
+		total += lineTotal
+	}
+	total = financesvc.RoundMoney(total)
+
+	dbTx, err := r.db.BeginTx(ctx, nil)
+	if err != nil {
+		return nil, err
+	}
+	defer dbTx.Rollback()
+
+	now := time.Now().UTC()
+	_, err = dbTx.ExecContext(ctx, `
+		UPDATE transactions
+		SET cash_account_id = ?, amount = ?, transaction_date = ?, description = ?,
+		    business_unit_id = ?, batch_id = ?, updated_at = ?
+		WHERE workspace_id = ? AND id = ?`,
+		input.CashAccountID, total, input.TransactionDate, input.Description,
+		input.BusinessUnitID, input.BatchID, now, input.WorkspaceID, txID,
+	)
+	if err != nil {
+		return nil, err
+	}
+
+	_, err = dbTx.ExecContext(ctx, `DELETE FROM purchase_line_items WHERE transaction_id = ?`, txID)
+	if err != nil {
+		return nil, err
+	}
+
+	for _, item := range input.Items {
+		lineTotal := financesvc.RoundMoney(item.Qty * item.UnitPrice)
+		itemID := uuid.New().String()
+		normalized := financesvc.NormalizeItemName(item.ItemName)
+		_, err = dbTx.ExecContext(ctx, `
+			INSERT INTO purchase_line_items (
+				id, transaction_id, item_name, item_name_normalized, category, qty, unit, unit_price, total_price,
+				supplier_name, notes, created_at
+			) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+			itemID, txID, strings.TrimSpace(item.ItemName), normalized, item.Category, item.Qty, item.Unit,
+			item.UnitPrice, lineTotal, item.SupplierName, item.Notes, now,
+		)
+		if err != nil {
+			return nil, err
+		}
+	}
+
+	updated, err := r.getTransactionTx(ctx, dbTx, input.WorkspaceID, txID)
+	if err != nil {
+		return nil, err
+	}
+	after := transactionAuditPayload(updated)
+
+	if audit != nil {
+		if err := audit.InsertTx(ctx, dbTx, AuditWriteInput{
+			WorkspaceID: input.WorkspaceID,
+			ActorUserID: actorUserID,
+			EntityType:  model.AuditEntityTransaction,
+			EntityID:    txID,
+			EventType:   model.AuditEventUpdate,
+			Changes:     map[string]any{"before": before, "after": after},
+		}); err != nil {
+			return nil, err
+		}
+	}
+
+	if err := dbTx.Commit(); err != nil {
+		return nil, err
+	}
+	return r.GetTransaction(ctx, input.WorkspaceID, txID)
+}
+
+func (r *FinanceRepository) UpdateOtherExpense(
+	ctx context.Context,
+	audit *AuditRepository,
+	actorUserID string,
+	txID string,
+	input CreateOtherExpenseInput,
+) (*model.Transaction, error) {
+	existing, err := r.GetTransaction(ctx, input.WorkspaceID, txID)
+	if err != nil {
+		return nil, err
+	}
+	if existing == nil {
+		return nil, sql.ErrNoRows
+	}
+	if existing.TransactionType != model.TransactionOtherExpense {
+		return nil, ErrTransactionNotEditable
+	}
+
+	before := transactionAuditPayload(existing)
+	amount := financesvc.RoundMoney(input.Amount)
+	now := time.Now().UTC()
+
+	dbTx, err := r.db.BeginTx(ctx, nil)
+	if err != nil {
+		return nil, err
+	}
+	defer dbTx.Rollback()
+
+	res, err := dbTx.ExecContext(ctx, `
+		UPDATE transactions
+		SET cash_account_id = ?, amount = ?, transaction_date = ?, description = ?,
+		    business_unit_id = ?, batch_id = ?, category = ?, updated_at = ?
+		WHERE workspace_id = ? AND id = ?`,
+		input.CashAccountID, amount, input.TransactionDate, input.Description,
+		input.BusinessUnitID, input.BatchID, input.Category, now, input.WorkspaceID, txID,
+	)
+	if err != nil {
+		return nil, err
+	}
+	if n, _ := res.RowsAffected(); n == 0 {
+		return nil, sql.ErrNoRows
+	}
+
+	updated, err := r.getTransactionTx(ctx, dbTx, input.WorkspaceID, txID)
+	if err != nil {
+		return nil, err
+	}
+	after := transactionAuditPayload(updated)
+
+	if audit != nil {
+		if err := audit.InsertTx(ctx, dbTx, AuditWriteInput{
+			WorkspaceID: input.WorkspaceID,
+			ActorUserID: actorUserID,
+			EntityType:  model.AuditEntityTransaction,
+			EntityID:    txID,
+			EventType:   model.AuditEventUpdate,
+			Changes:     map[string]any{"before": before, "after": after},
+		}); err != nil {
+			return nil, err
+		}
+	}
+
+	if err := dbTx.Commit(); err != nil {
+		return nil, err
+	}
+	return updated, nil
+}
+
+func transactionAuditPayload(tx *model.Transaction) map[string]any {
+	if tx == nil {
+		return nil
+	}
+	payload := map[string]any{
+		"id":              tx.ID,
+		"transactionType": tx.TransactionType,
+		"cashAccountId":   tx.CashAccountID,
+		"amount":          tx.Amount,
+		"transactionDate": tx.TransactionDate,
+		"description":     tx.Description,
+		"businessUnitId":  tx.BusinessUnitID,
+		"batchId":         tx.BatchID,
+		"category":        tx.Category,
+	}
+	if len(tx.Items) > 0 {
+		items := make([]map[string]any, 0, len(tx.Items))
+		for _, line := range tx.Items {
+			items = append(items, map[string]any{
+				"itemName":     line.ItemName,
+				"category":     line.Category,
+				"qty":          line.Qty,
+				"unit":         line.Unit,
+				"unitPrice":    line.UnitPrice,
+				"totalPrice":   line.TotalPrice,
+				"supplierName": line.SupplierName,
+				"notes":        line.Notes,
+			})
+		}
+		payload["items"] = items
+	}
+	return payload
+}
+
+func (r *FinanceRepository) getTransactionTx(ctx context.Context, dbTx *sql.Tx, workspaceID, id string) (*model.Transaction, error) {
+	row := dbTx.QueryRowContext(ctx, `
+		SELECT t.id, t.workspace_id, t.cash_account_id, c.name, t.transaction_type, t.amount,
+		       t.transaction_date, t.description, t.business_unit_id, b.name, t.batch_id, t.category,
+		       t.created_at, t.updated_at
+		FROM transactions t
+		JOIN cash_accounts c ON c.id = t.cash_account_id
+		LEFT JOIN business_units b ON b.id = t.business_unit_id
+		WHERE t.workspace_id = ? AND t.id = ?`, workspaceID, id)
+
+	item, err := scanTransactionRow(row)
+	if errors.Is(err, sql.ErrNoRows) {
+		return nil, nil
+	}
+	if err != nil {
+		return nil, err
+	}
+	items, err := r.loadLineItemsTx(ctx, dbTx, id)
+	if err != nil {
+		return nil, err
+	}
+	item.Items = items
+	return item, nil
+}
+
+func (r *FinanceRepository) loadLineItemsTx(ctx context.Context, dbTx *sql.Tx, transactionID string) ([]model.PurchaseLineItem, error) {
+	rows, err := dbTx.QueryContext(ctx, `
+		SELECT id, transaction_id, item_name, item_name_normalized, category, qty, unit, unit_price, total_price,
+		       supplier_name, notes, created_at
+		FROM purchase_line_items
+		WHERE transaction_id = ?
+		ORDER BY created_at ASC`, transactionID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	items := make([]model.PurchaseLineItem, 0)
+	for rows.Next() {
+		var item model.PurchaseLineItem
+		var supplier, notes sql.NullString
+		if err := rows.Scan(
+			&item.ID, &item.TransactionID, &item.ItemName, &item.ItemNameNormalized, &item.Category,
+			&item.Qty, &item.Unit, &item.UnitPrice, &item.TotalPrice, &supplier, &notes, &item.CreatedAt,
+		); err != nil {
+			return nil, err
+		}
+		if supplier.Valid {
+			item.SupplierName = &supplier.String
+		}
+		if notes.Valid {
+			item.Notes = &notes.String
+		}
+		items = append(items, item)
+	}
+	return items, rows.Err()
+}
+
 func (r *FinanceRepository) MonthSummary(ctx context.Context, workspaceID string, monthStart, monthEnd time.Time) (*model.FinanceSummary, error) {
 	var purchases, otherExpenses sql.NullFloat64
 	var count int

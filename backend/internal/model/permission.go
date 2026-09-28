@@ -23,7 +23,9 @@ const (
 	PermCashAccountDelete  = "cash_account.delete"
 	PermFinanceRentRead    = "finance.rent.read"
 	PermFinanceRentCreate  = "finance.rent.create"
-	PermFinanceRentPay     = "finance.rent.pay"
+	PermFinanceRentPay        = "finance.rent.pay"
+	PermFinancePurchaseUpdate = "finance.purchase.update"
+	PermFinanceExpenseUpdate  = "finance.expense.update"
 )
 
 // AllPermissionCodes daftar lengkap untuk seed workspace_admin.
@@ -33,14 +35,14 @@ var AllPermissionCodes = []string{
 	PermPermissionRead, PermAuditRead,
 	PermPondDelete, PermWaterQualityDelete, PermWaterQualityCfgUp,
 	PermCashAccountRead, PermCashAccountCreate, PermCashAccountUpdate, PermCashAccountDelete,
-	"finance.read", "finance.purchase.create", "finance.expense.create",
+	"finance.read", "finance.purchase.create", "finance.purchase.update", "finance.expense.create", "finance.expense.update",
 	"pond.read", "pond.create", "pond.update",
 	"water_quality.read", "water_quality.create", "water_quality.update",
 }
 
 // OperatorPermissionCodes subset untuk peran operator — sinkron roleDefaults di access-catalog.json.
 var OperatorPermissionCodes = []string{
-	"finance.read", "finance.purchase.create", "finance.expense.create",
+	"finance.read", "finance.purchase.create", "finance.purchase.update", "finance.expense.create", "finance.expense.update",
 	"pond.read", "pond.create", "pond.update",
 	"water_quality.read", "water_quality.create", "water_quality.update",
 	"cash_account.read", "cash_account.create", "cash_account.update",

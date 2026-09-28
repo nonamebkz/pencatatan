@@ -49,6 +49,7 @@ func main() {
 	pondRepo := repository.NewPondRepository(db)
 	waterQualityRepo := repository.NewWaterQualityRepository(db)
 	financeRepo := repository.NewFinanceRepository(db)
+	auditRepo := repository.NewAuditRepository(db)
 	rentRepo := repository.NewRentRepository(db)
 	reportRepo := repository.NewReportRepository(db)
 	settingsRepo := repository.NewSettingsRepository(db)
@@ -61,7 +62,7 @@ func main() {
 	batchHandler := handler.NewBatchHandler(batchRepo)
 	pondHandler := handler.NewPondHandler(pondRepo, settingsRepo)
 	waterQualityHandler := handler.NewWaterQualityHandler(waterQualityRepo, pondRepo, settingsRepo)
-	financeHandler := handler.NewFinanceHandler(financeRepo)
+	financeHandler := handler.NewFinanceHandler(financeRepo, auditRepo)
 	rentHandler := handler.NewRentHandler(rentRepo, financeRepo)
 	reportHandler := handler.NewReportHandler(reportRepo, rentRepo)
 
@@ -147,7 +148,9 @@ func main() {
 	protected.Get("/purchases", financeHandler.ListPurchases)
 	protected.Get("/purchases/:id", financeHandler.GetPurchase)
 	protected.Post("/purchases", financeHandler.CreatePurchase)
+	protected.Put("/purchases/:id", middleware.RequirePermission(model.PermFinancePurchaseUpdate), financeHandler.UpdatePurchase)
 	protected.Post("/transactions/other-expenses", financeHandler.CreateOtherExpense)
+	protected.Put("/transactions/other-expenses/:id", middleware.RequirePermission(model.PermFinanceExpenseUpdate), financeHandler.UpdateOtherExpense)
 
 	protected.Get("/rent-contracts", middleware.RequirePermission(model.PermFinanceRentRead), rentHandler.List)
 	protected.Get("/rent-contracts/:id", middleware.RequirePermission(model.PermFinanceRentRead), rentHandler.Get)

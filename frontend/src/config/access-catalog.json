@@ -73,6 +73,16 @@
                   "description": "Form pembelian multi-item",
                   "routes": ["/finance/purchases/new"],
                   "operatorDefault": true
+                },
+                {
+                  "id": "update",
+                  "label": "Ubah pembelian",
+                  "permission": "finance.purchase.update",
+                  "resource": "finance",
+                  "action": "purchase",
+                  "description": "Edit transaksi pembelian yang sudah tercatat",
+                  "routes": ["/finance/purchases/:id/edit"],
+                  "operatorDefault": true
                 }
               ]
             },
@@ -89,6 +99,16 @@
                   "action": "expense",
                   "description": "Form pengeluaran operasional",
                   "routes": ["/finance/expenses/new"],
+                  "operatorDefault": true
+                },
+                {
+                  "id": "update",
+                  "label": "Ubah pengeluaran lain",
+                  "permission": "finance.expense.update",
+                  "resource": "finance",
+                  "action": "expense",
+                  "description": "Edit transaksi pengeluaran operasional",
+                  "routes": ["/finance/expenses/:id/edit"],
                   "operatorDefault": true
                 }
               ]
@@ -489,7 +509,9 @@
     "operatorPermissionCodes": [
       "finance.read",
       "finance.purchase.create",
+      "finance.purchase.update",
       "finance.expense.create",
+      "finance.expense.update",
       "finance.rent.read",
       "finance.rent.create",
       "finance.rent.pay",

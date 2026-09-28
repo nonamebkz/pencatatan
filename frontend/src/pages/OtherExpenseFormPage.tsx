@@ -1,8 +1,8 @@
-import { useState } from 'react'
-import { Link, useNavigate } from 'react-router-dom'
+import { useEffect, useState } from 'react'
+import { Link, useLocation, useNavigate, useParams } from 'react-router-dom'
 import { Save } from 'lucide-react'
 
-import { createOtherExpense } from '@/api/finance'
+import { createOtherExpense, getTransaction, updateOtherExpense } from '@/api/finance'
 import { BackLink } from '@/components/shared/BackLink'
 import { SelectField, TextField, TextareaField } from '@/components/shared/Field'
 import { ErrorAlert } from '@/components/shared/ErrorAlert'
@@ -17,6 +17,9 @@ import { todayISO } from '@/lib/format'
 
 export function OtherExpenseFormPage() {
   const navigate = useNavigate()
+  const location = useLocation()
+  const { id } = useParams()
+  const isEdit = Boolean(id && location.pathname.endsWith('/edit'))
   const { accounts, ponds, cashAccountId, setCashAccountId, accountsError } = useCashAccountAndPonds()
   const [transactionDate, setTransactionDate] = useState(todayISO())
   const [amount, setAmount] = useState('')
@@ -24,7 +27,28 @@ export function OtherExpenseFormPage() {
   const [category, setCategory] = useState('')
   const [businessUnitId, setBusinessUnitId] = useState('')
   const [error, setError] = useState<string | null>(null)
+  const [loading, setLoading] = useState(isEdit)
   const [submitting, setSubmitting] = useState(false)
+
+  useEffect(() => {
+    if (!isEdit || !id) return
+    setLoading(true)
+    getTransaction(id)
+      .then((response) => {
+        const item = response.data
+        if (item.transactionType !== 'OTHER_EXPENSE') {
+          throw new Error('Hanya pengeluaran lain yang dapat diubah di sini')
+        }
+        setTransactionDate(item.transactionDate)
+        setAmount(String(item.amount))
+        setDescription(item.description ?? '')
+        setCategory(item.category ?? '')
+        setBusinessUnitId(item.businessUnitId ?? '')
+        if (item.cashAccountId) setCashAccountId(item.cashAccountId)
+      })
+      .catch((err) => setError(err instanceof Error ? err.message : 'Gagal memuat pengeluaran'))
+      .finally(() => setLoading(false))
+  }, [id, isEdit, setCashAccountId])
 
   const handleSubmit = async (event: React.FormEvent) => {
     event.preventDefault()
@@ -32,15 +56,21 @@ export function OtherExpenseFormPage() {
     setError(null)
 
     try {
-      await createOtherExpense({
+      const body = {
         cashAccountId: cashAccountId || undefined,
         transactionDate,
         amount: Number(amount),
         description,
         category: category || undefined,
         businessUnitId: businessUnitId || undefined,
-      })
-      navigate('/finance')
+      }
+      if (isEdit && id) {
+        await updateOtherExpense(id, body)
+        navigate(`/finance/transactions/${id}`)
+      } else {
+        await createOtherExpense(body)
+        navigate('/finance')
+      }
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Gagal menyimpan pengeluaran')
     } finally {
@@ -53,10 +83,11 @@ export function OtherExpenseFormPage() {
       <BackLink to="/finance" label="Kembali ke keuangan" />
 
       <PageHeader
-        title="Pengeluaran Lain"
+        title={isEdit ? 'Ubah Pengeluaran' : 'Pengeluaran Lain'}
         description="Biaya operasional yang bukan pembelian barang (transport, listrik, dll.)."
       />
 
+      {loading && <p className="text-sm text-muted-foreground">Memuat data…</p>}
       {error && <ErrorAlert>{error}</ErrorAlert>}
       {accountsError && <ErrorAlert>{accountsError}</ErrorAlert>}
       {!accountsError && accounts.length === 0 && (
@@ -69,7 +100,7 @@ export function OtherExpenseFormPage() {
         </ErrorAlert>
       )}
 
-      <form id="other-expense-form" onSubmit={handleSubmit}>
+      <form id="other-expense-form" onSubmit={handleSubmit} hidden={loading}>
         <PanelCard className="overflow-hidden">
           <div className="space-y-4">
             <div className="grid gap-4 sm:grid-cols-2">

@@ -1,10 +1,12 @@
-import { useMemo, useState } from 'react'
-import { Link, useNavigate } from 'react-router-dom'
+import { useEffect, useMemo, useState } from 'react'
+import { Link, useLocation, useNavigate, useParams } from 'react-router-dom'
 import { Plus, Save, Trash2 } from 'lucide-react'
 
 import {
   createPurchase,
+  getPurchase,
   purchaseCategoryLabels,
+  updatePurchase,
   type PurchaseCategory,
   type PurchaseItemInput,
 } from '@/api/finance'
@@ -38,13 +40,44 @@ function emptyLine(): LineDraft {
 
 export function PurchaseFormPage() {
   const navigate = useNavigate()
+  const location = useLocation()
+  const { id } = useParams()
+  const isEdit = Boolean(id && location.pathname.endsWith('/edit'))
   const { accounts, ponds, cashAccountId, setCashAccountId, accountsError } = useCashAccountAndPonds()
   const [transactionDate, setTransactionDate] = useState(todayISO())
   const [description, setDescription] = useState('')
   const [businessUnitId, setBusinessUnitId] = useState('')
   const [lines, setLines] = useState<LineDraft[]>([emptyLine()])
   const [error, setError] = useState<string | null>(null)
+  const [loading, setLoading] = useState(isEdit)
   const [submitting, setSubmitting] = useState(false)
+
+  useEffect(() => {
+    if (!isEdit || !id) return
+    setLoading(true)
+    getPurchase(id)
+      .then((response) => {
+        const item = response.data
+        setTransactionDate(item.transactionDate)
+        setDescription(item.description ?? '')
+        setBusinessUnitId(item.businessUnitId ?? '')
+        if (item.cashAccountId) setCashAccountId(item.cashAccountId)
+        setLines(
+          (item.items ?? []).map((line) => ({
+            key: line.id,
+            itemName: line.itemName,
+            category: line.category,
+            qty: line.qty,
+            unit: line.unit,
+            unitPrice: line.unitPrice,
+            supplierName: line.supplierName,
+            notes: line.notes,
+          })),
+        )
+      })
+      .catch((err) => setError(err instanceof Error ? err.message : 'Gagal memuat pembelian'))
+      .finally(() => setLoading(false))
+  }, [id, isEdit, setCashAccountId])
 
   const total = useMemo(
     () => lines.reduce((sum, line) => sum + line.qty * line.unitPrice, 0),
@@ -61,14 +94,20 @@ export function PurchaseFormPage() {
     setError(null)
 
     try {
-      await createPurchase({
+      const body = {
         cashAccountId: cashAccountId || undefined,
         transactionDate,
         description: description || undefined,
         businessUnitId: businessUnitId || undefined,
         items: lines.map(({ key: _key, ...item }) => item),
-      })
-      navigate('/finance')
+      }
+      if (isEdit && id) {
+        await updatePurchase(id, body)
+        navigate(`/finance/transactions/${id}`)
+      } else {
+        await createPurchase(body)
+        navigate('/finance')
+      }
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Gagal menyimpan pembelian')
     } finally {
@@ -81,10 +120,11 @@ export function PurchaseFormPage() {
       <BackLink to="/finance" label="Kembali ke keuangan" />
 
       <PageHeader
-        title="Catat Pembelian"
+        title={isEdit ? 'Ubah Pembelian' : 'Catat Pembelian'}
         description="Satu transaksi bisa berisi beberapa barang; total dihitung otomatis."
       />
 
+      {loading && <p className="text-sm text-muted-foreground">Memuat data…</p>}
       {error && <ErrorAlert>{error}</ErrorAlert>}
       {accountsError && <ErrorAlert>{accountsError}</ErrorAlert>}
       {!accountsError && accounts.length === 0 && (
@@ -97,7 +137,7 @@ export function PurchaseFormPage() {
         </ErrorAlert>
       )}
 
-      <form id="purchase-form" onSubmit={handleSubmit} className="space-y-6">
+      <form id="purchase-form" onSubmit={handleSubmit} className="space-y-6" hidden={loading}>
         <PanelCard title="Informasi transaksi" className="overflow-hidden" contentClassName="p-0">
           <div className="space-y-4 p-4 sm:p-5 md:p-6">
             <div className="grid gap-4 sm:grid-cols-2">

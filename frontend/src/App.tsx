@@ -67,9 +67,11 @@ function App() {
                 <Route path="finance/reports/rent" element={<RentReportPage />} />
               </Route>
               <Route path="finance/purchases/new" element={<PurchaseFormPage />} />
+              <Route path="finance/purchases/:id/edit" element={<PurchaseFormPage />} />
               <Route path="finance/purchases/:id" element={<PurchaseDetailPage />} />
               <Route path="finance/transactions/:id" element={<TransactionDetailPage />} />
               <Route path="finance/expenses/new" element={<OtherExpenseFormPage />} />
+              <Route path="finance/expenses/:id/edit" element={<OtherExpenseFormPage />} />
 
               <Route element={<PermissionRoute permission="finance.rent.read" />}>
                 <Route path="finance/rent" element={<RentListPage />} />

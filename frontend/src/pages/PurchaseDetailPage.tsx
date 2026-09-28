@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react'
 import { Link, useParams } from 'react-router-dom'
+import { Pencil } from 'lucide-react'
 
 import { getPurchase, purchaseCategoryLabels, type Transaction } from '@/api/finance'
 import { BackLink } from '@/components/shared/BackLink'
@@ -12,9 +13,12 @@ import { Skeleton } from '@/components/ui/skeleton'
 import { pageLayout, skeleton } from '@/lib/design'
 import { formatIDR } from '@/lib/format'
 import { cn } from '@/lib/utils'
+import { useCatalogAccess } from '@/hooks/useCatalogAccess'
 
 export function PurchaseDetailPage() {
   const { id } = useParams()
+  const { canPageAction } = useCatalogAccess()
+  const canEdit = canPageAction('page.finance.purchases', 'update')
   const [item, setItem] = useState<Transaction | null>(null)
   const [error, setError] = useState<string | null>(null)
   const [loading, setLoading] = useState(true)
@@ -54,6 +58,18 @@ export function PurchaseDetailPage() {
       <PageHeader
         title="Detail Pembelian"
         description={`${item.transactionDate} · ${item.cashAccountName ?? 'Kas'}`}
+        actions={
+          canEdit && id
+            ? (
+                <Button asChild size="lg" className="w-full md:w-auto">
+                  <Link to={`/finance/purchases/${id}/edit`}>
+                    <Pencil className="size-4" />
+                    Ubah catatan
+                  </Link>
+                </Button>
+              )
+            : undefined
+        }
       />
 
       {item.description && (
